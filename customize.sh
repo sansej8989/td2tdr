@@ -19,6 +19,9 @@ if command -v logcat >/dev/null 2>&1; then
   logcat -c 2>/dev/null
 fi
 
+# Примітка: KernelSU-Next склеює послідовні ui_print, тому
+# після КОЖНОГО рядка ставимо роздільник ui_print " "
+
 # ── Зчитування клавіш ─────────────────────────────────────
 # Повертає: 115 = Volume+, 116 = Volume-, 100 = таймаут (5с)
 keycheck() {
@@ -70,10 +73,15 @@ keycheck() {
 
 # ── Вибір Так/Ні ──────────────────────────────────────────
 #  [ Volume+ ] = перемикає Так / Ні
-#  [ Volume- ] = підтверджує поточний вибір
+#  [ Volume- ] = підтвердити поточний вибір
 #  Повертає 0 = Так, 1 = Ні
 choose_yn() {
   local choice=no
+
+  # Одразу показуємо поточний вибір (за замовчуванням: Ні)
+  ui_print " "
+  ui_print "Поточний вибір: [2] Ні (скасувати)"
+  ui_print " "
 
   while true; do
     keycheck
@@ -88,11 +96,9 @@ choose_yn() {
       fi
       ui_print " "
       if [ "$choice" = yes ]; then
-        ui_print "  > [1] Так"
-        ui_print "    [2] Ні"
+        ui_print "Поточний вибір: [1] Так"
       else
-        ui_print "    [1] Так"
-        ui_print "  > [2] Ні"
+        ui_print "Поточний вибір: [2] Ні (скасувати)"
       fi
       ui_print " "
     elif [ $KEY -eq 116 ]; then
@@ -104,7 +110,8 @@ choose_yn() {
       fi
     else
       ui_print " "
-      ui_print "! Таймаут. Вибір за замовчуванням: Ні (скасування)."
+      ui_print "Таймаут 5 с. Вибір: [2] Ні (скасування)."
+      ui_print " "
       return 1
     fi
   done
@@ -113,37 +120,50 @@ choose_yn() {
 # ── Шапка ─────────────────────────────────────────────────
 ui_print " "
 ui_print "td2tdr v$VER"
+ui_print " "
 ui_print "Top Drives Garage Sync Module"
+ui_print " "
 ui_print "-------------------------------------------"
+ui_print " "
 
 # ── Дисклеймер ───────────────────────────────────────────
-ui_print "-------------------------------------------"
 ui_print "ДИСКЛЕЙМЕР"
-ui_print "-------------------------------------------"
+ui_print " "
 ui_print "Модуль надається «як є» (AS IS)."
+ui_print " "
 ui_print "Автор не несе відповідальності за:"
 ui_print " "
 ui_print "  * втрату або пошкодження Garage.dat"
+ui_print " "
 ui_print "  * збої або помилки гри Top Drives"
+ui_print " "
 ui_print "  * будь-які проблеми з пристроєм"
 ui_print " "
 ui_print "Використовуючи модуль, ви приймаєте"
+ui_print " "
 ui_print "ці умови на свій власний ризик."
+ui_print " "
+ui_print "-------------------------------------------"
+ui_print " "
 
 # ── Підтвердження ────────────────────────────────────────
-ui_print "-------------------------------------------"
 ui_print "Продовжити встановлення модуля?"
 ui_print " "
-ui_print "  [ Volume+ ] = перемикає Так / Ні"
-ui_print "  [ Volume- ] = підтвердити вибір"
-ui_print "  (за замовчуванням: Ні, таймаут 5 с)"
+ui_print "[ Volume+ ] = перемикає Так / Ні"
+ui_print " "
+ui_print "[ Volume- ] = підтвердити вибір"
+ui_print " "
+ui_print "(таймаут 5 с = скасування)"
+ui_print " "
 ui_print "-------------------------------------------"
 
 choose_yn
 if [ $? -ne 0 ]; then
   ui_print " "
   ui_print "! Встановлення скасовано."
+  ui_print " "
   ui_print "Модуль не буде встановлено."
+  ui_print " "
   rm -rf "$MODPATH"
   abort
 fi
@@ -151,14 +171,17 @@ fi
 # ── Встановлення ─────────────────────────────────────────
 ui_print " "
 ui_print "-------------------------------------------"
+ui_print " "
 ui_print "ВСТАНОВЛЕННЯ"
-ui_print "-------------------------------------------"
 ui_print " "
 ui_print "  [*] service.sh          готово"
+ui_print " "
 ui_print "  [*] WebUI (webroot)     готово"
+ui_print " "
 ui_print "  [*] Банер / іконка      готово"
 ui_print " "
 ui_print "Після перезавантаження Garage.dat"
+ui_print " "
 ui_print "буде синхронізовано у /Download/td2tdr_sync"
 ui_print " "
 ui_print "Дякуємо за встановлення!"
