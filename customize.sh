@@ -13,6 +13,45 @@ if ! command -v abort >/dev/null 2>&1; then
   }
 fi
 
+# ── Зчитування клавіш ─────────────────────────────────────
+# Спосіб 1: logcat (KernelSU / KernelSU-Next)
+# Спосіб 2: read з OUTFD (Magisk)
+# Повертає: 115 = Volume+, 116 = Volume-, 100 = таймаут
+keycheck() {
+  local LINE
+  local count=0
+
+  if command -v logcat >/dev/null 2>&1; then
+    logcat -c 2>/dev/null
+    while true; do
+      LINE=$(logcat -d 2>/dev/null | grep -E -i "volume_up|volume_down|keycode_volume_up|keycode_volume_down|key 24|key 25|key_volumeup|key_volumedown" | tail -n 1)
+      if [ -n "$LINE" ]; then
+        logcat -c 2>/dev/null
+        if echo "$LINE" | grep -qE -i "volume_up|key 24|keycode_volume_up|key_volumeup"; then
+          return 115
+        elif echo "$LINE" | grep -qE -i "volume_down|key 25|keycode_volume_down|key_volumedown"; then
+          return 116
+        fi
+      fi
+      sleep 0.2
+      count=$((count + 1))
+      if [ $count -ge 25 ]; then
+        return 100
+      fi
+    done
+  fi
+
+  # Magisk fallback: читаємо символ напряму
+  while read -r key < "$OUTFD" 2>/dev/null; do
+    case "$key" in
+      "+"|"VOL_UP"|"y"|"Y") return 115 ;;
+      "-"|"VOL_DOWN"|"n"|"N") return 116 ;;
+      *) : ;;
+    esac
+  done
+  return 100
+}
+
 # ── Вибір Так/Ні ──────────────────────────────────────────
 # [ Volume+ ] перемикає вибір на "Так"
 # [ Volume- ] підтверджує поточний вибір
@@ -21,27 +60,25 @@ fi
 choose_yn() {
   choice=no
   while true; do
-    read -r key < "$OUTFD" 2>/dev/null || break
-    case "$key" in
-      "+"|"VOL_UP"|"y"|"Y")
-        choice=yes
-        ui_print ""
-        ui_print "  Відповідь: ТАК"
-        ;;
-      "-"|"VOL_DOWN"|"n"|"N")
-        if [ "$choice" = yes ]; then
-          return 0
-        else
-          return 1
-        fi
-        ;;
-      *)
-        ui_print ""
-        ui_print "  ! Невідома клавіша. Використовуйте Volume+ / Volume-"
-        ;;
-    esac
+    keycheck
+    local KEY=$?
+
+    if [ $KEY -eq 115 ]; then
+      choice=yes
+      ui_print ""
+      ui_print "  Відповідь: ТАК"
+    elif [ $KEY -eq 116 ]; then
+      if [ "$choice" = yes ]; then
+        return 0
+      else
+        return 1
+      fi
+    else
+      ui_print ""
+      ui_print "  ! Таймаут. Встановлення скасовано."
+      return 1
+    fi
   done
-  return 1
 }
 
 # ── Шапка ─────────────────────────────────────────────────
