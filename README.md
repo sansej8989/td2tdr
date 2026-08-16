@@ -52,8 +52,8 @@
 ### Спосіб 2: Через ADB
 
 ```bash
-adb push td2tdr_v0.0.001.zip /data/local/tmp/
-adb shell su -c "magisk --install-module /data/local/tmp/td2tdr_v0.0.001.zip"
+adb push td2tdr_v0.0.002.zip /data/local/tmp/
+adb shell su -c "magisk --install-module /data/local/tmp/td2tdr_v0.0.002.zip"
 adb reboot
 ```
 
@@ -162,9 +162,15 @@ td2tdr/
 ├── customize.sh                   # Інсталяційний скрипт
 ├── module.prop                    # Метадані модуля
 ├── service.sh                     # Фоновий сервіс синхронізації
-├── td2tdricon.png                 # Іконка WebUI
 └── update.json                    # JSON для автооновлення
 ```
+
+---
+
+## 📬 Контакти
+
+- [@sansej89](https://t.me/sansej89) — автор модуля
+- [@topdrives_ua](https://t.me/topdrives_ua) — канал новин Top Drives
 
 ---
 
