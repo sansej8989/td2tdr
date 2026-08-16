@@ -1,6 +1,12 @@
 name: Release
 
 on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Версія релізу (напр. 0.0.002)'
+        required: false
+        default: '0.0.002'
   push:
     tags:
       - 'v*'
@@ -15,9 +21,15 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v5
 
-      - name: Read version from tag
+      - name: Read version
         id: version
-        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> "$GITHUB_OUTPUT"
+        run: |
+          if [ -n "${{ github.event.inputs.version }}" ]; then
+            VERSION="${{ github.event.inputs.version }}"
+          else
+            VERSION="${GITHUB_REF#refs/tags/v}"
+          fi
+          echo "VERSION=${VERSION}" >> "$GITHUB_OUTPUT"
 
       - name: Build zip
         run: |
@@ -51,6 +63,10 @@ jobs:
 
       - name: Commit update.json
         run: |
+          if git diff --quiet update.json; then
+            echo "update.json не змінився — коміт пропущено"
+            exit 0
+          fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add update.json
@@ -62,3 +78,4 @@ jobs:
         with:
           files: dist/td2tdr_v${{ steps.version.outputs.VERSION }}.zip
           body_path: changelog.md
+          update_release: true
