@@ -1,0 +1,11 @@
+id=td2tdr_sync
+name=td2tdr
+version=0.0.001
+versionCode=1
+author=sansej8989
+description=Автоматично копіює Garage.dat з Android/data/com.hutchgames.cccg/files у Download/td2tdr_sync
+updateJson=https://raw.githubusercontent.com/sansej8989/td2tdr/master/update.json
+webroot=webroot
+banner=banner.png
+webuiIcon=td2tdricon.png
+actionIcon=td2tdricon.png

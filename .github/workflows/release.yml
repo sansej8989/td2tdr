@@ -1,0 +1,64 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Read version from tag
+        id: version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> "$GITHUB_OUTPUT"
+
+      - name: Build zip
+        run: |
+          mkdir -p dist
+          zip -r "dist/td2tdr_v${{ steps.version.outputs.VERSION }}.zip" . \
+            -x ".git/*" ".github/*" "dist/*" "*.zip"
+
+      - name: Compute sha256
+        id: sha
+        run: |
+          SHA=$(sha256sum "dist/td2tdr_v${{ steps.version.outputs.VERSION }}.zip" | cut -d' ' -f1)
+          echo "SHA256=$SHA" >> "$GITHUB_OUTPUT"
+
+      - name: Update update.json
+        run: |
+          python3 <<'EOF'
+          import json
+          ver = "${{ steps.version.outputs.VERSION }}"
+          vc = int(ver.split('.')[-1])
+          with open('update.json') as f:
+              data = json.load(f)
+          data['version'] = ver
+          data['versionCode'] = vc
+          data['zipUrl'] = f"https://github.com/${{ github.repository }}/releases/download/v{ver}/td2tdr_v{ver}.zip"
+          data['changelog'] = f"https://raw.githubusercontent.com/${{ github.repository }}/master/changelog.md"
+          data['sha256'] = "${{ steps.sha.outputs.SHA256 }}"
+          with open('update.json', 'w') as f:
+              json.dump(data, f, indent=2)
+              f.write('\n')
+          EOF
+
+      - name: Commit update.json
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add update.json
+          git commit -m "chore: bump update.json to v${{ steps.version.outputs.VERSION }}"
+          git push origin HEAD:master
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/td2tdr_v${{ steps.version.outputs.VERSION }}.zip
+          body_path: changelog.md

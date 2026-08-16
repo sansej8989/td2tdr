@@ -1,0 +1,12 @@
+# Локальні та збірочні артефакти
+dist/
+*.zip
+sync.log
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+Thumbs.db
+.DS_Store

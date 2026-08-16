@@ -1,0 +1,39 @@
+#!/sbin/sh
+#################
+# Initialization
+#################
+
+umask 022
+
+ui_print() { echo "$1"; }
+
+require_new_magisk() {
+  ui_print "*********************************"
+  ui_print " Please install Magisk / KernelSU "
+  ui_print " with module manager support!     "
+  ui_print "*********************************"
+  exit 1
+}
+
+#########################
+# Load util_functions.sh
+#########################
+
+OUTFD=$2
+ZIPFILE=$3
+
+mount /data 2>/dev/null
+
+[ -f /data/adb/magisk/util_functions.sh ] || [ -f /data/adb/ksu/bin/busybox ] || require_new_magisk
+
+if [ -f /data/adb/magisk/util_functions.sh ]; then
+  . /data/adb/magisk/util_functions.sh
+  [ "$MAGISK_VER_CODE" -lt 20400 ] && require_new_magisk
+  install_module
+else
+  # KernelSU: install_module з ksu util_functions
+  . /data/adb/ksu/util_functions.sh 2>/dev/null || . /data/adb/magisk/util_functions.sh 2>/dev/null
+  install_module
+fi
+
+exit 0
