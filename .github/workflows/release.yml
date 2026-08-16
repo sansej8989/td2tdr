@@ -58,7 +58,7 @@ jobs:
           git push origin HEAD:master
 
       - name: Create Release
-        uses: softprops/action-gh-release@v2.2.1
+        uses: softprops/action-gh-release@v2
         with:
           files: dist/td2tdr_v${{ steps.version.outputs.VERSION }}.zip
           body_path: changelog.md

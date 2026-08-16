@@ -9,6 +9,21 @@ set -e
 
 PROP="module.prop"
 JSON="update.json"
+PY=""
+for c in python3 python; do
+  if command -v "$c" >/dev/null 2>&1 && "$c" -c 'import sys' >/dev/null 2>&1; then
+    PY=$(command -v "$c")
+    break
+  fi
+done
+# Fallback: прямий пошук python.exe у типовому каталозі інсталяції (Windows)
+if [ -z "$PY" ]; then
+  PY=$(ls /c/Users/*/AppData/Local/Programs/Python/Python*/python.exe 2>/dev/null | head -n1)
+fi
+if [ -z "$PY" ]; then
+  echo "Помилка: Python не знайдено. Встановіть Python або додайте його в PATH." >&2
+  exit 1
+fi
 
 OLD_VER=$(grep -o '^version=.*' "$PROP" | cut -d= -f2)
 OLD_VC=$(grep -o '^versionCode=.*' "$PROP" | cut -d= -f2)
@@ -33,7 +48,7 @@ sed -i "s/^version=.*/version=${NEW_VER}/" "$PROP"
 sed -i "s/^versionCode=.*/versionCode=${NEW_VC}/" "$PROP"
 
 # Оновлюємо update.json
-python3 - "$JSON" "$NEW_VER" "$NEW_VC" <<'EOF'
+"$PY" - "$JSON" "$NEW_VER" "$NEW_VC" <<'EOF'
 import json, sys
 path, ver, vc = sys.argv[1], sys.argv[2], int(sys.argv[3])
 with open(path) as f:

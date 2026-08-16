@@ -104,6 +104,9 @@ WebUI відкривається через менеджер модулів:
 
 Скрипт оновлює `module.prop` та `update.json`.
 
+> 💡 **Windows:** скрипт потребує середовище **Git Bash** (входить у Git for Windows) та **Python** у `PATH`.
+> Запускайте з Git Bash, а не PowerShell: `./scripts/bump_version.sh patch`
+
 ### Створення релізу
 
 1. Оновіть версію скриптом `bump_version.sh`.
