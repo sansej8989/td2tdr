@@ -262,7 +262,7 @@ body {
   z-index: 1;
   max-width: 480px;
   margin: 0 auto;
-  padding: max(22px, env(safe-area-inset-top, 22px)) 16px 40px;
+  padding: max(22px, env(safe-area-inset-top, 22px)) 16px 90px;
 }
 
 /* ---------- header ---------- */
@@ -597,6 +597,15 @@ body {
   margin-bottom: 14px;
   overflow-x: auto;
   scrollbar-width: none;
+  position: fixed;
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: calc(100% - 32px);
+  max-width: 448px;
+  z-index: 100;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
 }
 
 .tab-nav::-webkit-scrollbar { display: none; }
@@ -1295,7 +1304,7 @@ body {
   top: calc(100% + 6px);
   left: 0;
   right: 0;
-  z-index: 40;
+  z-index: 150;
   max-height: 280px;
   overflow-y: auto;
   background: #12141c;
@@ -1422,7 +1431,7 @@ body {
 .toast-inline {
   position: fixed;
   left: 50%;
-  bottom: 24px;
+  bottom: 82px;
   transform: translate(-50%, 12px);
   background: #12141c;
   border: 1px solid var(--card-border-hi);
@@ -1431,7 +1440,7 @@ body {
   font-weight: 600;
   padding: 10px 16px;
   border-radius: 999px;
-  z-index: 20;
+  z-index: 200;
   opacity: 0;
   pointer-events: none;
   transition: all 0.25s ease;
@@ -1472,7 +1481,7 @@ body {
   inset: 0;
   background: rgba(3, 4, 8, 0.7);
   backdrop-filter: blur(6px);
-  z-index: 30;
+  z-index: 300;
   align-items: center;
   justify-content: center;
   padding: 20px;
