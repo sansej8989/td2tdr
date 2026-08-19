@@ -37,6 +37,50 @@
   --ok-glow: rgba(61, 220, 132, 0.25);
   --bad-glow: rgba(255, 92, 122, 0.25);
   --warn-glow: rgba(255, 181, 69, 0.25);
+  --accent-3: #0090b3;
+}
+
+[data-theme="light"] .head h1 {
+  background: linear-gradient(90deg, #14151b, #4d5262);
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+
+[data-theme="light"] .garage-total-num {
+  background: linear-gradient(90deg, #14151b, #6d5bff);
+  -webkit-background-clip: text;
+  background-clip: text;
+  filter: none;
+}
+
+[data-theme="light"] .an-forecast b { color: #b8860b; }
+
+[data-theme="light"] .an-forecast {
+  border-color: rgba(184, 134, 11, 0.35);
+  background: rgba(184, 134, 11, 0.08);
+}
+
+[data-theme="light"] .an-delta.up { color: #0d3a1a; }
+[data-theme="light"] .an-delta.down { color: #3a0a14; }
+
+[data-theme="light"] .tab-nav {
+  background: #ffffff;
+  border-color: rgba(10, 12, 24, 0.12);
+}
+
+[data-theme="light"] .tab-btn.active {
+  color: #b8860b;
+  background: rgba(245, 196, 0, 0.12);
+  border-color: rgba(184, 134, 11, 0.35);
+  box-shadow: none;
+}
+
+[data-theme="light"] .sync-btn.onclic {
+  background: #ffffff;
+}
+
+[data-theme="light"] .lang-save-btn.onclic {
+  background: #ffffff;
 }
 
 [data-theme="light"] .lang-menu,
