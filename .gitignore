@@ -1,4 +1,5 @@
 # Локальні та збірочні артефакти
+temp/
 dist/
 *.zip
 sync.log
@@ -10,3 +11,5 @@ sync.log
 # OS
 Thumbs.db
 .DS_Store
+d
+txt.txt

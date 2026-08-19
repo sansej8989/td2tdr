@@ -8,8 +8,10 @@ done
 sleep 5
 
 SRC="/storage/emulated/0/Android/data/com.hutchgames.cccg/files/Garage.dat"
+SRC_USER="/storage/emulated/0/Android/data/com.hutchgames.cccg/files/user.dat"
 DST_DIR="/storage/emulated/0/Download/td2tdr_sync"
 DST="$DST_DIR/Garage.dat"
+DST_USER="$DST_DIR/user.dat"
 LOG="$MODDIR/sync.log"
 
 log() {
@@ -18,11 +20,51 @@ log() {
 
 mkdir -p "$DST_DIR"
 
+# --- Force per-app language via Android's official LocaleManager API ---
+# Android 13+ lets each app have its own UI language independent of the
+# system language. This is the mechanism Settings > Apps > App language uses.
+# Reads the locale chosen in the WebUI dropdown (${MODDIR}/locale, e.g.
+# "ru_RU"); defaults to ru_RU if nothing was chosen yet.
+GAME_PKG="com.hutchgames.cccg"
+if [ -f "${MODDIR}/locale" ] && [ -s "${MODDIR}/locale" ]; then
+    TARGET_LOCALE=$(cat "${MODDIR}/locale")
+else
+    TARGET_LOCALE="ru_RU"
+fi
+# Convert xx_YY -> xx-YY (BCP-47, required by `cmd locale`)
+TARGET_BCP47=$(echo "$TARGET_LOCALE" | tr '_' '-')
+
+if command -v cmd >/dev/null 2>&1; then
+    cmd locale set-app-locales "$GAME_PKG" --user 0 --locales "$TARGET_BCP47" >> "$LOG" 2>&1
+    CUR_APP_LOCALE=$(cmd locale get-app-locales "$GAME_PKG" --user 0 2>&1)
+    log "Per-app locale for $GAME_PKG -> $TARGET_BCP47 (verify: $CUR_APP_LOCALE)"
+
+    # Force-stop the game so it re-reads the locale fresh on next launch,
+    # rather than keeping whatever it initialized with earlier this boot.
+    if command -v am >/dev/null 2>&1; then
+        am force-stop "$GAME_PKG" >> "$LOG" 2>&1
+        log "Force-stopped $GAME_PKG to apply new locale on next launch"
+    fi
+else
+    log "cmd binary not available, skipping per-app locale override"
+fi
+
+# Retry the sed-based prefs patch too, as a belt-and-suspenders fallback
+# in case the app doesn't honor per-app locale for its own custom language key.
+# Only touch it if the game isn't currently running, to avoid racing a live save.
+if ! pidof "$GAME_PKG" >/dev/null 2>&1; then
+    sh "${MODDIR}/set_locale.sh"
+fi
+
 sync_file() {
     if [ -f "$SRC" ]; then
         cp -f "$SRC" "$DST" 2>/dev/null && {
+            if [ -f "$SRC_USER" ]; then
+                cp -f "$SRC_USER" "$DST_USER" 2>/dev/null
+                chmod 0644 "$DST_USER"
+            fi
             chmod 0644 "$DST"
-            log "Синхронізовано: $SRC -> $DST"
+            log "Синхронізовано: $SRC -> $DST, $SRC_USER -> $DST_USER"
         }
     else
         log "Файл-джерело не знайдено: $SRC"
