@@ -388,13 +388,25 @@
   // ---- session log (in-panel, exportable) --------------------------------
   const sessionLog = [];
   const LOG_FILE = "/sdcard/Download/td2tdr_log.txt";
-  function addLog(msg) {
-    const line = `[${new Date().toLocaleTimeString("uk-UA")}] ${msg}`;
+  function addLog(msg, level) {
+    const lvl = level || (msg.includes("ПОМИЛКА") || msg.includes("НЕОБРОБЛЕНА") || msg.includes("помилка") || msg.includes("Помилка") ? "E" : msg.includes("УВАГА") || msg.includes(" warns ") ? "W" : "I");
+    const ts = new Date().toLocaleTimeString("uk-UA");
+    const line = `[${ts}] ${msg}`;
     sessionLog.push(line);
-    const elLog = $("log");
-    if (elLog) {
-      elLog.textContent = sessionLog.join("\n");
-      elLog.scrollTop = elLog.scrollHeight;
+    const el = $("log");
+    if (el) {
+      const empty = el.querySelector('[data-i18n="log_empty"]');
+      if (empty) empty.remove();
+      const d = document.createElement("div");
+      d.className = "log-line";
+      d.dataset.level = lvl;
+      d.innerHTML = `<span class="log-time">${ts}</span><span class="log-level log-level-${lvl.toLowerCase()}">${lvl}</span> ${escapeHtml(msg)}`;
+      const filter = $("logLevelFilter");
+      if (filter && filter.value !== "all" && filter.value !== lvl) {
+        d.style.display = "none";
+      }
+      el.appendChild(d);
+      el.scrollTop = el.scrollHeight;
     }
     // append to file on device (fire-and-forget)
     if (hasKsu()) {
@@ -818,7 +830,7 @@
 
   function applyResolvedTheme(choice) {
     const resolved = choice === "auto"
-      ? (systemLightMedia && systemLightMedia.matches ? "light" : "dark")
+      ? (systemLightMedia && systemLightMedia.matches ? "light" : "amoled")
       : choice;
     document.documentElement.setAttribute("data-theme", resolved);
   }
@@ -841,7 +853,7 @@
         if (errno === 0 && stdout.trim()) choice = stdout.trim();
       } catch (e) {}
     }
-    if (!["auto", "light", "dark"].includes(choice)) choice = "auto";
+    if (!["auto", "light", "dark", "amoled"].includes(choice)) choice = "amoled";
     currentThemeChoice = choice;
     applyResolvedTheme(choice);
     updateThemeSwitchUI(choice);
@@ -1262,6 +1274,25 @@
     initThemeSwitch();
     loadTheme();
     recordSnapshotIfNeeded().then(renderAnalytics);
+    const logClear = $("logClear");
+    if (logClear) logClear.addEventListener("click", () => {
+      const el = $("log");
+      if (el) el.innerHTML = "";
+      sessionLog.length = 0;
+      addLog("Консоль очищено");
+    });
+
+    const logFilter = $("logLevelFilter");
+    if (logFilter) logFilter.addEventListener("change", () => {
+      const val = logFilter.value;
+      const el = $("log");
+      if (!el) return;
+      el.querySelectorAll(".log-line").forEach((d) => {
+        if (val === "all") { d.style.display = ""; return; }
+        d.style.display = d.dataset.level === val ? "" : "none";
+      });
+    });
+
     const clearHistoryBtn = $("clearHistoryBtn");
     if (clearHistoryBtn) clearHistoryBtn.addEventListener("click", async () => {
       if (!hasKsu()) return;

@@ -83,6 +83,93 @@
   background: #ffffff;
 }
 
+[data-theme="light"] .log-toolbar {
+  background: rgba(10, 12, 24, 0.04);
+  border-color: rgba(10, 12, 24, 0.1);
+}
+
+[data-theme="light"] .log-filter {
+  color: var(--text-dim);
+  background: rgba(10, 12, 24, 0.06);
+  border-color: rgba(10, 12, 24, 0.1);
+}
+
+[data-theme="light"] .log-clear {
+  color: var(--text-dim);
+  background: rgba(10, 12, 24, 0.06);
+  border-color: rgba(10, 12, 24, 0.1);
+}
+
+[data-theme="light"] .log-clear:hover {
+  color: var(--bad);
+  border-color: var(--bad);
+}
+
+[data-theme="light"] .log-level-i { color: #1a6b3a; }
+[data-theme="light"] .log-level-w { color: #8a6a00; }
+[data-theme="light"] .log-level-e { color: #b01020; }
+[data-theme="light"] .log-level-d { color: var(--text-dimmer); }
+
+/* ---- AMOLED theme ---- */
+[data-theme="amoled"] {
+  --bg-0: #000000;
+  --bg-1: #0a0a0a;
+  --card: rgba(255, 255, 255, 0.04);
+  --card-border: rgba(255, 255, 255, 0.08);
+  --card-border-hi: rgba(255, 255, 255, 0.14);
+}
+
+[data-theme="amoled"] .head h1 {
+  background: linear-gradient(90deg, #ffffff, #c7ceff 70%);
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+
+[data-theme="amoled"] .tab-nav {
+  background: #000000;
+}
+
+[data-theme="amoled"] .tab-btn.active {
+  background: #0a0a0a;
+}
+
+[data-theme="amoled"] .sync-btn.onclic {
+  background: #000000;
+}
+
+[data-theme="amoled"] .lang-save-btn.onclic {
+  background: #000000;
+}
+
+[data-theme="amoled"] .lang-menu,
+[data-theme="amoled"] .toast-inline,
+[data-theme="amoled"] .modal-card {
+  background: #0a0a0a;
+  box-shadow: 0 20px 44px -12px rgba(0, 0, 0, 0.9), 0 0 0 1px rgba(255, 255, 255, 0.04);
+}
+
+[data-theme="amoled"] .log-toolbar {
+  background: #000000;
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+[data-theme="amoled"] .log-filter {
+  color: var(--text-dim);
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+[data-theme="amoled"] .log-clear {
+  color: var(--text-dim);
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+[data-theme="amoled"] .log-clear:hover {
+  color: var(--bad);
+  border-color: var(--bad);
+}
+
 [data-theme="light"] .lang-menu,
 [data-theme="light"] .toast-inline,
 [data-theme="light"] .modal-card {
@@ -873,6 +960,170 @@ body {
   margin-top: 8px;
   font-size: 11.5px;
   color: var(--text-dim);
+}
+
+/* ---------- console / log box ---------- */
+.log-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--card-border);
+}
+
+.log-toolbar-title {
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-dim);
+  margin-right: auto;
+}
+
+.log-filter {
+  font-family: "SF Mono", "JetBrains Mono", "Courier New", monospace;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 4px 8px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--card-border);
+  color: var(--text-dim);
+  cursor: pointer;
+  outline: none;
+  transition: all 0.18s ease;
+  -webkit-appearance: none;
+  appearance: none;
+  -webkit-padding-end: 20px;
+  padding-right: 20px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%236b7284' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 6px center;
+}
+
+.log-filter:hover {
+  border-color: var(--card-border-hi);
+  color: var(--text);
+}
+
+.log-clear {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--card-border);
+  color: var(--text-dimmer);
+  cursor: pointer;
+  transition: all 0.18s ease;
+  font-size: 13px;
+  flex-shrink: 0;
+  padding: 0;
+}
+
+.log-clear:hover {
+  color: var(--bad);
+  border-color: var(--bad);
+  background: rgba(255, 92, 122, 0.08);
+}
+
+.log-box {
+  padding: 10px 12px;
+  min-height: 120px;
+  max-height: 320px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
+}
+
+.log-box::-webkit-scrollbar { width: 5px; }
+.log-box::-webkit-scrollbar-track { background: transparent; }
+.log-box::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); border-radius: 10px; }
+
+.log-line {
+  font-family: "SF Mono", "JetBrains Mono", "Courier New", monospace;
+  font-size: 11px;
+  line-height: 1.6;
+  color: var(--text-dim);
+  white-space: pre-wrap;
+  word-break: break-all;
+  animation: logFadeIn 0.15s ease both;
+}
+
+@keyframes logFadeIn {
+  from { opacity: 0; transform: translateY(3px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.log-line:empty::after { content: "\00a0"; }
+
+.log-level {
+  font-weight: 800;
+  margin-right: 4px;
+  padding: 0 3px;
+  border-radius: 3px;
+  font-size: 9.5px;
+}
+
+.log-level-i { color: var(--ok); }
+.log-level-w { color: var(--warn); }
+.log-level-e { color: var(--bad); }
+.log-level-d { color: var(--text-dimmer); }
+
+.log-time {
+  color: var(--text-dimmer);
+  margin-right: 6px;
+  font-size: 10px;
+}
+
+/* ---------- theme switch ---------- */
+.theme-switch {
+  display: flex;
+  gap: 6px;
+}
+
+.theme-opt {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 6px 8px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--card-border);
+  color: var(--text-dimmer);
+  cursor: pointer;
+  transition: all 0.18s ease;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.theme-opt:hover {
+  border-color: var(--card-border-hi);
+  color: var(--text-dim);
+}
+
+.theme-opt.active {
+  background: rgba(109, 91, 255, 0.1);
+  border-color: var(--accent-1);
+  color: var(--accent-1);
+  box-shadow: 0 0 12px -4px rgba(109, 91, 255, 0.35);
+}
+
+[data-theme="light"] .theme-opt.active {
+  background: rgba(109, 91, 255, 0.08);
+}
+
+.theme-opt-icon {
+  font-size: 18px;
+  line-height: 1;
 }
 
 /* ---------- animated sync button ---------- */
