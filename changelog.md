@@ -1,3 +1,7 @@
+# v0.0.303
+- Очищено проект від зайвих файлів (видалено папку temp/, scripts/fix_html.js, webroot/css/style.css, webroot/data/garage_normalized.json).
+- Оптимізовано структуру проекту.
+
 # v0.0.302
 - Змінено порядок табів: Синхр → Гараж → Аналіт → Мова → Журнал → Реліз.
 - Tab bar закріплено внизу екрана з blur-ефектом (position: fixed, bottom: 12px).
