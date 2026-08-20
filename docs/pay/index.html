@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>td2tdr — Підтримати проєкт</title>
+<meta name="description" content="Підтримати розробку td2tdr — Garage Sync модуля для Top Drives">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+
+  :root {
+    --bg-0: #05060a;
+    --bg-1: #0b0c14;
+    --card: rgba(255,255,255,.045);
+    --card-border: rgba(255,255,255,.09);
+    --card-border-hi: rgba(129,140,248,.4);
+    --text: #f2f3f8;
+    --text-dim: rgba(242,243,248,.62);
+    --text-dimmer: rgba(242,243,248,.36);
+    --accent-1: #818cf8;
+    --accent-2: #a78bfa;
+    --accent-3: #67e8f9;
+    --hazard: #f5c400;
+    --radius: 20px;
+    --spring: cubic-bezier(.34,1.56,.64,1);
+    --ease-out: cubic-bezier(.16,1,.3,1);
+  }
+
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background:
+      radial-gradient(700px 420px at 12% -8%, rgba(129,140,248,.16), transparent 60%),
+      radial-gradient(600px 500px at 90% 8%, rgba(103,232,249,.10), transparent 55%),
+      var(--bg-0);
+    color: var(--text);
+    font-family: 'Inter', -apple-system, "Segoe UI", Roboto, sans-serif;
+    padding: 28px 16px 60px;
+    display: flex;
+    justify-content: center;
+  }
+
+  .wrap { width: 100%; max-width: 440px; }
+
+  /* ---------- header ---------- */
+  header {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding-bottom: 20px;
+    margin-bottom: 22px;
+  }
+  header::after {
+    content: "";
+    position: absolute;
+    left: 0; right: 0; bottom: 0;
+    height: 4px;
+    border-radius: 2px;
+    background: repeating-linear-gradient(-45deg, var(--hazard) 0 9px, #17181d 9px 18px);
+    opacity: .9;
+  }
+  .logo {
+    width: 46px; height: 46px; border-radius: 14px; flex-shrink: 0;
+    background: #1a1b20;
+    border: 2px solid var(--hazard);
+    display: grid; place-items: center;
+    color: var(--hazard);
+    font-weight: 900; font-size: 21px;
+    box-shadow: 0 6px 18px -6px rgba(245,196,0,.35);
+  }
+  header h1 { margin: 0; font-size: 18px; font-weight: 800; letter-spacing: -.01em; }
+  header p { margin: 3px 0 0; font-size: 12.5px; color: var(--text-dim); }
+
+  /* ---------- intro ---------- */
+  .intro {
+    font-size: 14px;
+    line-height: 1.55;
+    color: var(--text-dim);
+    margin-bottom: 24px;
+  }
+  .intro b { color: var(--text); }
+
+  /* ---------- method cards ---------- */
+  .methods { display: flex; flex-direction: column; gap: 12px; }
+
+  .method {
+    position: relative;
+    background: var(--card);
+    backdrop-filter: blur(22px) saturate(1.4);
+    -webkit-backdrop-filter: blur(22px) saturate(1.4);
+    border: 1px solid var(--card-border);
+    border-radius: var(--radius);
+    padding: 16px;
+    transition: border-color .25s var(--ease-out);
+  }
+  .method:hover { border-color: var(--card-border-hi); }
+
+  .method-head {
+    display: flex; align-items: center; gap: 10px;
+    margin-bottom: 12px;
+  }
+  .method-icon {
+    width: 30px; height: 30px; border-radius: 9px; flex-shrink: 0;
+    display: grid; place-items: center;
+    background: linear-gradient(135deg, var(--accent-1), var(--accent-2) 55%, var(--accent-3));
+  }
+  .method-icon svg { width: 16px; height: 16px; color: #fff; }
+  .method-title { font-size: 14.5px; font-weight: 700; }
+  .method-sub { font-size: 11.5px; color: var(--text-dimmer); margin-top: 1px; }
+
+  .field {
+    display: flex; align-items: center; gap: 8px;
+    background: rgba(255,255,255,.04);
+    border: 1px solid var(--card-border);
+    border-radius: 12px;
+    padding: 10px 12px;
+    margin-top: 8px;
+  }
+  .field:first-of-type { margin-top: 0; }
+  .field-value {
+    flex: 1; min-width: 0;
+    font-size: 13.5px; font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: .01em;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .field-label {
+    font-size: 10px; text-transform: uppercase; letter-spacing: .04em;
+    color: var(--text-dimmer); font-weight: 700; flex-shrink: 0;
+  }
+
+  .copy-btn {
+    flex-shrink: 0;
+    width: 30px; height: 30px; border-radius: 9px;
+    display: grid; place-items: center;
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    color: var(--text-dim);
+    cursor: pointer;
+    transition: all .18s var(--spring);
+  }
+  .copy-btn:hover { border-color: var(--card-border-hi); color: var(--text); }
+  .copy-btn:active { transform: scale(.9); }
+  .copy-btn svg { width: 14px; height: 14px; }
+  .copy-btn.copied { color: #34d399; border-color: rgba(52,211,153,.5); }
+
+  .link-btn {
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    width: 100%;
+    padding: 11px;
+    border-radius: 12px;
+    border: none;
+    background: linear-gradient(135deg, var(--accent-1), var(--accent-2) 60%, var(--accent-3));
+    color: #0a0a12;
+    font-family: inherit;
+    font-size: 13.5px; font-weight: 800;
+    text-decoration: none;
+    cursor: pointer;
+    transition: transform .18s var(--spring), box-shadow .18s var(--ease-out);
+  }
+  .link-btn:hover { box-shadow: 0 8px 24px -8px rgba(129,140,248,.55); }
+  .link-btn:active { transform: scale(.97); }
+
+  .note {
+    text-align: center;
+    font-size: 11.5px;
+    color: var(--text-dimmer);
+    margin-top: 26px;
+    line-height: 1.6;
+  }
+  .note a { color: var(--accent-1); text-decoration: none; }
+  .note a:hover { text-decoration: underline; }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="logo">!</div>
+      <div>
+        <h1>td2tdr</h1>
+        <p>Підтримати розробку модуля</p>
+      </div>
+    </header>
+
+    <p class="intro">
+      td2tdr — безкоштовний Garage Sync модуль для <b>Top Drives</b>, який я підтримую
+      у вільний час. Якщо він зекономив тобі час — можеш пригостити мене кавою.
+      Це повністю добровільно і ніяк не впливає на функціонал модуля.
+    </p>
+
+    <div class="methods">
+
+      <!-- Card (Mono/Privat) -->
+      <div class="method">
+        <div class="method-head">
+          <div class="method-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2.5"/><path d="M2 10h20"/></svg>
+          </div>
+          <div>
+            <div class="method-title">Картка</div>
+            <div class="method-sub">Monobank / PrivatBank</div>
+          </div>
+        </div>
+        <div class="field">
+          <span class="field-label">Номер</span>
+          <span class="field-value" id="cardNum">0000 0000 0000 0000</span>
+          <button class="copy-btn" data-copy="cardNum" title="Скопіювати">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+          </button>
+        </div>
+        <!-- TODO: за бажанням додай посилання на monobank-банку замість/на додачу до номера картки:
+        <a class="link-btn" href="https://send.monobank.ua/ЗАМІНИ" target="_blank" rel="noopener" style="margin-top:8px;">Відкрити банку Monobank</a>
+        -->
+      </div>
+
+      <!-- PayPal -->
+      <div class="method">
+        <div class="method-head">
+          <div class="method-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M7 21h3l1-6"/><path d="M8 15h6.5a4.5 4.5 0 0 0 4.4-5.5"/><path d="M9 3h6.5A4.5 4.5 0 0 1 20 8.4"/><path d="M5 9h6.5a4.5 4.5 0 0 1 4.4 5.5"/></svg>
+          </div>
+          <div>
+            <div class="method-title">PayPal</div>
+            <div class="method-sub">paypal.me</div>
+          </div>
+        </div>
+        <a class="link-btn" href="https://paypal.me/ЗАМІНИ_НА_СВІЙ_ЛОГІН" target="_blank" rel="noopener">Відкрити PayPal</a>
+      </div>
+
+      <!-- Crypto -->
+      <div class="method">
+        <div class="method-head">
+          <div class="method-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M9.5 9.5h4a1.8 1.8 0 0 1 0 3.5h-4M9.5 13h4a1.8 1.8 0 0 1 0 3.5h-4"/></svg>
+          </div>
+          <div>
+            <div class="method-title">Крипта</div>
+            <div class="method-sub">USDT / BTC</div>
+          </div>
+        </div>
+        <div class="field">
+          <span class="field-label">USDT&nbsp;TRC20</span>
+          <span class="field-value" id="usdtAddr">TXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX</span>
+          <button class="copy-btn" data-copy="usdtAddr" title="Скопіювати">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+          </button>
+        </div>
+        <div class="field">
+          <span class="field-label">BTC</span>
+          <span class="field-value" id="btcAddr">bc1qXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX</span>
+          <button class="copy-btn" data-copy="btcAddr" title="Скопіювати">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Buy Me a Coffee / Ko-fi -->
+      <div class="method">
+        <div class="method-head">
+          <div class="method-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4Z"/><path d="M6 1v3M10 1v3M14 1v3"/></svg>
+          </div>
+          <div>
+            <div class="method-title">Buy Me a Coffee</div>
+            <div class="method-sub">одноразово, будь-яка сума</div>
+          </div>
+        </div>
+        <a class="link-btn" href="https://www.buymeacoffee.com/ЗАМІНИ_НА_СВІЙ_ЛОГІН" target="_blank" rel="noopener">Пригостити кавою</a>
+      </div>
+
+    </div>
+
+    <p class="note">
+      Питання чи пропозиції — <a href="https://t.me/sansej89" target="_blank" rel="noopener">@sansej89</a>
+      · Новини Top Drives — <a href="https://t.me/topdrives_ua" target="_blank" rel="noopener">@topdrives_ua</a>
+    </p>
+  </div>
+
+<script>
+  document.querySelectorAll(".copy-btn[data-copy]").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const src = document.getElementById(btn.dataset.copy);
+      if (!src) return;
+      try {
+        await navigator.clipboard.writeText(src.textContent.trim());
+        btn.classList.add("copied");
+        setTimeout(() => btn.classList.remove("copied"), 1400);
+      } catch (e) {
+        // clipboard API unavailable — select text as a fallback
+        const range = document.createRange();
+        range.selectNodeContents(src);
+        const sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(range);
+      }
+    });
+  });
+</script>
+</body>
+</html>
