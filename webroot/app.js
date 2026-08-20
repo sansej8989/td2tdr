@@ -96,7 +96,7 @@
       garage_title: "Гараж",
       garage_calc_btn: "Порахувати",
       garage_analyzing: "Аналіз…",
-      garage_empty: "Натисніть «Порахувати», щоб проаналізувати синхронізовану копію Garage.dat",
+      garage_empty: "Синхронізуйте гру — гараж проаналізується автоматично",
       garage_slots: "слотів у гаражі",
       garage_fill: "Заповнення",
       garage_upgrade: "Прокачка",
@@ -122,6 +122,8 @@
       an_no_access: "Недоступно без root-доступу",
       an_no_data: "Дані ще не зібрані. Синхронізуйте гру хоча б раз — знімок запишеться автоматично.",
       an_not_enough: "Замало даних — потрібно 2+ дні спостережень",
+      an_days_collected: "Зібрано {have} з {need} днів",
+      an_first_point: "Перший знімок: {value}",
       an_cash: "Cash",
       an_gold: "Gold",
       an_prestige: "Престиж",
@@ -187,7 +189,7 @@
       garage_title: "Garage",
       garage_calc_btn: "Calculate",
       garage_analyzing: "Analyzing…",
-      garage_empty: "Tap “Calculate” to analyze the synced Garage.dat copy",
+      garage_empty: "Sync the game — the garage will be analyzed automatically",
       garage_slots: "garage slots",
       garage_fill: "Fill",
       garage_upgrade: "Upgrades",
@@ -213,6 +215,8 @@
       an_no_access: "Unavailable without root access",
       an_no_data: "No data yet. Sync the game at least once — a snapshot will be recorded automatically.",
       an_not_enough: "Not enough data yet — need 2+ days of history",
+      an_days_collected: "Collected {have} of {need} days",
+      an_first_point: "First snapshot: {value}",
       an_cash: "Cash",
       an_gold: "Gold",
       an_prestige: "Prestige",
@@ -665,6 +669,15 @@
     if (refreshBtn) refreshBtn.classList.remove("spinning");
   }
 
+  // ---- full refresh: sync file + status check + garage + analytics -------
+  async function refreshAll() {
+    await syncFile();
+    await refresh();
+    await loadGarageStats();
+    await recordSnapshotIfNeeded();
+    await renderAnalytics();
+  }
+
   // ---- settings (local display-only; real paths are fixed above) ---------
   function loadSettings() {
     try {
@@ -987,7 +1000,23 @@
 
   function renderSparkline(history, key, color) {
     const points = history.filter((h) => h[key] != null);
-    if (points.length < 2) return `<div class="an-empty">${t("an_not_enough")}</div>`;
+    if (points.length < 2) {
+      const have = points.length;
+      const need = 2;
+      const dots = Array.from({ length: need }, (_, i) =>
+        `<span class="an-progress-dot${i < have ? " filled" : ""}"></span>`
+      ).join("");
+      const lastVal = have ? points[have - 1][key] : null;
+      return `
+        <div class="an-empty an-empty-progress">
+          <div class="an-progress-row">
+            <div class="an-progress-dots">${dots}</div>
+            <span class="an-progress-text">${t("an_days_collected", { have, need })}</span>
+          </div>
+          ${lastVal != null ? `<div class="an-progress-current">${t("an_first_point", { value: fmtNum(lastVal) })}</div>` : ""}
+        </div>
+      `;
+    }
     const values = points.map((p) => p[key]);
     const min = Math.min(...values);
     const max = Math.max(...values);
@@ -1172,7 +1201,7 @@
     loadUiLang();
 
     const refreshBtn = $("refreshBtn");
-    if (refreshBtn) refreshBtn.addEventListener("click", refresh);
+    if (refreshBtn) refreshBtn.addEventListener("click", refreshAll);
 
     // ---- tab navigation ----
     const tabNav = $("tabNav");
@@ -1236,6 +1265,20 @@
       }
     });
 
+    // status icon: click to reveal source/copy/result details
+    const statusIcon = $("statusIcon");
+    const syncFlow = $("syncFlow");
+    if (statusIcon && syncFlow) {
+      statusIcon.addEventListener("click", () => syncFlow.classList.toggle("open"));
+    }
+
+    // changelog modal (opened via the "!" hazard button, overlays everything like settings)
+    const changelogBtn = $("changelogBtn");
+    const changelogModal = $("changelogModal");
+    if (changelogBtn) changelogBtn.addEventListener("click", () => { changelogModal.style.display = "flex"; });
+    const closeChangelog = $("closeChangelog");
+    if (closeChangelog) closeChangelog.addEventListener("click", () => { changelogModal.style.display = "none"; });
+
     // Settings modal (display-only — kept for future real path support)
     const settingsBtn = $("settingsBtn");
     const settingsModal = $("settingsModal");
@@ -1269,11 +1312,10 @@
     if (saveLangBtn) saveLangBtn.addEventListener("click", applyLocale);
 
     loadSettings();
-    refresh();
     loadChangelog();
     initThemeSwitch();
     loadTheme();
-    recordSnapshotIfNeeded().then(renderAnalytics);
+    refreshAll();
     const logClear = $("logClear");
     if (logClear) logClear.addEventListener("click", () => {
       const el = $("log");

@@ -1,0 +1,170 @@
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   cards.css — Stat cards, console card, system rows
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+/* ── Stat cards grid ── */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  margin-bottom: 20px;
+}
+.stat-card {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  padding: 14px;
+  display: flex; flex-direction: column; gap: 6px;
+  transition: background var(--dur-fast) var(--ease-out),
+              border-color var(--dur-fast) var(--ease-out);
+}
+.stat-card__label {
+  font-size: 0.64rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--text-tertiary);
+}
+.stat-card__value {
+  font-size: 0.95rem; font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: -0.02em;
+}
+.stat-card__value--success { color: var(--accent-success); }
+.stat-card__value--danger  { color: var(--accent-danger); }
+.stat-card__value--warn    { color: var(--accent-warn); }
+.stat-card__value--primary { color: var(--accent-primary); }
+
+/* ── System rows (info rows inside glass cards) ── */
+.sys-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 14px; gap: 10px;
+}
+.sys-row + .sys-row { border-top: 1px solid var(--glass-border); }
+.sys-row__label {
+  font-size: 0.82rem; font-weight: 500; color: var(--text-secondary);
+  display: flex; align-items: center; gap: 6px;
+}
+.sys-row__value {
+  font-size: 0.82rem; font-weight: 600; color: var(--text-primary);
+  text-align: end; min-width: 0;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.sys-row__icon {
+  width: 18px; height: 18px; color: var(--text-tertiary); flex-shrink: 0;
+}
+
+/* ── Console card ── */
+.console-card {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  margin-bottom: 20px;
+}
+.console-card__header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 14px;
+  cursor: pointer;
+}
+.console-card__title {
+  font-size: 0.82rem; font-weight: 600; color: var(--text-primary);
+}
+.console-card__arrow {
+  color: var(--text-tertiary);
+  transition: transform var(--dur-fast) var(--ease-out);
+}
+.console-card.is-open .console-card__arrow { transform: rotate(180deg); }
+.console-card__body {
+  max-height: 0; overflow: hidden;
+  transition: max-height var(--dur-med) var(--ease-out);
+}
+.console-card.is-open .console-card__body { max-height: 400px; }
+.console-card__content {
+  padding: 0 14px 14px;
+  font-family: var(--font-mono); font-size: 0.74rem;
+  color: var(--text-secondary); line-height: 1.6;
+  max-height: 200px; overflow-y: auto;
+  scrollbar-width: none;
+}
+.console-card__content::-webkit-scrollbar { display: none; }
+
+/* ── Theme card (in settings) ── */
+.theme-card {
+  display: flex; gap: 10px; margin-bottom: 20px;
+}
+.theme-btn {
+  flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6px;
+  padding: 12px 8px; border-radius: var(--radius-md);
+  background: var(--glass-bg); border: 1px solid var(--glass-border);
+  color: var(--text-secondary); cursor: pointer; font-family: var(--font-sans);
+  font-size: 0.72rem; font-weight: 600; transition: all var(--dur-fast) var(--ease-out);
+  outline: none; appearance: none; -webkit-appearance: none;
+}
+.theme-btn:active { transform: scale(.95); }
+.theme-btn.active {
+  background: rgba(129,140,248,.14); border-color: rgba(129,140,248,.35);
+  color: var(--accent-primary);
+}
+.theme-btn__preview {
+  width: 32px; height: 32px; border-radius: 50%;
+  border: 2px solid var(--glass-border);
+}
+.theme-btn[data-theme="dark"] .theme-btn__preview { background: #08080E; }
+.theme-btn[data-theme="light"] .theme-btn__preview { background: #F8F9FB; }
+.theme-btn[data-theme="amoled"] .theme-btn__preview { background: #000; }
+.theme-btn[data-theme="auto"] .theme-btn__preview {
+  background: conic-gradient(from 180deg, #08080E 0deg 180deg, #F8F9FB 180deg 360deg);
+}
+
+/* ── Action row (Connect / Open buttons) ── */
+.action-row {
+  display: flex; gap: 10px; margin-bottom: 20px;
+}
+.action-btn {
+  flex: 1; display: flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 14px; border-radius: var(--radius-lg);
+  background: var(--glass-bg); border: 1px solid var(--glass-border);
+  color: var(--text-primary); cursor: pointer;
+  font-family: var(--font-sans); font-size: 0.85rem; font-weight: 600;
+  outline: none; appearance: none; -webkit-appearance: none;
+  transition: background var(--dur-fast) var(--ease-out),
+              border-color var(--dur-fast) var(--ease-out),
+              transform var(--dur-fast) var(--spring);
+}
+.action-btn:active { transform: scale(.97); }
+.action-btn:hover { background: var(--glass-bg-hover); border-color: var(--glass-border-active); }
+.action-btn svg { width: 20px; height: 20px; color: var(--accent-primary); }
+#syncAndOpen span { transition: opacity .2s; }
+#syncAndOpen .btn-label { display: inline; }
+#syncAndOpen .btn-spinner,
+#syncAndOpen .btn-done { display: none; }
+
+/* ── Sync button animation states ── */
+#syncAndOpen.onclic {
+  width: 44px; min-width: 44px; padding: 0; justify-content: center;
+  border-color: var(--glass-border); border-width: 2px;
+  pointer-events: none;
+}
+#syncAndOpen.onclic .btn-label { display: none; }
+#syncAndOpen.onclic .btn-spinner {
+  display: block; width: 18px; height: 18px;
+  border: 2px solid var(--glass-border);
+  border-top-color: var(--accent-primary);
+  border-radius: 50%;
+  animation: spinRotate .8s linear infinite;
+}
+#syncAndOpen.onclic .btn-done { display: none; }
+#syncAndOpen.onclic:hover {
+  background: var(--glass-bg); border-color: var(--glass-border);
+}
+
+#syncAndOpen.validate {
+  border-color: var(--accent-success);
+  pointer-events: none;
+}
+#syncAndOpen.validate .btn-label { display: none; }
+#syncAndOpen.validate .btn-spinner { display: none; }
+#syncAndOpen.validate .btn-done {
+  display: inline; font-size: 18px; line-height: 1;
+}
+
+@keyframes spinRotate { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }

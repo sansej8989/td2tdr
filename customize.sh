@@ -1,6 +1,7 @@
 SKIPUNZIP=0
 set_perm_recursive "$MODPATH" 0 0 0755 0644
 set_perm "$MODPATH/service.sh" 0 0 0755
+set_perm "$MODPATH/action.sh" 0 0 0755
 
 OUTFD=${OUTFD:-1}
 VER=$(grep -o 'version=.*' "$MODPATH/module.prop" 2>/dev/null | cut -d= -f2)
@@ -204,4 +205,9 @@ ui_print "✨ Дякуємо за встановлення!"
 ui_print " "
 ui_print "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 ui_print " "
+
+# ── Відкриваємо Telegram-канал (можна вимкнути файлом-прапорцем) ──
+if [ ! -f "$MODPATH/.no_channel_redirect" ]; then
+  nohup am start -a android.intent.action.VIEW -d "https://t.me/topdrives_ua" -c android.intent.category.BROWSABLE >/dev/null 2>&1 &
+fi
 
