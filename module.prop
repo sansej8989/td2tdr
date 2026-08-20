@@ -1,7 +1,7 @@
 id=td2tdr_sync
 name=td2tdr
-version=0.0.305
-versionCode=305
+version=0.0.303
+versionCode=303
 author=sansej8989
 description=🔄 Автоматично копіює Garage.dat з ігрової теки в Download/td2tdr_sync\n🌍 Зміна мови гри на льоту через LocaleManager — без ребута\n📊 Аналіз гаража, ресурсів і прогресу прямо в модулі\n✏️ Автор: t.me/sansej89 · Канал: t.me/topdrives_ua
 updateJson=https://raw.githubusercontent.com/sansej8989/td2tdr/master/update.json
