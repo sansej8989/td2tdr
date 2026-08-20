@@ -1,0 +1,20 @@
+{
+  "player_stats": {
+    "bucks": 345073,
+    "gold": 880,
+    "cups": 61310,
+    "prestige": { "value": 920, "max": 1000 },
+    "rq": 150
+  },
+  "stats": {
+    "total_cards": 3822,
+    "locked_count": 412,
+    "held_count": 34,
+    "next_held_in": "2d 4h"
+  },
+  "wld": { "w": 1240, "d": 120, "l": 410 },
+  "cards": [
+    { "cardRecordId": "r1", "cardId": "c100", "wins": 120, "losses": 10, "rarity": "Legendary" },
+    { "cardRecordId": "r2", "cardId": "c200", "wins": 85, "losses": 20, "rarity": "Epic" }
+  ]
+}
