@@ -31,19 +31,22 @@
   <main class="wrap">
     <header class="head head-hazard">
       <div class="haz-stripe"></div>
-      <button type="button" id="changelogBtn" class="head-icon hz-icon" title="Реліз / Changelog">!</button>
+      <button type="button" id="changelogBtn" class="head-icon hz-icon" title="Реліз / Changelog" data-i18n-title="tt_changelog">
+        !
+        <span id="updateBadge" class="tab-badge" hidden aria-label="update available"></span>
+      </button>
       <div class="head-text">
         <h1>td2tdr</h1>
         <p class="sub" data-i18n="head_sub">Garage Sync — ручне оновлення, локальні дані</p>
       </div>
       <div class="head-actions">
-        <button id="settingsBtn" class="btn-icon" title="Налаштування">
+        <button id="settingsBtn" class="btn-icon" title="Налаштування" data-i18n-title="tt_settings">
           <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="12" cy="12" r="3"/>
             <path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1.04 1.56V21a2 2 0 0 1-4 0v-.09A1.7 1.7 0 0 0 9 19.37a1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.7 1.7 0 0 0 4.63 15a1.7 1.7 0 0 0-1.56-1.04H3a2 2 0 0 1 0-4h.09A1.7 1.7 0 0 0 4.63 9a1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.7 1.7 0 0 0 9 4.63a1.7 1.7 0 0 0 1.04-1.56V3a2 2 0 0 1 4 0v.09a1.7 1.7 0 0 0 1.04 1.56 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.7 1.7 0 0 0 19.37 9c.14.51.5.94 1.56 1.04H21a2 2 0 0 1 0 4h-.09a1.7 1.7 0 0 0-1.56 1.04Z"/>
           </svg>
         </button>
-        <button id="refreshBtn" class="btn-icon" title="Оновити">
+        <button id="refreshBtn" class="btn-icon" title="Оновити" data-i18n-title="tt_refresh">
           <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
             <path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 3v6h-6"/>
           </svg>
@@ -56,18 +59,22 @@
       <button class="tab-btn active" data-tab="sync" type="button">
         <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
         <span data-i18n="tab_sync">Синхр.</span>
+        <span class="tab-indicator" data-tab-indicator="sync"></span>
       </button>
       <button class="tab-btn" data-tab="garage" type="button">
         <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M3 13h2l2-5h10l2 5h2"/><rect x="3" y="13" width="18" height="6" rx="1.5"/><circle cx="7.5" cy="19" r="1.2" fill="currentColor" stroke="none"/><circle cx="16.5" cy="19" r="1.2" fill="currentColor" stroke="none"/></svg>
         <span data-i18n="tab_garage">Гараж</span>
+        <span class="tab-indicator" data-tab-indicator="garage"></span>
       </button>
       <button class="tab-btn" data-tab="analytics" type="button">
         <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m7 14 4-4 3 3 5-6"/></svg>
         <span data-i18n="tab_analytics">Аналіт.</span>
+        <span class="tab-indicator" data-tab-indicator="analytics"></span>
       </button>
       <button class="tab-btn" data-tab="log" type="button">
         <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M9 13h6"/><path d="M9 17h6"/></svg>
         <span data-i18n="tab_log">Журнал</span>
+        <span class="tab-indicator" data-tab-indicator="log"></span>
       </button>
     </nav>
 
@@ -77,7 +84,7 @@
     <section class="card status-card">
       <div class="status-main">
         <div class="status-left">
-          <div id="statusIcon" class="status-icon ok" title="Натисніть, щоб побачити деталі">
+          <div id="statusIcon" class="status-icon ok" title="Натисніть, щоб побачити деталі" data-i18n-title="tt_status_details">
             <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M13 2 3 14h7l-1 8 11-14h-7l1-6z"/></svg>
           </div>
           <div>
@@ -157,14 +164,14 @@
           </button>
           <div class="lang-menu" id="langMenu" role="listbox" tabindex="-1"></div>
         </div>
-        <button id="saveLangBtn" class="lang-save-btn" title="Зберегти та застосувати">
+        <button id="saveLangBtn" class="lang-save-btn" title="Зберегти та застосувати" data-i18n-title="tt_save_apply">
           <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"/>
             <path d="M17 21v-8H7v8"/>
             <path d="M7 3v5h8"/>
           </svg>
         </button>
-        <button id="diagnoseBtn" class="btn-icon" style="flex:0 0 auto;font-size:11px;padding:4px 8px;opacity:.7;" title="Показати ключі мови в shared_prefs">🔍</button>
+        <button id="diagnoseBtn" class="btn-icon" style="flex:0 0 auto;font-size:11px;padding:4px 8px;opacity:.7;" title="Показати ключі мови в shared_prefs" data-i18n-title="tt_diagnose">🔍</button>
       </div>
       <div class="import-hint" data-i18n="lang_hint">Оберіть мову зі списку та натисніть дискету — гра перезапуститься автоматично</div>
     </section>
@@ -188,21 +195,28 @@
       <div id="resourcesEmpty" class="garage-empty" data-i18n="res_empty">Синхронізуйте файли, щоб побачити ресурси</div>
 
       <div id="resourcesGrid" class="resources-grid" style="display:none;">
-        <div class="res-tile">
-          <div id="resCash" class="garage-tile-num">—</div>
-          <div class="res-tile-lbl">Cash</div>
-        </div>
-        <div class="res-tile">
-          <div id="resGold" class="garage-tile-num">—</div>
-          <div class="res-tile-lbl">Gold</div>
-        </div>
-        <div class="prestige-wrap">
-          <div class="bar-label">
-            <span class="prestige-title" data-i18n="res_prestige">Престиж</span>
-            <span id="prestigeText" class="bar-val">— / 1000</span>
+        <div class="res-tile res-tile-cash">
+          <div class="res-bg-icon">💵</div>
+          <div class="res-tile-head">
+            <span class="res-tile-lbl">Cash</span>
           </div>
-          <div class="bar">
-            <div id="prestigeFill" class="bar-fill"></div>
+          <div id="resCash" class="garage-tile-num">—</div>
+        </div>
+        <div class="res-tile res-tile-gold">
+          <div class="res-bg-icon">🪙</div>
+          <div class="res-tile-head">
+            <span class="res-tile-lbl">Gold</span>
+          </div>
+          <div id="resGold" class="garage-tile-num">—</div>
+        </div>
+        <div class="res-tile res-tile-prestige prestige-wrap" role="progressbar" aria-valuemin="0" aria-valuemax="1000" aria-valuenow="0" aria-label="Престиж">
+          <div id="prestigeFill" class="prestige-progress-fill"></div>
+          <div class="res-bg-icon">👑</div>
+          <div class="prestige-content">
+            <div class="res-tile-head">
+              <span class="res-tile-lbl" data-i18n="res_prestige">Престиж</span>
+            </div>
+            <div id="prestigeText" class="garage-tile-num">— / 1000</div>
           </div>
           <div id="prestigeWarn" class="bar-warn" style="display:none;"></div>
         </div>
@@ -219,7 +233,7 @@
               <circle cx="7.5" cy="19" r="1.2" fill="currentColor" stroke="none"/><circle cx="16.5" cy="19" r="1.2" fill="currentColor" stroke="none"/>
             </svg>
           </span>
-          <span data-i18n="garage_title">Гараж</span>
+          <span data-i18n="garage_title">Статистика</span>
         </div>
       </div>
 
@@ -227,38 +241,52 @@
 
       <div id="garageStats" style="display:none;">
         <div id="garageMeta" class="garage-meta" style="display:none;">
-          <div class="garage-total">
-            <div id="garageTotalNum" class="garage-total-num">0</div>
-            <div class="garage-total-lbl" data-i18n="garage_slots">слотів у гаражі</div>
+          <!-- Заповнення слотів (прогрес-бар плитка у стилі престижу) -->
+          <div class="garage-fill-group">
+            <div class="res-tile garage-fill-tile prestige-wrap" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="Заповнення гаража">
+              <div id="garageFillProgress" class="garage-fill-bar"></div>
+              <div class="res-bg-icon">🚗</div>
+              <div class="prestige-content">
+                <div class="res-tile-head">
+                  <span class="res-tile-lbl" data-i18n="garage_fill">Гараж</span>
+                  <span id="garagePctText" class="garage-fill-pct">0%</span>
+                </div>
+                <div id="garageBarText" class="garage-tile-num">0 / 0</div>
+              </div>
+            </div>
+            <div id="garageHeldLine" class="garage-fill-held"></div>
           </div>
 
-          <div class="bar-wrap">
-            <div class="bar-label">
-              <span data-i18n="garage_fill">Заповнення</span>
-              <span id="garageBarText" class="bar-val"></span>
+          <!-- Прокачка: горизонтальна стек-шкала (замість donut — не накладаються підписи на малих сегментах) -->
+          <div class="garage-section-card">
+            <div class="garage-section-title" data-i18n="garage_upgrade">Прокачка</div>
+            <div class="upgrade-stack-wrap">
+              <div class="upgrade-stack-head">
+                <span id="upgradeStackVal" class="upgrade-stack-val">0</span>
+                <span class="upgrade-stack-lbl" data-i18n="garage_total_cars">авто</span>
+              </div>
+              <div id="upgradeStackTrack" class="upgrade-stack-track"></div>
+              <div id="upgradeLegend" class="garage-donut-legend"></div>
             </div>
-            <div class="bar">
-              <div id="garageFill" class="bar-fill"></div>
-            </div>
-            <div id="garageHeldLine" class="bar-note"></div>
           </div>
 
-          <div class="bar-wrap">
-            <div class="bar-label">
-              <span data-i18n="garage_upgrade">Прокачка</span>
-              <span id="upgradeBarText" class="bar-val"></span>
+          <!-- Бої: плитка шкали у стилі престижу -->
+          <div class="garage-battle-group">
+            <div class="res-tile garage-battle-tile prestige-wrap" id="battleTile" role="img" aria-label="Бої">
+              <div id="battleBarBg" class="garage-battle-bar-bg"></div>
+              <div class="res-bg-icon">⚔️</div>
+              <div class="prestige-content">
+                <div class="res-tile-head">
+                  <span class="res-tile-lbl" data-i18n="garage_battles">Бої</span>
+                </div>
+                <div id="battleBarText" class="garage-tile-num">0</div>
+              </div>
             </div>
-            <div class="bar bar-stack" id="upgradeBar"></div>
-            <div id="upgradeLegend" class="bar-legend"></div>
-          </div>
-
-          <div class="bar-wrap">
-            <div class="bar-label">
-              <span data-i18n="garage_battles">Бої</span>
-              <span id="battleBarText" class="bar-val"></span>
+            <div id="battleStatsInline" class="garage-battle-inline-stats">
+              <span class="battle-stat-tag b-win"><b id="battleWins">0</b> W</span>
+              <span class="battle-stat-tag b-draw"><b id="battleDraws">0</b> D</span>
+              <span class="battle-stat-tag b-loss"><b id="battleLosses">0</b> L</span>
             </div>
-            <div class="bar bar-stack" id="battleBar"></div>
-            <div id="battleLegend" class="bar-legend"></div>
           </div>
         </div>
 
@@ -274,14 +302,14 @@
     <section class="card log-card">
       <div class="log-toolbar">
         <span class="log-toolbar-title" data-i18n="log_title">Консоль</span>
-        <select class="log-filter" id="logLevelFilter" title="Фільтр рівнів">
-          <option value="all">Усі</option>
+        <select class="log-filter" id="logLevelFilter" title="Фільтр рівнів" data-i18n-title="tt_log_filter">
+          <option value="all" data-i18n="log_filter_all">Усі</option>
           <option value="I" selected>INFO</option>
           <option value="W">WARN</option>
           <option value="E">ERR</option>
           <option value="D">DEBUG</option>
         </select>
-        <button class="log-clear" id="logClear" title="Очистити консоль">
+        <button class="log-clear" id="logClear" title="Очистити консоль" data-i18n-title="tt_log_clear">
           <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg>
         </button>
       </div>
@@ -308,6 +336,11 @@
         <button id="clearHistoryBtn" class="btn-icon btn-text" style="flex:0 0 auto;font-size:11px;opacity:.65;" data-i18n="an_clear">Очистити</button>
       </div>
       <div id="analyticsNote" class="import-hint" data-i18n="an_hint">Знімок стану записується автоматично раз на добу — при відкритті WebUI, якщо дані вже синхронізовані</div>
+      <div class="an-period-switch" id="analyticsPeriod" role="tablist">
+        <button type="button" class="an-period-opt" data-period="7" data-i18n="an_period_7">7д</button>
+        <button type="button" class="an-period-opt" data-period="30" data-i18n="an_period_30">30д</button>
+        <button type="button" class="an-period-opt active" data-period="all" data-i18n="an_period_all">Усі</button>
+      </div>
       <div id="analyticsList" class="analytics-list">
         <div class="garage-empty" data-i18n="cl_loading">Завантаження…</div>
       </div>
@@ -317,61 +350,62 @@
     <!-- Settings modal -->
     <div id="settingsModal" class="modal-overlay">
       <div class="modal-card">
-        <h3 class="modal-title" data-i18n="settings_title">Налаштування</h3>
-
-        <div class="modal-field">
-          <label class="modal-label" data-i18n="settings_theme">Тема</label>
-          <div class="theme-switch" id="themeSwitch" role="tablist">
-            <button type="button" class="theme-opt" data-theme-choice="auto">
-              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
-              <span data-i18n="theme_auto">Авто</span>
-            </button>
-            <button type="button" class="theme-opt" data-theme-choice="light">
-              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2.5M12 19.5V22M4.2 4.2l1.8 1.8M18 18l1.8 1.8M2 12h2.5M19.5 12H22M4.2 19.8 6 18M18 6l1.8-1.8"/></svg>
-              <span data-i18n="theme_light">Світла</span>
-            </button>
-            <button type="button" class="theme-opt" data-theme-choice="dark">
-              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.5A8.5 8.5 0 1 1 11.5 3a7 7 0 0 0 9.5 9.5z"/></svg>
-              <span data-i18n="theme_dark">Темна</span>
-            </button>
-            <button type="button" class="theme-opt" data-theme-choice="amoled">
-              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/></svg>
-              <span data-i18n="theme_amoled">AMOLED</span>
-            </button>
-          </div>
+        <div class="modal-header">
+          <h3 class="modal-title" data-i18n="settings_title">Налаштування</h3>
+          <button type="button" class="modal-close-x" data-close-modal="settingsModal" data-i18n-title="tt_close" title="Закрити" aria-label="Закрити">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+          </button>
         </div>
 
-        <div class="modal-field">
-          <label class="modal-label" data-i18n="settings_ui_lang">Мова інтерфейсу</label>
-          <div class="theme-switch" id="uiLangSwitch" role="tablist">
-            <button type="button" class="theme-opt" data-ui-lang-choice="auto">
-              <span data-i18n="ui_lang_auto">Авто</span>
-            </button>
-            <button type="button" class="theme-opt" data-ui-lang-choice="uk">
-              <span data-i18n="ui_lang_uk">UKR</span>
-            </button>
-            <button type="button" class="theme-opt" data-ui-lang-choice="en">
-              <span data-i18n="ui_lang_en">ENG</span>
-            </button>
+        <div class="modal-body">
+          <div class="modal-field">
+            <label class="modal-label" data-i18n="settings_theme">Тема</label>
+            <div class="theme-switch" id="themeSwitch" role="tablist">
+              <button type="button" class="theme-opt" data-theme-choice="auto">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+                <span data-i18n="theme_auto">Авто</span>
+              </button>
+              <button type="button" class="theme-opt" data-theme-choice="light">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2.5M12 19.5V22M4.2 4.2l1.8 1.8M18 18l1.8 1.8M2 12h2.5M19.5 12H22M4.2 19.8 6 18M18 6l1.8-1.8"/></svg>
+                <span data-i18n="theme_light">Світла</span>
+              </button>
+              <button type="button" class="theme-opt" data-theme-choice="dark">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.5A8.5 8.5 0 1 1 11.5 3a7 7 0 0 0 9.5 9.5z"/></svg>
+                <span data-i18n="theme_dark">Темна</span>
+              </button>
+              <button type="button" class="theme-opt" data-theme-choice="amoled">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/></svg>
+                <span data-i18n="theme_amoled">AMOLED</span>
+              </button>
+            </div>
           </div>
-        </div>
 
-        <div class="modal-field">
-          <label class="modal-label" data-i18n="settings_src_path">Шлях джерела</label>
-          <div class="modal-inputs">
-            <input id="setSrcFile" type="file">
-            <input id="setSrcFolder" type="file" webkitdirectory>
+          <div class="modal-field">
+            <label class="modal-label" data-i18n="settings_ui_lang">Мова інтерфейсу</label>
+            <div class="theme-switch" id="uiLangSwitch" role="tablist">
+              <button type="button" class="theme-opt" data-ui-lang-choice="auto">
+                <span data-i18n="ui_lang_auto">Авто</span>
+              </button>
+              <button type="button" class="theme-opt" data-ui-lang-choice="uk">
+                <span data-i18n="ui_lang_uk">UKR</span>
+              </button>
+              <button type="button" class="theme-opt" data-ui-lang-choice="en">
+                <span data-i18n="ui_lang_en">ENG</span>
+              </button>
+            </div>
           </div>
-          <span id="srcPathDisplay" class="modal-hint" data-i18n="settings_not_selected">Не вибрано</span>
-        </div>
 
-        <div class="modal-field">
-          <label class="modal-label" data-i18n="settings_dst_path">Шлях копії</label>
-          <div class="modal-inputs">
-            <input id="setDstFile" type="file">
-            <input id="setDstFolder" type="file" webkitdirectory>
+          <div class="modal-field">
+            <label class="modal-label" data-i18n="settings_src_path">Шлях джерела</label>
+            <span id="srcPathDisplay" class="modal-hint modal-hint-path" data-i18n="settings_not_selected">Не вибрано</span>
           </div>
-          <span id="dstPathDisplay" class="modal-hint" data-i18n="settings_not_selected">Не вибрано</span>
+
+          <div class="modal-field">
+            <label class="modal-label" data-i18n="settings_dst_path">Шлях копії</label>
+            <span id="dstPathDisplay" class="modal-hint modal-hint-path" data-i18n="settings_not_selected">Не вибрано</span>
+          </div>
+
+          <div class="modal-field-note">ℹ️ <span data-i18n="settings_paths_fixed_note">Шляхи визначаються автоматично модулем — показані для довідки</span></div>
         </div>
 
         <div class="modal-actions">
@@ -385,12 +419,39 @@
     <!-- Changelog modal (opened via the "!" button in the header) -->
     <div id="changelogModal" class="modal-overlay">
       <div class="modal-card">
-        <h3 class="modal-title" data-i18n="cl_title">Історія версій</h3>
-        <div id="changelogList" class="changelog-list">
-          <div class="garage-empty" data-i18n="cl_loading">Завантаження…</div>
+        <div class="modal-header">
+          <h3 class="modal-title" data-i18n="cl_title">Історія версій</h3>
+          <button type="button" class="modal-close-x" data-close-modal="changelogModal" data-i18n-title="tt_close" title="Закрити" aria-label="Закрити">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+          </button>
+        </div>
+        <div class="modal-body">
+          <div id="updateCard" class="update-card" hidden></div>
+          <div id="changelogList" class="changelog-list">
+            <div class="garage-empty" data-i18n="cl_loading">Завантаження…</div>
+          </div>
         </div>
         <div class="modal-actions">
           <button id="closeChangelog" class="btn-icon btn-text" data-i18n="settings_close">Закрити</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sync progress modal (opened by "Синхронізувати та відкрити") -->
+    <div id="syncModal" class="modal-overlay">
+      <div class="modal-card">
+        <div class="modal-header">
+          <h3 class="modal-title" data-i18n="sm_title">Синхронізація</h3>
+          <button type="button" class="modal-close-x" data-close-modal="syncModal" data-i18n-title="tt_close" title="Закрити" aria-label="Закрити">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+          </button>
+        </div>
+        <div class="modal-body">
+          <div id="syncModalSteps" class="sync-steps"></div>
+          <div id="syncModalHint" class="import-hint" hidden data-i18n="sm_hint">У браузері торкніться поля вибору файлу — Garage.dat вже лежить у Download/td2tdr_sync</div>
+        </div>
+        <div class="modal-actions">
+          <button id="closeSyncModal" class="btn-icon btn-text" data-i18n="settings_close">Закрити</button>
         </div>
       </div>
     </div>

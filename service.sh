@@ -57,18 +57,7 @@ if ! pidof "$GAME_PKG" >/dev/null 2>&1; then
 fi
 
 sync_file() {
-    if [ -f "$SRC" ]; then
-        cp -f "$SRC" "$DST" 2>/dev/null && {
-            if [ -f "$SRC_USER" ]; then
-                cp -f "$SRC_USER" "$DST_USER" 2>/dev/null
-                chmod 0644 "$DST_USER"
-            fi
-            chmod 0644 "$DST"
-            log "Синхронізовано: $SRC -> $DST, $SRC_USER -> $DST_USER"
-        }
-    else
-        log "Файл-джерело не знайдено: $SRC"
-    fi
+    sh "${MODDIR}/sync_now.sh"
 }
 
 # Початкова синхронізація одразу після завантаження
@@ -78,7 +67,7 @@ sync_file
 if command -v inotifywait >/dev/null 2>&1; then
     log "Запускаю режим стеження через inotifywait"
     while true; do
-        inotifywait -e close_write,modify,create,moved_to \
+        inotifywait -e close_write,create,moved_to \
             "$(dirname "$SRC")" 2>/dev/null | grep -q "Garage.dat" && sync_file
     done
 else

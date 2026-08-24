@@ -7,6 +7,13 @@
 #   ./scripts/bump_version.sh 1.2.3   # задати конкретну версію
 set -e
 
+# Auto-detect: if not running in Git Bash, re-exec via bash.exe
+if [ -z "$MSYSTEM" ] && [ -z "$MINGW_CHOST" ]; then
+  if command -v bash.exe >/dev/null 2>&1; then
+    exec bash.exe "$0" "$@"
+  fi
+fi
+
 PROP="module.prop"
 JSON="update.json"
 PY=""

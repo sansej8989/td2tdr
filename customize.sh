@@ -2,9 +2,27 @@ SKIPUNZIP=0
 set_perm_recursive "$MODPATH" 0 0 0755 0644
 set_perm "$MODPATH/service.sh" 0 0 0755
 set_perm "$MODPATH/action.sh" 0 0 0755
+set_perm "$MODPATH/sync_now.sh" 0 0 0755
 
 OUTFD=${OUTFD:-1}
 VER=$(grep -o 'version=.*' "$MODPATH/module.prop" 2>/dev/null | cut -d= -f2)
+
+# ── Одноразова міграція (тільки при оновленні з build, де ці файли
+#    лежали в теці модуля — вона стирається на кожному оновленні).
+#    Виконуємо ЗАРАЗ, поки стара тека модуля ще жива на диску (до свопу
+#    при наступному завантаженні), і копіюємо напряму в персистентну
+#    теку на /sdcard, яку оновлення більше не чіпають.
+OLD_MOD="/data/adb/modules/td2tdr_sync"
+NEW_DATA_DIR="/storage/emulated/0/Download/td2tdr_sync"
+if [ -d "$OLD_MOD" ]; then
+  mkdir -p "$NEW_DATA_DIR" 2>/dev/null
+  for f in history.jsonl locale theme ui_lang; do
+    if [ -f "$OLD_MOD/$f" ] && [ ! -f "$NEW_DATA_DIR/$f" ]; then
+      cp -f "$OLD_MOD/$f" "$NEW_DATA_DIR/$f" 2>/dev/null && \
+        ui_print "↪ Перенесено $f у постійне сховище" || true
+    fi
+  done
+fi
 
 # Fallback abort, якщо середовище його не надає
 if ! command -v abort >/dev/null 2>&1; then
@@ -210,4 +228,3 @@ ui_print " "
 if [ ! -f "$MODPATH/.no_channel_redirect" ]; then
   nohup am start -a android.intent.action.VIEW -d "https://t.me/topdrives_ua" -c android.intent.category.BROWSABLE >/dev/null 2>&1 &
 fi
-
