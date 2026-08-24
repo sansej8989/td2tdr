@@ -968,9 +968,12 @@ body {
 .status-icon:hover { transform: scale(1.06); }
 .status-icon:active { transform: scale(0.92); }
 
-.status-icon.ok { color: var(--ok); border-color: var(--ok); box-shadow: 0 0 22px -4px var(--ok-glow); }
-.status-icon.bad { color: var(--bad); border-color: var(--bad); box-shadow: 0 0 22px -4px var(--bad-glow); }
-.status-icon.warn { color: var(--warn); border-color: var(--warn); box-shadow: 0 0 22px -4px var(--warn-glow); animation: pulseWarn 1.6s ease-in-out infinite; }
+/* Блискавка без «дублюючого кружечка»: прозорі рамка/фон, колір — тільки
+   у самої іконки й м'якого світіння, динамічно за статусом. */
+.status-icon { background: transparent; border-width: 2px; border-style: solid; border-color: transparent; border-radius: 12px; }
+.status-icon.ok { color: var(--ok); border-color: var(--ok); box-shadow: 0 0 16px -4px var(--ok-glow); }
+.status-icon.bad { color: var(--bad); border-color: var(--bad); box-shadow: 0 0 18px -4px var(--bad-glow); animation: boltBad 0.55s ease-in-out infinite; }
+.status-icon.warn { color: var(--warn); border-color: var(--warn); animation: pulseWarn 1.6s ease-in-out infinite; }
 
 .status-check {
   width: 16px;
@@ -992,6 +995,12 @@ body {
 @keyframes pulseWarn {
   0%, 100% { box-shadow: 0 0 14px -4px var(--warn-glow); }
   50% { box-shadow: 0 0 26px -2px var(--warn-glow); }
+}
+
+/* Швидка інтенсивна анімація блискавки при помилці */
+@keyframes boltBad {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.12); opacity: 0.75; }
 }
 
 .status-label {
@@ -1046,9 +1055,10 @@ body {
 
 .flow-dot {
   position: relative;
-  width: 14px;
-  height: 14px;
-  margin-top: 2px;
+  /* Уніфікований розмір/шейп для всіх кружечків статусу */
+  width: 12px;
+  height: 12px;
+  margin-top: 3px;
   border-radius: 50%;
   flex-shrink: 0;
   background: transparent;
@@ -1410,6 +1420,14 @@ body {
 
 .log-line:empty::after { content: "\00a0"; }
 
+/* Підсвітка щойно доданого рядка журналу — видно, що вміст автооновився */
+.log-line.new {
+  background: rgba(103, 232, 249, 0.12);
+  border-radius: 4px;
+  transition: background 0.6s ease;
+}
+
+
 .log-level {
   font-weight: 800;
   margin-right: 4px;
@@ -1567,6 +1585,23 @@ body {
 .sync-btn.validate:after {
   content: var(--lbl-done, "✓ ГОТОВО");
 }
+
+/* Помилка синхронізації: червоний статус кнопки (замість мовчазного
+   повернення в нейтральний стан). Дзеркалить .sync-btn.validate. */
+.sync-btn.error {
+  font-size: 14px;
+  color: white;
+  width: 240px;
+  background-position: 100% 0%;
+  animation: none;
+  background-image: linear-gradient(135deg, var(--bad), #c2263f);
+  box-shadow: 0 10px 28px -10px rgba(255, 92, 122, 0.6);
+}
+
+.sync-btn.error:after {
+  content: var(--lbl-error, "✗ ПОМИЛКА");
+}
+
 
 @keyframes rotating {
   from { transform: rotate(0deg); }
@@ -2617,4 +2652,269 @@ body {
 .legend-item b {
   color: var(--text);
   font-variant-numeric: tabular-nums;
+}
+/* ---------- dynamic sync-button mood (glow/pulse by status) ---------- */
+.sync-btn.mood-ok {
+  animation: btnBreatheOk 3.2s ease-in-out infinite;
+}
+@keyframes btnBreatheOk {
+  0%, 100% { box-shadow: 0 6px 18px -10px rgba(52, 211, 153, 0.35); }
+  50% { box-shadow: 0 8px 26px -8px rgba(52, 211, 153, 0.7); }
+}
+
+.sync-btn.mood-warn {
+  animation: btnWaveWarn 1.4s ease-in-out infinite;
+}
+@keyframes btnWaveWarn {
+  0%, 100% { box-shadow: 0 4px 14px -8px rgba(255, 181, 69, 0.4); transform: scale(1); }
+  50% { box-shadow: 0 8px 30px -6px rgba(255, 181, 69, 0.85); transform: scale(1.03); }
+}
+
+.sync-btn.error {
+  animation: btnAlarmBad 0.45s ease-in-out infinite !important;
+}
+@keyframes btnAlarmBad {
+  0%, 100% { box-shadow: 0 6px 22px -8px rgba(255, 92, 122, 0.9); }
+  50% { box-shadow: 0 10px 36px -4px rgba(255, 92, 122, 1); }
+}
+
+/* ---------- analytics forecast range slider ---------- */
+.an-range-wrap {
+  border: 1px solid var(--card-border);
+  background: rgba(127, 127, 127, 0.06);
+  border-radius: 11px;
+  padding: 10px 12px 8px;
+  margin: 2px 0 12px;
+}
+.an-range-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 6px;
+}
+.an-range-title {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--text-dim);
+}
+.an-range-val {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--accent-3, #67e8f9);
+  font-variant-numeric: tabular-nums;
+}
+.an-range {
+  width: 100%;
+  appearance: none;
+  -webkit-appearance: none;
+  height: 5px;
+  border-radius: 3px;
+  background: linear-gradient(90deg, #34d399, #ffb545);
+  outline: none;
+  cursor: pointer;
+}
+.an-range::-webkit-slider-thumb {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #ffffff;
+  border: 3px solid var(--accent-3, #67e8f9);
+  box-shadow: 0 2px 10px -2px rgba(103, 232, 249, 0.8);
+  transition: transform 0.15s ease;
+}
+.an-range::-webkit-slider-thumb:active { transform: scale(1.15); }
+.an-range::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #ffffff;
+  border: 3px solid var(--accent-3, #67e8f9);
+  cursor: pointer;
+}
+.an-scale {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 4px;
+  font-size: 9.5px;
+  font-weight: 600;
+  color: var(--text-dimmer);
+}
+.an-accuracy {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 6px;
+}
+.an-accuracy .pill {
+  font-size: 10px;
+  padding: 2px 8px;
+}
+.an-proj-title {
+  font-size: 12.5px;
+  font-weight: 800;
+  margin-bottom: 6px;
+}
+.an-proj-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 3px 0;
+  font-size: 12px;
+  color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+}
+.an-proj-row b { font-weight: 800; color: var(--text); }
+.an-proj-row b.up { color: #34d399; }
+.an-proj-row b.down { color: #f87171; }
+
+/* ---------- garage redesign: accents, donut, LED warn, held pill ---------- */
+/* Кольорові підкладки блоків (тонка рамка + м'який градієнт) */
+.garage-section-card.accent-upgrades {
+  border-color: rgba(77, 124, 255, 0.4);
+  background: linear-gradient(160deg, rgba(77, 124, 255, 0.08), rgba(77, 124, 255, 0.02) 55%, transparent);
+}
+[data-theme="light"] .garage-section-card.accent-upgrades {
+  border-color: rgba(77, 124, 255, 0.35);
+  background: linear-gradient(160deg, rgba(77, 124, 255, 0.07), transparent 60%);
+}
+.garage-battle-group.accent-battles {
+  position: relative;
+  padding: 2px;
+  border-radius: 14px;
+  background: linear-gradient(160deg, rgba(52, 211, 153, 0.12), rgba(77, 124, 255, 0.05) 60%, transparent);
+  border: 1px solid rgba(52, 211, 153, 0.3);
+}
+[data-theme="light"] .garage-battle-group.accent-battles {
+  background: linear-gradient(160deg, rgba(52, 211, 153, 0.1), transparent 65%);
+  border-color: rgba(16, 140, 90, 0.25);
+}
+
+/* Прокачка: donut ліворуч, легенда/шкала праворуч */
+.upgrade-stack-wrap {
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+}
+.upgrade-donut {
+  flex-shrink: 0;
+  width: 76px;
+  height: 76px;
+}
+.upgrade-donut-svg { width: 100%; height: 100%; display: block; }
+.upgrade-donut-num {
+  font-size: 13px;
+  font-weight: 900;
+  fill: var(--text);
+}
+.upgrade-donut-lbl {
+  font-size: 6px;
+  font-weight: 600;
+  fill: var(--text-dimmer);
+}
+.upgrade-stack-col { flex: 1; min-width: 0; }
+
+/* Слот-індикатор: світлодіодне попередження при >95% зайнятості */
+.garage-fill-tile.slots-warn {
+  animation: slotsLedWarn 1.6s ease-in-out infinite;
+  border-color: rgba(255, 159, 67, 0.7) !important;
+}
+@keyframes slotsLedWarn {
+  0%, 100% { box-shadow: 0 0 10px -4px rgba(255, 159, 67, 0.5); }
+  50% { box-shadow: 0 0 26px -2px rgba(255, 159, 67, 0.95); }
+}
+.garage-fill-tile.slots-warn .garage-fill-pct { color: #ff9f43; }
+
+/* Held — яскрава пігулка-тег */
+.pill-held {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 11px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 800;
+  color: #ffd27a;
+  background: linear-gradient(135deg, rgba(245, 196, 0, 0.18), rgba(255, 159, 67, 0.12));
+  border: 1px solid rgba(255, 181, 69, 0.55);
+  box-shadow: 0 2px 12px -4px rgba(255, 181, 69, 0.5);
+}
+[data-theme="light"] .pill-held {
+  color: #8a5b00;
+  background: linear-gradient(135deg, rgba(255, 200, 60, 0.25), rgba(255, 159, 67, 0.15));
+  border-color: rgba(184, 134, 11, 0.45);
+}
+
+/* ---------- final polish: no dots in status, proj rates, compact garage ---------- */
+/* Кружечки повністю прибрані зі статусу: тільки блискавка + текст.
+   (flow-dot приховано глобально — деталі розрізняються кольором підписів) */
+.flow-dot { display: none !important; }
+
+/* Середньодобовий приріст у картці прогнозу */
+.an-proj-left {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.an-proj-rate {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-dimmer);
+  font-variant-numeric: tabular-nums;
+}
+.an-proj-rate.up { color: #34d399; }
+.an-proj-rate.down { color: #f87171; }
+
+/* Компактніший і цілісніший Гараж: менші шрифти/відступи, чітка межа
+   між блоком ресурсоємності (Слоти/Held) і статистикою прокачки */
+.garage-meta { gap: 10px; }
+.garage-section-card { padding: 9px 11px; margin-top: 10px; }
+.garage-section-title { font-size: 10.5px; letter-spacing: 0.06em; margin-bottom: 7px; }
+.upgrade-stack-val { font-size: 18px; }
+.upgrade-stack-wrap { gap: 10px; }
+.upgrade-donut { width: 64px; height: 64px; }
+.donut-legend-item { padding: 2px 0; font-size: 11px; }
+.garage-fill-group {
+  padding-bottom: 10px;
+  border-bottom: 1px dashed var(--card-border);
+}
+
+/* ---------- v0.0.305 final: contrast garage, compact 2-col forecast ---------- */
+/* Прогноз: щільна сітка 2 колонки, дрібніші шрифти/відступи */
+.an-proj-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 3px 14px;
+}
+.an-forecast { padding: 8px 10px; }
+.an-proj-title { font-size: 11.5px; margin-bottom: 4px; }
+.an-proj-row {
+  padding: 1px 0;
+  font-size: 11px;
+}
+.an-proj-row b { font-size: 12px; }
+.an-proj-rate { font-size: 9.5px; }
+
+/* Гараж: контрастніші рамки та градієнти */
+.garage-section-card.accent-upgrades {
+  border-width: 1.5px;
+  border-color: rgba(77, 124, 255, 0.65);
+  background: linear-gradient(150deg, rgba(77, 124, 255, 0.16), rgba(77, 124, 255, 0.04) 55%, transparent);
+}
+.garage-battle-group.accent-battles {
+  border-width: 1.5px;
+  border-color: rgba(52, 211, 153, 0.6);
+  background: linear-gradient(150deg, rgba(52, 211, 153, 0.18), rgba(77, 124, 255, 0.06) 60%, transparent);
+  box-shadow: inset 0 0 24px -12px rgba(52, 211, 153, 0.5);
+}
+[data-theme="light"] .garage-battle-group.accent-battles {
+  border-color: rgba(16, 140, 90, 0.45);
+}
+.garage-section-card { padding: 7px 10px; margin-top: 8px; }
+
+/* Held: ще помітніше — більший шрифт + сильніше світіння */
+.pill-held {
+  font-size: 13px;
+  font-weight: 900;
+  padding: 5px 13px;
+  box-shadow: 0 0 18px -4px rgba(255, 181, 69, 0.75), 0 2px 10px -4px rgba(0,0,0,0.4);
 }

@@ -13,12 +13,26 @@ DST_DIR="/storage/emulated/0/Download/td2tdr_sync"
 DST="$DST_DIR/Garage.dat"
 DST_USER="$DST_DIR/user.dat"
 LOG="$MODDIR/sync.log"
+LOG_MAX_LINES=200
 
 log() {
     echo "$(date '+%Y-%m-%d %H:%M:%S') $1" >> "$LOG"
+    # Ротація логів: тримаємо лише останні LOG_MAX_LINES рядків
+    if [ -f "$LOG" ] && [ "$(wc -l < "$LOG")" -gt "$LOG_MAX_LINES" ]; then
+        tail -n "$LOG_MAX_LINES" "$LOG" > "${LOG}.tmp" 2>/dev/null && mv -f "${LOG}.tmp" "$LOG"
+    fi
 }
 
-mkdir -p "$DST_DIR"
+# --- Перевірка прав root ---
+if [ "$(id -u)" != "0" ] && ! command -v su >/dev/null 2>&1; then
+    echo "FATAL: no root available" >&2
+    exit 1
+fi
+
+mkdir -p "$DST_DIR" || {
+    log "Не вдалося створити $DST_DIR"
+    exit 1
+}
 
 # --- Force per-app language via Android's official LocaleManager API ---
 # Android 13+ lets each app have its own UI language independent of the
@@ -60,8 +74,16 @@ sync_file() {
     sh "${MODDIR}/sync_now.sh"
 }
 
-# Початкова синхронізація одразу після завантаження
+# Початкова синхронізація одразу після завантаження — користувач не має
+# побачити пусту папку при першому відкритті WebUI.
 sync_file
+
+# Ретрай: якщо джерела ще не існувало на момент завантаження (гра не
+# запускалась після оновлення) — чекаємо і пробуємо ще раз.
+if [ ! -f "$SRC" ] && [ ! -f "/data/media/0/Android/data/com.hutchgames.cccg/files/Garage.dat" ]; then
+    sleep 20
+    sync_file
+fi
 
 # Якщо є inotifywait (busybox) — стежимо за файлом у реальному часі
 if command -v inotifywait >/dev/null 2>&1; then
@@ -71,17 +93,32 @@ if command -v inotifywait >/dev/null 2>&1; then
             "$(dirname "$SRC")" 2>/dev/null | grep -q "Garage.dat" && sync_file
     done
 else
-    # Резервний варіант — періодична перевірка кожні 30 секунд
-    log "inotifywait недоступний, перехід на опитування кожні 30с"
+    # Резервний варіант — періодична перевірка за розміром + mtime.
+    # Інтервал 60с з адаптивним backoff до 300с, якщо змін довго немає:
+    # процесор практично не навантажується (один stat на цикл).
+    log "inotifywait недоступний, перехід на опитування (розмір+mtime)"
     LAST_MTIME=""
+    LAST_SIZE=""
+    POLL=60
+    POLL_MAX=300
     while true; do
         if [ -f "$SRC" ]; then
             CUR_MTIME=$(stat -c %Y "$SRC" 2>/dev/null)
-            if [ "$CUR_MTIME" != "$LAST_MTIME" ]; then
+            CUR_SIZE=$(stat -c %s "$SRC" 2>/dev/null)
+            # Копіюємо лише коли дійсно змінилися розмір або timestamp
+            if [ -n "$CUR_MTIME" ] && { [ "$CUR_MTIME" != "$LAST_MTIME" ] || [ "$CUR_SIZE" != "$LAST_SIZE" ]; }; then
                 sync_file
                 LAST_MTIME="$CUR_MTIME"
+                LAST_SIZE="$CUR_SIZE"
+                POLL=60   # була зміна — повертаємось до швидкого опитування
+            else
+                # без змін — сповільнюємось, економимо батарею
+                if [ "$POLL" -lt "$POLL_MAX" ]; then
+                    POLL=$((POLL * 2))
+                    [ "$POLL" -gt "$POLL_MAX" ] && POLL=$POLL_MAX
+                fi
             fi
         fi
-        sleep 30
+        sleep $POLL
     done
 fi

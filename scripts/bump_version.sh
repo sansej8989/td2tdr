@@ -48,29 +48,57 @@ case "$1" in
 esac
 
 NEW_VER="${MAJ}.${MIN}.$(printf '%03d' "$PAT")"
-NEW_VC=$((10#$OLD_VC + 1))
+# versionCode = патч-компонент версії — узгоджено з release.yml, де
+# versionCode обчислюється як останнє число версії (0.0.305 -> 305).
+NEW_VC=$((10#$PAT))
 
 # Оновлюємо module.prop
 sed -i "s/^version=.*/version=${NEW_VER}/" "$PROP"
 sed -i "s/^versionCode=.*/versionCode=${NEW_VC}/" "$PROP"
 
-# Оновлюємо update.json
-"$PY" - "$JSON" "$NEW_VER" "$NEW_VC" <<'EOF'
+# Оновлюємо update.json + додаємо заголовок нової версії у changelog.md.
+# Python замість sed для changelog: гарантовано зберігає UTF-8 (емодзі в
+# описі) та LF-закінчення рядків на Windows.
+"$PY" - "$JSON" "$NEW_VER" <<'EOF'
 import json, sys
-path, ver, vc = sys.argv[1], sys.argv[2], int(sys.argv[3])
+path, ver = sys.argv[1], sys.argv[2]
 with open(path) as f:
     data = json.load(f)
 data['version'] = ver
-data['versionCode'] = vc
+data['versionCode'] = int(ver.split('.')[-1])
 data['zipUrl'] = f"https://github.com/sansej8989/td2tdr/releases/download/v{ver}/td2tdr_v{ver}.zip"
-with open(path, 'w') as f:
+with open(path, 'w', encoding='utf-8', newline='\n') as f:
     json.dump(data, f, indent=2)
     f.write('\n')
 EOF
 
-echo "v${OLD_VER} (code $OLD_VC) -> v${NEW_VER} (code $NEW_VC)"
-echo "Потім створіть реліз:"
-echo "  git add module.prop update.json changelog.md"
+# Заголовок у changelog.md: нова секція вставляється ПЕРШОЮ (зверху),
+# лише якщо її ще немає (ідемпотентність при повторному запуску).
+"$PY" - "changelog.md" "$NEW_VER" <<'EOF'
+import sys
+path, ver = sys.argv[1], sys.argv[2]
+header = f"# v{ver}"
+with open(path, encoding='utf-8', newline='') as f:
+    content = f.read()
+if header not in content.splitlines():
+    # Вставляємо після верхнього титульного заголовка (# ...), якщо він є,
+    # інакше — на початок файлу. Секція: заголовок + порожній рядок-плейсхолдер.
+    lines = content.split('\n')
+    if lines and lines[0].startswith('# ') and not lines[0].startswith('# v'):
+        insert_at = 1
+        while insert_at < len(lines) and lines[insert_at].strip() == '':
+            insert_at += 1
+    else:
+        insert_at = 0
+    lines[insert_at:insert_at] = ['', '', header, '- ']
+    with open(path, 'w', encoding='utf-8', newline='\n') as f:
+        f.write('\n'.join(lines))
+EOF
+
+echo "v${OLD_VER} (code $((10#$OLD_VC))) -> v${NEW_VER} (code $NEW_VC)"
+echo "Наступні кроки:"
+echo "  1) Заповніть список змін під заголовком '# v${NEW_VER}' у changelog.md"
+echo "  2) git add module.prop update.json changelog.md"
 echo "  git commit -m \"chore: bump to v${NEW_VER}\""
 echo "  git push origin master"
 echo "  git tag v${NEW_VER}"

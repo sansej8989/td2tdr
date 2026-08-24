@@ -1,11 +1,26 @@
 SKIPUNZIP=0
 set_perm_recursive "$MODPATH" 0 0 0755 0644
-set_perm "$MODPATH/service.sh" 0 0 0755
-set_perm "$MODPATH/action.sh" 0 0 0755
-set_perm "$MODPATH/sync_now.sh" 0 0 0755
+# Явно виставляємо права на виконання для ВСІХ скриптів модуля.
+# Спершу відомий список, потім страховочний обхід по *.sh — щоб новий
+# скрипт, доданий у майбутніх версіях, не залишився без +x.
+for s in service.sh action.sh sync_now.sh set_locale.sh post-fs-data.sh; do
+  [ -f "$MODPATH/$s" ] && set_perm "$MODPATH/$s" 0 0 0755
+done
+for s in "$MODPATH"/*.sh; do
+  [ -f "$s" ] && chmod 0755 "$s" 2>/dev/null
+done
 
 OUTFD=${OUTFD:-1}
 VER=$(grep -o 'version=.*' "$MODPATH/module.prop" 2>/dev/null | cut -d= -f2)
+
+# ── Персистентна тека даних користувача ────────────────────
+# Створюємо ЗАВЖДИ (не лише під час міграції): історія аналітики,
+# мова/тема та логи живуть тут і не стираються при оновленні модуля.
+NEW_DATA_DIR="/storage/emulated/0/Download/td2tdr_sync"
+mkdir -p "$NEW_DATA_DIR" 2>/dev/null
+chmod 0775 "$NEW_DATA_DIR" 2>/dev/null
+chown 1023:1023 "$NEW_DATA_DIR" 2>/dev/null || chown media_rw:media_rw "$NEW_DATA_DIR" 2>/dev/null
+restorecon "$NEW_DATA_DIR" 2>/dev/null || chcon u:object_r:media_rw_data_file:s0 "$NEW_DATA_DIR" 2>/dev/null
 
 # ── Одноразова міграція (тільки при оновленні з build, де ці файли
 #    лежали в теці модуля — вона стирається на кожному оновленні).
@@ -13,9 +28,7 @@ VER=$(grep -o 'version=.*' "$MODPATH/module.prop" 2>/dev/null | cut -d= -f2)
 #    при наступному завантаженні), і копіюємо напряму в персистентну
 #    теку на /sdcard, яку оновлення більше не чіпають.
 OLD_MOD="/data/adb/modules/td2tdr_sync"
-NEW_DATA_DIR="/storage/emulated/0/Download/td2tdr_sync"
 if [ -d "$OLD_MOD" ]; then
-  mkdir -p "$NEW_DATA_DIR" 2>/dev/null
   for f in history.jsonl locale theme ui_lang; do
     if [ -f "$OLD_MOD/$f" ] && [ ! -f "$NEW_DATA_DIR/$f" ]; then
       cp -f "$OLD_MOD/$f" "$NEW_DATA_DIR/$f" 2>/dev/null && \
@@ -136,6 +149,55 @@ choose_yn() {
   done
 }
 
+# ── Перевірка середовища ──────────────────────────────────
+ui_print " "
+ui_print "🔍 ПЕРЕВІРКА СЕРЕДОВИЩА"
+ui_print " "
+
+# Версія Android (SDK)
+ANDROID_REL=$(getprop ro.build.version.release 2>/dev/null)
+ANDROID_SDK=$(getprop ro.build.version.sdk 2>/dev/null)
+if [ -n "$ANDROID_REL" ]; then
+  ui_print "  📱 Android $ANDROID_REL (API $ANDROID_SDK)"
+else
+  ui_print "  ⚠️ Не вдалося визначити версію Android"
+fi
+ui_print " "
+
+# Попередження для дуже старих Android (LocaleManager потребує API 33+,
+# але модуль деградує gracefully — тому лише попередження, не abort)
+if [ -n "$ANDROID_SDK" ] && [ "$ANDROID_SDK" -lt 33 ] 2>/dev/null; then
+  ui_print "  ⚠️ Зміна мови гри потребує Android 13+"
+  ui_print "     (інші функції працюватимуть)"
+  ui_print " "
+fi
+
+# Root-менеджер
+ROOT_MGR="невідомий"
+if [ -n "$KSU_VER" ] || [ "$KSU" = "true" ] || [ -n "$KSU_KERNEL_VER_CODE" ]; then
+  ROOT_MGR="KernelSU"
+elif [ -n "$MAGISK_VER" ] || [ -n "$MAGISK_VER_CODE" ]; then
+  ROOT_MGR="Magisk $MAGISK_VER"
+fi
+ui_print "  🔑 Root: $ROOT_MGR"
+ui_print " "
+
+# Наявність гри (інформаційно, НЕ блокує встановлення)
+GAME_PKG="com.hutchgames.cccg"
+GAME_FOUND=""
+if command -v pm >/dev/null 2>&1; then
+  GAME_FOUND=$(pm path "$GAME_PKG" 2>/dev/null | head -n 1)
+fi
+if [ -n "$GAME_FOUND" ]; then
+  ui_print "  🎮 Гра Top Drives знайдена ✅"
+else
+  ui_print "  ⚠️ Гра ($GAME_PKG) не знайдена —"
+  ui_print "     встановіть гру перед використанням"
+fi
+ui_print " "
+ui_print "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+ui_print " "
+
 # ── Шапка ─────────────────────────────────────────────────
 ui_print " "
 ui_print "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
@@ -200,6 +262,11 @@ ui_print " "
 ui_print "  ✅ WebUI (webroot)     готово"
 ui_print " "
 ui_print "  ✅ Банер               готово"
+ui_print " "
+ui_print "  ✅ Права скриптів      0755"
+ui_print " "
+ui_print "  🗂️ Дані користувача    збережено"
+ui_print "     (Download/td2tdr_sync)"
 ui_print " "
 ui_print "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 ui_print " "

@@ -10,6 +10,10 @@ LOG="${MODDIR}/sync.log"
 
 SRC="/storage/emulated/0/Android/data/com.hutchgames.cccg/files/Garage.dat"
 SRC_USER="/storage/emulated/0/Android/data/com.hutchgames.cccg/files/user.dat"
+# Fallback, якщо /storage/emulated/0 заблокований Scoped Storage —
+# той самий файл через raw-шлях /data/media (доступний із root).
+SRC_ROOT="/data/media/0/Android/data/com.hutchgames.cccg/files/Garage.dat"
+SRC_USER_ROOT="/data/media/0/Android/data/com.hutchgames.cccg/files/user.dat"
 
 if [ -d /data/media/0 ]; then
     DST_DIR="/data/media/0/Download/td2tdr_sync"
@@ -70,23 +74,35 @@ copy_one() {
     local dst="${DST_DIR}/${name}" tmp="${DST_DIR}/${name}.part"
     local want got
 
-    [ -f "$src" ] || return 1
+    [ -f "$src" ] || {
+        log "${name}: джерело не знайдено ($src)"
+        return 1
+    }
 
     want=$(wait_stable "$src") || {
         log "Пропуск ${name}: джерело ще пишеться або порожнє"
         return 1
     }
 
-    cp -f "$src" "$tmp" || { rm -f "$tmp"; return 1; }
+    # Логуємо саме команду cp: видно, чи падає копіювання і чому
+    if ! cp -f "$src" "$tmp" 2>>"$LOG"; then
+        rm -f "$tmp"
+        log "${name}: ПОМИЛКА cp (${src} -> ${tmp}) — див. повідомлення вище"
+        return 1
+    fi
     got=$(stat -c %s "$tmp" 2>/dev/null)
     if [ "$got" != "$want" ]; then
         rm -f "$tmp"
         log "Пропуск ${name}: розмір копії ${got} != ${want}"
         return 1
     fi
-    mv -f "$tmp" "$dst" || return 1
+    if ! mv -f "$tmp" "$dst" 2>>"$LOG"; then
+        log "${name}: ПОМИЛКА mv (${tmp} -> ${dst})"
+        return 1
+    fi
     fixup "$dst"
     scan "$name"
+    log "${name}: скопійовано ${got} байт -> ${dst}"
     return 0
 }
 
@@ -99,19 +115,90 @@ chmod 0775 "$DST_DIR" 2>/dev/null
 chown 1023:1023 "$DST_DIR" 2>/dev/null || chown media_rw:media_rw "$DST_DIR" 2>/dev/null
 restorecon "$DST_DIR" 2>/dev/null || chcon u:object_r:media_rw_data_file:s0 "$DST_DIR" 2>/dev/null
 
-if [ ! -f "$SRC" ]; then
+# Обираємо робоче джерело: спершу стандартний шлях, якщо він недоступний
+# (Scoped Storage) — raw-шлях через /data/media.
+if [ -f "$SRC" ]; then
+    EFF_SRC="$SRC"
+elif [ -f "$SRC_ROOT" ]; then
+    EFF_SRC="$SRC_ROOT"
+    log "Основне джерело недоступне, використовую fallback: $SRC_ROOT"
+else
+    EFF_SRC="$SRC"
+fi
+log "Синхронізація: джерело=${EFF_SRC}, призначення=${DST_DIR}"
+if [ -f "$SRC_USER" ]; then
+    EFF_SRC_USER="$SRC_USER"
+elif [ -f "$SRC_USER_ROOT" ]; then
+    EFF_SRC_USER="$SRC_USER_ROOT"
+else
+    EFF_SRC_USER="$SRC_USER"
+fi
+
+if [ ! -f "$EFF_SRC" ]; then
     log "Файл-джерело не знайдено: $SRC"
     echo "source missing: $SRC" >&2
     exit 1
 fi
 
-if ! copy_one "$SRC" "Garage.dat"; then
+if ! copy_one "$EFF_SRC" "Garage.dat"; then
+    log "ПОМИЛКА: Garage.dat не скопійовано"
     echo "copy Garage.dat failed" >&2
     exit 1
 fi
 
-if [ -f "$SRC_USER" ]; then
-    copy_one "$SRC_USER" "user.dat" || log "user.dat не скопійовано (не критично)"
+# Жорстка верифікація з ретраями: Android FUSE / MediaProvider іноді не
+# одразу відображає новий файл у /data/media/0/, і миттєвий stat падає.
+FINAL="$DST_DIR/Garage.dat"
+PUB_FINAL="/storage/emulated/0/Download/td2tdr_sync/Garage.dat"
+
+# Примусовий скидання кешу файлової системи на диск після копіювання
+sync 2>/dev/null
+
+verify_file() {
+    # 3 спроби з паузою 0.5с — FUSE може «дозрівати» до секунди
+    local f="$1" i=0
+    while [ $i -lt 3 ]; do
+        if [ -s "$f" ]; then
+            stat -c %s "$f" 2>/dev/null && return 0
+        fi
+        sleep 0.5 2>/dev/null || sleep 1
+        i=$((i + 1))
+    done
+    return 1
+}
+
+if ! SIZE=$(verify_file "$FINAL"); then
+    # Можливо, cp створив файл, але він у дзеркальній теці — перевіряємо обидва
+    ALT_FINAL="/data/media/0/Download/td2tdr_sync/Garage.dat"
+    if [ "$ALT_FINAL" != "$FINAL" ] && SIZE=$(verify_file "$ALT_FINAL"); then
+        FINAL="$ALT_FINAL"
+        log "Файл знайдено у дзеркалі: $FINAL ($SIZE байт)"
+    else
+        # Fallback-копіювання напряму в публічний /storage шлях: деякі ROM
+        # не дають shell писати в /data/media, але дають в /storage/emulated/0
+        log "Верифікація не пройшла (${FINAL}) — пробую fallback у /storage"
+        mkdir -p "/storage/emulated/0/Download/td2tdr_sync" 2>/dev/null
+        if cp -f "$EFF_SRC" "$PUB_FINAL" 2>>"$LOG" && [ -s "$PUB_FINAL" ]; then
+            chmod 0644 "$PUB_FINAL" 2>/dev/null
+            chown 1023:1023 "$PUB_FINAL" 2>/dev/null || chown media_rw:media_rw "$PUB_FINAL" 2>/dev/null
+            restorecon "$PUB_FINAL" 2>/dev/null || chcon u:object_r:media_rw_data_file:s0 "$PUB_FINAL" 2>/dev/null
+            FINAL="$PUB_FINAL"
+            SIZE=$(stat -c %s "$FINAL")
+            log "Fallback-копіювання вдалось: $FINAL ($SIZE байт)"
+            # Примусове оновлення MediaStore, щоб Chrome/ОС одразу бачили файл
+            scan "Garage.dat"
+        else
+            log "ПОМИЛКА: файл не створено ні в одному з шляхів (перевірено ${FINAL}, ${ALT_FINAL}, ${PUB_FINAL})"
+            echo "verify failed: Garage.dat missing/empty everywhere" >&2
+            exit 3
+        fi
+    fi
+fi
+
+log "Верифікація: $FINAL ($SIZE байт) — ОК"
+
+if [ -f "$EFF_SRC_USER" ]; then
+    copy_one "$EFF_SRC_USER" "user.dat" || log "user.dat не скопійовано (не критично)"
 fi
 
 sync

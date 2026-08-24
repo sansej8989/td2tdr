@@ -4,6 +4,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>td2tdr — Garage Sync</title>
+  <!-- Inline SVG favicon: не залежить від зовнішнього файлу, працює офлайн
+       усередині WebUI (файл banner лежить поза webroot і звідси недосяжний) -->
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='0.9em' font-size='90'%3E%F0%9F%9A%97%3C/text%3E%3C/svg%3E">
+  <link rel="apple-touch-icon" href="../banner_hazard_v2.png">
   <link rel="stylesheet" href="style.css">
   <script>
     // Applied before first paint to avoid a flash of the wrong theme.
@@ -257,21 +261,24 @@
             <div id="garageHeldLine" class="garage-fill-held"></div>
           </div>
 
-          <!-- Прокачка: горизонтальна стек-шкала (замість donut — не накладаються підписи на малих сегментах) -->
-          <div class="garage-section-card">
+          <!-- Прокачка: міні-donut + стек-шкала з легендою -->
+          <div class="garage-section-card accent-upgrades">
             <div class="garage-section-title" data-i18n="garage_upgrade">Прокачка</div>
             <div class="upgrade-stack-wrap">
+              <div id="upgradeDonut" class="upgrade-donut"></div>
+              <div class="upgrade-stack-col">
               <div class="upgrade-stack-head">
                 <span id="upgradeStackVal" class="upgrade-stack-val">0</span>
                 <span class="upgrade-stack-lbl" data-i18n="garage_total_cars">авто</span>
               </div>
               <div id="upgradeStackTrack" class="upgrade-stack-track"></div>
               <div id="upgradeLegend" class="garage-donut-legend"></div>
+              </div>
             </div>
           </div>
 
           <!-- Бої: плитка шкали у стилі престижу -->
-          <div class="garage-battle-group">
+          <div class="garage-battle-group accent-battles">
             <div class="res-tile garage-battle-tile prestige-wrap" id="battleTile" role="img" aria-label="Бої">
               <div id="battleBarBg" class="garage-battle-bar-bg"></div>
               <div class="res-bg-icon">⚔️</div>
@@ -336,10 +343,14 @@
         <button id="clearHistoryBtn" class="btn-icon btn-text" style="flex:0 0 auto;font-size:11px;opacity:.65;" data-i18n="an_clear">Очистити</button>
       </div>
       <div id="analyticsNote" class="import-hint" data-i18n="an_hint">Знімок стану записується автоматично раз на добу — при відкритті WebUI, якщо дані вже синхронізовані</div>
-      <div class="an-period-switch" id="analyticsPeriod" role="tablist">
-        <button type="button" class="an-period-opt" data-period="7" data-i18n="an_period_7">7д</button>
-        <button type="button" class="an-period-opt" data-period="30" data-i18n="an_period_30">30д</button>
-        <button type="button" class="an-period-opt active" data-period="all" data-i18n="an_period_all">Усі</button>
+      <div class="an-range-wrap">
+        <div class="an-range-head">
+          <span class="an-range-title" data-i18n="an_range_title">Прогнозний період</span>
+          <span id="analyticsRangeVal" class="an-range-val">30д</span>
+        </div>
+        <input type="range" id="analyticsRange" class="an-range" min="3" max="90" step="1" value="30">
+        <div class="an-scale"><span>3д</span><span>30д</span><span>60д</span><span>90д</span></div>
+        <div id="analyticsAccuracy" class="an-accuracy"></div>
       </div>
       <div id="analyticsList" class="analytics-list">
         <div class="garage-empty" data-i18n="cl_loading">Завантаження…</div>

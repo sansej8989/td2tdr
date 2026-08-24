@@ -20,6 +20,10 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v5
+        with:
+          # Повна історія потрібна, щоб без проблем запушити коміт
+          # оновленого update.json назад у master
+          fetch-depth: 0
 
       - name: Read version
         id: version
@@ -34,14 +38,57 @@ jobs:
       - name: Build zip
         run: |
           mkdir -p dist
+
+          # Гарантовано виставляємо exec-права скриптам модуля: zip (info-zip)
+          # зберігає POSIX-права файлів, але лише ті, що реально є на диску.
+          # Якщо exec-біт загубився в git — інсталятор Magisk/KSU все одно
+          # виправить права через customize.sh, але краще пакувати коректно.
+          chmod 0755 customize.sh service.sh sync_now.sh set_locale.sh action.sh post-fs-data.sh 2>/dev/null || true
+
+          # В архів мають потрапити ЛИШЕ файли модуля (у корені zip):
+          # module.prop, customize.sh, *.sh, webroot/, banner.
+          # Виключаємо все службове репозиторію.
           zip -r "dist/td2tdr_v${{ steps.version.outputs.VERSION }}.zip" . \
-            -x ".git/*" ".github/*" "dist/*" "*.zip"
+            -x ".git/*" \
+               ".github/*" \
+               ".gitignore" \
+               ".gitattributes" \
+               "dist/*" \
+               "*.zip" \
+               "package.json" \
+               "package-lock.json" \
+               "node_modules/*" \
+               "scripts/*" \
+               "README.md"
+
+          # Контроль вмісту архіву — одразу видно зайві файли у логах
+          echo "── Вміст ZIP ──"
+          unzip -l "dist/td2tdr_v${{ steps.version.outputs.VERSION }}.zip"
 
       - name: Compute sha256
         id: sha
         run: |
           SHA=$(sha256sum "dist/td2tdr_v${{ steps.version.outputs.VERSION }}.zip" | cut -d' ' -f1)
           echo "SHA256=$SHA" >> "$GITHUB_OUTPUT"
+          echo "sha256: $SHA"
+
+      - name: Extract changelog for this version
+        id: changelog
+        run: |
+          VER="v${{ steps.version.outputs.VERSION }}"
+          # Витягуємо з changelog.md лише секцію цієї версії: від рядка
+          "# v<ver>" до наступного заголовка "# v..." (або EOF).
+          awk -v ver="$VER" '
+            $0 ~ "^#+ " ver "([[:space:]]|$)" { found=1; next }
+              found && $0 ~ "^#+ v" { exit }
+              found { print }
+          ' changelog.md > release_body.md
+          if [ ! -s release_body.md ]; then
+            # Fallback: якщо секції немає (забули оновити changelog),
+            # використовуємо весь файл, щоб реліз не лишився без опису.
+            echo "⚠️ Секцію $VER не знайдено в changelog.md — використовую весь файл"
+            cp changelog.md release_body.md
+          fi
 
       - name: Update update.json
         run: |
@@ -61,6 +108,13 @@ jobs:
               f.write('\n')
           EOF
 
+      - name: Attach update.json + checksum to release artifacts
+        run: |
+          # Копія оновленого update.json і файл хеша прикріплюються до релізу,
+          # щоб значення було доступне навіть до мержу коміту в master
+          cp update.json dist/update.json
+          echo "${{ steps.sha.outputs.SHA256 }}  td2tdr_v${{ steps.version.outputs.VERSION }}.zip" > "dist/td2tdr_v${{ steps.version.outputs.VERSION }}.zip.sha256"
+
       - name: Commit update.json
         run: |
           if git diff --quiet update.json; then
@@ -71,12 +125,15 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add update.json
           git commit -m "chore: bump update.json to v${{ steps.version.outputs.VERSION }}"
-          git push origin HEAD:master
+          git push origin HEAD:${GITHUB_REF_NAME:-master}
 
       - name: Create Release
-        uses: softprops/action-gh-release@v3.0.2
+        uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ steps.version.outputs.VERSION }}
-          files: dist/td2tdr_v${{ steps.version.outputs.VERSION }}.zip
-          body_path: changelog.md
+          files: |
+            dist/td2tdr_v${{ steps.version.outputs.VERSION }}.zip
+            dist/td2tdr_v${{ steps.version.outputs.VERSION }}.zip.sha256
+            dist/update.json
+          body_path: release_body.md
           overwrite_files: true

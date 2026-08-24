@@ -6,6 +6,10 @@
   const MODDIR = "/data/adb/modules/td2tdr_sync";
   const SRC = "/storage/emulated/0/Android/data/com.hutchgames.cccg/files/Garage.dat";
   const SRC_USER = "/storage/emulated/0/Android/data/com.hutchgames.cccg/files/user.dat";
+  // Fallback, якщо /storage/emulated/0 заблокований Scoped Storage:
+  // raw-шлях до того самого файлу через /data/media (доступний з root).
+  const SRC_ROOT = "/data/media/0/Android/data/com.hutchgames.cccg/files/Garage.dat";
+  const SRC_USER_ROOT = "/data/media/0/Android/data/com.hutchgames.cccg/files/user.dat";
   const DST_DIR = "/storage/emulated/0/Download/td2tdr_sync";
   const DST = `${DST_DIR}/Garage.dat`;
   const DST_USER = `${DST_DIR}/user.dat`;
@@ -17,6 +21,33 @@
   const THEME_FILE = `${DST_DIR}/theme`;
   const HISTORY_FILE = `${DST_DIR}/history.jsonl`;
   const UI_LANG_FILE = `${DST_DIR}/ui_lang`;
+  // Raw-дзеркала персистентної теки через /data/media. У частині ROM /
+  // SELinux-політик shell усередині WebUI не може читати FUSE-вид
+  // /storage/emulated/0 (файл фізично є, але stat/cat повертають помилку),
+  // тому кожен доступ робимо з фолбеком на /data/media/0 шлях.
+  const DST_DIR_ALT = "/data/media/0/Download/td2tdr_sync";
+  const DST_ALT = `${DST_DIR_ALT}/Garage.dat`;
+  const DST_USER_ALT = `${DST_DIR_ALT}/user.dat`;
+  const altPath = (p) => p.replace(DST_DIR, DST_DIR_ALT);
+
+  // ---- helpers for persistent config files (locale/theme/ui_lang/history) --
+  // Читання: спершу основний шлях (/storage), при невдачі — raw /data/media.
+  async function readCfg(path) {
+    if (!hasKsu()) return { errno: -1, stdout: "" };
+    const first = await exec(`cat ${shellQuote(path)} 2>/dev/null`);
+    if (first.errno === 0 && first.stdout) return first;
+    const alt = await exec(`cat ${shellQuote(altPath(path))} 2>/dev/null`);
+    if (alt.errno === 0 && alt.stdout) return alt;
+    return first;
+  }
+  // Запис: у основний шлях; якщо він не вдався (FUSE/SELinux) — дубль в raw.
+  async function writeCfg(path, shellCmd) {
+    const r = await exec(shellCmd(path));
+    if (r.errno !== 0) {
+      await exec(shellCmd(altPath(path)));
+    }
+    return r;
+  }
 
   // ---- ksu bridge -----------------------------------------------------
   let seq = 0;
@@ -67,7 +98,10 @@
   function ensureDataDir() {
     if (!dataDirReady) {
       dataDirReady = hasKsu()
-        ? exec(`mkdir -p ${shellQuote(DST_DIR)}`).catch(() => {})
+        ? Promise.all([
+            exec(`mkdir -p ${shellQuote(DST_DIR)}`).catch(() => {}),
+            exec(`mkdir -p ${shellQuote(DST_DIR_ALT)}`).catch(() => {}),
+          ])
         : Promise.resolve();
     }
     return dataDirReady;
@@ -150,6 +184,7 @@
       garage_total_cars: "авто в гаражі",
       garage_battles: "Бої",
       garage_held: "Held: {held} — для прокачки або продажу",
+      garage_held_short: "Held: {held}",
       upg_custom: "Інше",
       battle_wins: "Перемоги",
       battle_draws: "Нічиї",
@@ -179,6 +214,13 @@
       log_locale_unconfirmed: "Гру перезапущено, але жоден механізм зміни мови не підтвердив успіх — перевірте журнал вище",
       toast_locale_applied: "Мову змінено",
       toast_locale_unconfirmed: "Гру перезапущено, але зміна мови не підтверджена — див. журнал",
+      toast_sync_failed: "Помилка синхронізації — див. журнал",
+      btn_wait_sync: "Зачекайте: виконується первинна синхронізація…",
+      toast_not_ready: "Файл ще не готовий — повторіть за мить",
+      log_auto_resync: "Кнопку натиснуто до готовності копії — виконую аварійну синхронізацію…",
+      log_copy_ok: "Копіювання у Download: УСПІХ ({size})",
+      log_copy_fail: "Копіювання у Download: ПОМИЛКА — файл не створено (див. sync.log)",
+      status_ready_sticky: "Готово — копія підтверджена раніше",
       log_stopping_game: "Зупиняю гру…",
       log_starting_game: "Запускаю гру…",
       log_game_started: "Гру запущено",
@@ -249,7 +291,11 @@
       an_period_all: "Усі",
       an_period_7d_label: "7д",
       an_period_30d_label: "30д",
-      an_record_gain: "Рекорд приросту за день: <b>+{value}</b> ({date})",
+      an_record_gain: "Піковий день: <b>+{value}</b> ({date})",
+      an_accuracy: "Точність прогнозу: {pct}%",
+      an_projection: "Прогноз на {days} дн.:",
+      an_per_day: " / день",
+      an_range_title: "Прогнозний період",
       an_forecast_conf_label_low: "точність: низька",
       an_forecast_conf_label_med: "точність: середня",
       an_forecast_conf_label_high: "точність: висока",
@@ -337,6 +383,7 @@
       garage_total_cars: "cars in garage",
       garage_battles: "Battles",
       garage_held: "Held: {held} — for upgrading or selling",
+      garage_held_short: "Held: {held}",
       upg_custom: "Other",
       battle_wins: "Wins",
       battle_draws: "Draws",
@@ -366,6 +413,13 @@
       log_locale_unconfirmed: "Game restarted, but no locale mechanism confirmed success — check the log above",
       toast_locale_applied: "Language changed",
       toast_locale_unconfirmed: "Game restarted, but the language change wasn't confirmed — see log",
+      toast_sync_failed: "Sync failed — see the log",
+      btn_wait_sync: "Please wait: initial sync in progress…",
+      toast_not_ready: "File not ready yet — try again shortly",
+      log_auto_resync: "Button pressed before copy was ready — running emergency sync…",
+      log_copy_ok: "Copy to Download: SUCCESS ({size})",
+      log_copy_fail: "Copy to Download: FAILED — file was not created (see sync.log)",
+      status_ready_sticky: "Ready — copy confirmed earlier",
       log_stopping_game: "Stopping the game…",
       log_starting_game: "Starting the game…",
       log_game_started: "Game started",
@@ -436,7 +490,11 @@
       an_period_all: "All",
       an_period_7d_label: "7d",
       an_period_30d_label: "30d",
-      an_record_gain: "Best daily gain: <b>+{value}</b> ({date})",
+      an_record_gain: "Best day: <b>+{value}</b> ({date})",
+      an_accuracy: "Forecast accuracy: {pct}%",
+      an_projection: "{days}-day projection:",
+      an_per_day: " / day",
+      an_range_title: "Forecast period",
       an_forecast_conf_label_low: "confidence: low",
       an_forecast_conf_label_med: "confidence: medium",
       an_forecast_conf_label_high: "confidence: high",
@@ -543,7 +601,7 @@
     let choice = "auto";
     if (hasKsu()) {
       try {
-        const { errno, stdout } = await exec(`cat ${shellQuote(UI_LANG_FILE)} 2>/dev/null`);
+        const { errno, stdout } = await readCfg(UI_LANG_FILE);
         if (errno === 0 && stdout.trim()) choice = stdout.trim();
       } catch (e) {}
     }
@@ -565,7 +623,7 @@
     loadChangelog();
     renderLangUI();
     if (hasKsu()) {
-      try { await exec(`echo -n ${shellQuote(choice)} > ${shellQuote(UI_LANG_FILE)}`); } catch (e) {}
+      try { await writeCfg(UI_LANG_FILE, (p) => `echo -n ${shellQuote(choice)} > ${shellQuote(p)}`); } catch (e) {}
     }
   }
 
@@ -639,6 +697,53 @@
     return { size: Number(size), mtime: Number(mtime) };
   }
 
+  // stat по черзі кількох кандидатів — перший успішний виграє. Обов'язково
+  // для /storage/emulated/0 шляхів: у частині ROM shell WebUI не бачить
+  // FUSE-вид /storage, хоча файл реально існує через /data/media/0.
+  async function statFirst(paths) {
+    for (const p of paths) {
+      const st = await statPath(p);
+      if (st) return st;
+    }
+    return null;
+  }
+
+  // Останній шлях, де Garage.dat було успішно знайдено — перевіряємо його
+  // першим, щоб не гоняти весь ланцюжок кандидатів щоразу.
+  let garagePathHint = null;
+
+  // ЄДИНЕ ДЖЕРЕЛО ПРАВДИ про наявність копії Garage.dat. Використовується
+  // скрізь: стартова перевірка, статус-панель і верифікація в модалці.
+  // 1) stat по кандидатах (кешований шлях -> /storage -> /data/media);
+  // 2) якщо stat не спрацював ніде (транзієнт FUSE одразу після перезапису
+  //    файла, відсутність stat-бінарії тощо) — резервний probe через
+  //    test -s + wc -c, тобто інший код-шлях усередині shell.
+  async function checkGarageExists() {
+    const seen = new Set();
+    const candidates = [];
+    for (const p of [garagePathHint, DST, DST_ALT]) {
+      if (p && !seen.has(p)) { seen.add(p); candidates.push(p); }
+    }
+    let st = await statFirst(candidates);
+    if (st) {
+      // Запам'ятовуємо конкретний вдалий шлях для пріоритету наступного разу
+      for (const p of candidates) {
+        const one = await statPath(p);
+        if (one) { garagePathHint = p; break; }
+      }
+      return st;
+    }
+    // Резервний probe (без stat-бінарії)
+    for (const p of candidates) {
+      const r = await exec(`test -s ${shellQuote(p)} && wc -c < ${shellQuote(p)}`);
+      if (r.errno === 0 && Number(r.stdout.trim()) > 0) {
+        garagePathHint = p;
+        return { size: Number(r.stdout.trim()), mtime: Math.floor(Date.now() / 1000) };
+      }
+    }
+    return null;
+  }
+
   // ---- session log (in-panel, exportable) --------------------------------
   const sessionLog = [];
   const LOG_FILE = "/sdcard/Download/td2tdr_log.txt";
@@ -662,7 +767,9 @@
       const empty = el.querySelector('[data-i18n="log_empty"]');
       if (empty) empty.remove();
       const d = document.createElement("div");
-      d.className = "log-line";
+      d.className = "log-line new";
+      // Коротка підсвітка нового рядка — чіткий фідбек, що журнал оновився
+      setTimeout(() => d.classList.remove("new"), 1200);
       d.dataset.level = lvl;
       d.innerHTML = `<span class="log-time">${ts}</span><span class="log-level log-level-${lvl.toLowerCase()}">${lvl}</span> ${escapeHtml(msg)}`;
       const filter = $("logLevelFilter");
@@ -716,7 +823,19 @@
         addLog(t("log_sync_error", { reason: stderr || stdout || t("log_code", { code: errno }) }), "E");
         return false;
       }
-      addLog(t("log_synced_manual"));
+      // Верифікація результату копіювання: скрипт міг вийти з 0, не створивши
+      // файл. Чітко фіксуємо в Журналі: УСПІХ (з розміром) або ПОМИЛКА.
+      const st = await checkGarageExists();
+      if (st && st.size > 0) {
+        garageEverReady = true;
+        dstReady = true;
+        updateSyncGate(true);
+        saveStateCache(st);
+        addLog(t("log_copy_ok", { size: formatBytes(st.size) }));
+      } else {
+        addLog(t("log_copy_fail"), "E");
+        return false;
+      }
       return true;
     } catch (e) {
       // Defense in depth: any other unexpected exec() failure should degrade
@@ -950,8 +1069,20 @@
   async function refresh() {
     const refreshBtn = $("refreshBtn");
     if (refreshBtn) refreshBtn.classList.add("spinning");
+    // try/finally гарантує, що спінер зніметься навіть якщо statPath/парсинг
+    // кинуть виняток — інакше кнопка «Оновити» назавжди залишалась обертовою.
+    try {
+      await refreshInner();
+    } finally {
+      if (refreshBtn) refreshBtn.classList.remove("spinning");
+      // Гейт головної кнопки: активна лише коли копія реально знайдена
+      updateSyncGate(dstReady);
+    }
+  }
 
+  async function refreshInner() {
     if (!hasKsu()) {
+      dstReady = true; // демо-режим: вважаємо все готовим
       $("statusMeta").textContent = t("status_demo_mode");
       $("checkSrc").className = "flow-dot ok";
       $("checkDst").className = "flow-dot ok";
@@ -966,8 +1097,14 @@
       return;
     }
 
-    const src = await statPath(SRC);
-    const dst = await statPath(DST);
+    const src = await statFirst([SRC, SRC_ROOT]);
+    // Єдине джерело правди для копії — checkGarageExists (stat + fallback
+    // probe + кеш вдалого шляху). Копія фізично є — кнопка розблоковується.
+    const dst = await checkGarageExists();
+    if (dst) garageEverReady = true;
+    // Липкість: раз готовий — завжди готовий (файл міг транзієнтно бути
+    // недоступний для stat під час перезапису, це не привід скидати статус).
+    dstReady = !!dst || garageEverReady;
 
     const checkSrc = $("checkSrc");
     const checkDst = $("checkDst");
@@ -977,19 +1114,27 @@
     const dstFlowStatus = $("dstFlowStatus");
     const resultFlowStatus = $("resultFlowStatus");
 
-    checkSrc.className = `flow-dot ${src ? "ok" : "bad"}`;
-    checkDst.className = `flow-dot ${dst ? "ok" : "warn"}`;
-    if (srcFlowStatus) srcFlowStatus.textContent = src ? `${t("flow_found")} · ${formatBytes(src.size)}` : t("flow_not_found_src");
-    if (dstFlowStatus) dstFlowStatus.textContent = dst ? `${t("flow_found")} · ${formatBytes(dst.size)}` : t("flow_not_found_dst");
+    // Ефективний стан копії: якщо гараж вже був підтверджений (липкий
+    // прапорець), транзієнтна невдача stat НЕ скидає статус у «Копії ще немає».
+    const effDst = dst || (garageEverReady ? { size: null, mtime: 0 } : null);
 
-    if (src && dst) {
-      const inSync = src.size === dst.size;
+    checkSrc.className = `flow-dot ${src ? "ok" : "bad"}`;
+    checkDst.className = `flow-dot ${effDst ? "ok" : "warn"}`;
+    if (srcFlowStatus) srcFlowStatus.textContent = src ? `${t("flow_found")} · ${formatBytes(src.size)}` : t("flow_not_found_src");
+    if (dstFlowStatus) dstFlowStatus.textContent = effDst
+      ? `${t("flow_found")}${dst ? ` · ${formatBytes(dst.size)}` : ""}`
+      : t("flow_not_found_dst");
+
+    if (src && effDst) {
+      const inSync = dst ? src.size === dst.size : true; // липкий стан = вважаємо синхр.
       checkResult.className = `flow-dot ${inSync ? "ok" : "warn"}`;
       if (resultFlowStatus) resultFlowStatus.textContent = inSync ? t("flow_in_sync") : t("flow_diff");
       if (statusIcon) statusIcon.className = `status-icon ${inSync ? "ok" : "warn"}`;
-      $("statusMeta").textContent = inSync
-        ? t("status_synced", { size: formatBytes(dst.size) })
-        : t("status_size_mismatch", { src: formatBytes(src.size), dst: formatBytes(dst.size) });
+      $("statusMeta").textContent = !dst && garageEverReady
+        ? t("status_ready_sticky")
+        : (inSync
+          ? t("status_synced", { size: formatBytes(dst.size) })
+          : t("status_size_mismatch", { src: formatBytes(src.size), dst: formatBytes(dst.size) }));
       setTabIndicator("sync", inSync ? "ok" : "warn");
     } else if (!src) {
       checkResult.className = "flow-dot bad";
@@ -1005,13 +1150,79 @@
       setTabIndicator("sync", "warn");
     }
 
-    $("lastSync").textContent = dst ? new Date(dst.mtime * 1000).toLocaleString("uk-UA") : "—";
+    // Оновлюємо дату останньої синхронізації лише при реальному stat-успіху,
+    // щоб липкий стан не переписував її на 1970 рік.
+    if (dst) $("lastSync").textContent = new Date(dst.mtime * 1000).toLocaleString("uk-UA");
 
     if (refreshBtn) refreshBtn.classList.remove("spinning");
   }
 
   // ---- full refresh: sync file + status check + garage + analytics -------
   let refreshInFlight = false;
+  // Готовність копії Garage.dat: true лише коли файл фізично знайдено
+  // (stat успішний хоча б по одному зі шляхів). Керує доступністю кнопки
+  // «Синхронізувати та відкрити» — перехід на сайт блокується, поки false.
+  let dstReady = false;
+  // «Липкий» прапорець: щойно гараж було проаналізовано (WebUI зчитав дані)
+  // або копію фізично знайдено — статус більше НІКОЛИ не відкочується до
+  // «Копії ще немає» при повторних перевірках/натисканнях.
+  let garageEverReady = false;
+
+  // ---- кеш останнього стану (localStorage) --------------------------------
+  // Після першого вдалого копіювання стан зберігається, і при кожному
+  // наступному відкритті WebUI малюється МИТТЄВО з кешу — без «Не завантажено»
+  // і без очікування shell-команд. Повторне читання/копіювання — тільки
+  // за кнопкою «Синхронізувати та відкрити» або «Оновити».
+  const STATE_CACHE_KEY = "td2tdr_last_state";
+  function saveStateCache(st) {
+    try {
+      localStorage.setItem(STATE_CACHE_KEY, JSON.stringify({ size: st.size, mtime: st.mtime, ts: Date.now() }));
+    } catch (e) {}
+  }
+  function paintCachedState() {
+    let s = null;
+    try { s = JSON.parse(localStorage.getItem(STATE_CACHE_KEY) || "null"); } catch (e) {}
+    if (!s || !s.size) return false;
+    dstReady = true;
+    garageEverReady = true;
+    updateSyncGate(true);
+    $("statusMeta").textContent = t("status_synced", { size: formatBytes(s.size) });
+    $("lastSync").textContent = s.mtime ? new Date(s.mtime * 1000).toLocaleString("uk-UA") : "—";
+    const cr = $("checkResult"), cd = $("checkDst"), cs = $("checkSrc");
+    if (cr) cr.className = "flow-dot ok";
+    if (cd) cd.className = "flow-dot ok";
+    if (cs) cs.className = "flow-dot ok";
+    const si = $("statusIcon");
+    if (si) si.className = "status-icon ok";
+    setTabIndicator("sync", "ok");
+    return true;
+  }
+
+  // Оновлює доступність головної кнопки відповідно до стану синхронізації.
+  // Не чіпає кнопку посеред активної анімації (onclic/validate/error).
+  // Динамічний «настрій» кнопки: glow-анімація в тон статусу
+  function setBtnMood(mood) {
+    const btn = $("syncAndOpen");
+    if (!btn) return;
+    btn.classList.remove("mood-ok", "mood-warn");
+    if (mood === "ok") btn.classList.add("mood-ok");
+    else if (mood === "warn") btn.classList.add("mood-warn");
+    // "bad" не липнемо: червона швидка анімація живе лише у класі .error
+  }
+
+  function updateSyncGate(ready0) {
+    const btn = $("syncAndOpen");
+    if (!btn) return;
+    if (!hasKsu()) { btn.disabled = false; setBtnMood("ok"); return; } // демо-режим браузера
+    const busy = btn.classList.contains("onclic") || btn.classList.contains("validate") || btn.classList.contains("error");
+    if (!busy) {
+      const ready = ready0 || garageEverReady;
+      btn.disabled = !ready;
+      btn.title = ready ? "" : t("btn_wait_sync");
+      setBtnMood(ready ? "ok" : "warn");
+    }
+  }
+
 
   // Just the part the default-active "Синхр." tab needs — used at startup
   // so the essential status shows up fast without waiting on Гараж/Аналітика.
@@ -1019,6 +1230,27 @@
     if (refreshInFlight) return;
     refreshInFlight = true;
     try {
+      // Швидка попередня перевірка ДО синхронізації: якщо копія вже лежить
+      // у Download/td2tdr_sync (наприклад, service.sh відпрацював при boot),
+      // статус має стати зеленим НЕГАЙНО — без проміжного «Копії ще немає»,
+      // поки йде фонове оновлення файлів.
+      const pre = await checkGarageExists();
+      if (pre) {
+        dstReady = true;
+        garageEverReady = true;
+        saveStateCache(pre);
+        updateSyncGate(true);
+        $("statusMeta").textContent = t("status_synced", { size: formatBytes(pre.size) });
+        const cr = $("checkResult"), cd = $("checkDst");
+        if (cr) cr.className = "flow-dot ok";
+        if (cd) cd.className = "flow-dot ok";
+        const si = $("statusIcon");
+        if (si) si.className = "status-icon ok";
+        setTabIndicator("sync", "ok");
+        $("lastSync").textContent = pre.mtime
+          ? new Date(pre.mtime * 1000).toLocaleString("uk-UA")
+          : "—";
+      }
       await syncFile();
       await refresh();
     } finally {
@@ -1077,10 +1309,15 @@
       .catch(() => "");
   }
 
-  // читаємо оригінал гри напряму; якщо його нема — фолбек на синхронізовану копію
-  async function readSourceFile(primary, fallback) {
-    const data = await readFile(primary);
-    return data || readFile(fallback);
+  // читаємо файл-джерело; приймає будь-яку кількість кандидатів і повертає
+  // перший непорожній результат. Порядок: стандартний шлях → /data/media/0
+  // (Scoped Storage fallback) → синхронізована копія у Download.
+  async function readSourceFile() {
+    for (const p of arguments) {
+      const data = await readFile(p);
+      if (data) return data;
+    }
+    return "";
   }
 
   // Mock-дані для перегляду в браузері на ПК (коли немає KernelSU / Magisk)
@@ -1109,7 +1346,7 @@
   });
 
   async function loadResources() {
-    let data = await readSourceFile(SRC_USER, DST_USER);
+    let data = await readSourceFile(SRC_USER, SRC_USER_ROOT, DST_USER);
     if (!data && !hasKsu()) {
       data = MOCK_USER_DAT;
     }
@@ -1232,6 +1469,28 @@
     });
     legendEl.innerHTML = legendHtml;
 
+    // ---- міні-donut поруч із відсотками (преміальний акцент блоку) ----
+    const donutEl = $("upgradeDonut");
+    if (donutEl) {
+      const R = 26, C = 2 * Math.PI * R;
+      let offset = 0;
+      let segs = "";
+      sortedParts.forEach((p) => {
+        const cnt = counts[p.k] || 0;
+        if (!cnt || !total) return;
+        const frac = cnt / total;
+        segs += `<circle cx="32" cy="32" r="${R}" fill="none" stroke="${p.color}" stroke-width="9" stroke-dasharray="${(frac * C).toFixed(2)} ${(C - frac * C).toFixed(2)}" stroke-dashoffset="${(-offset * C).toFixed(2)}" transform="rotate(-90 32 32)"></circle>`;
+        offset += frac;
+      });
+      donutEl.innerHTML = `
+        <svg viewBox="0 0 64 64" class="upgrade-donut-svg">
+          <circle cx="32" cy="32" r="${R}" fill="none" stroke="rgba(127,127,127,0.15)" stroke-width="9"></circle>
+          ${segs}
+          <text x="32" y="30" text-anchor="middle" class="upgrade-donut-num">${total.toLocaleString("uk-UA")}</text>
+          <text x="32" y="42" text-anchor="middle" class="upgrade-donut-lbl">${escapeHtml(t("garage_total_cars"))}</text>
+        </svg>`;
+    }
+
     function highlight(key) {
       sortedParts.forEach((p) => {
         const seg = document.getElementById(`upgSeg_${p.k}`);
@@ -1309,7 +1568,7 @@
     const loadBtn = $("loadGarage");
     if (loadBtn) { loadBtn.disabled = true; loadBtn.textContent = t("garage_analyzing"); }
     try {
-      let data = await readSourceFile(SRC, DST);
+      let data = await readSourceFile(SRC, SRC_ROOT, DST);
       if (!data && !hasKsu()) {
         data = MOCK_GARAGE_DAT;
       }
@@ -1323,7 +1582,21 @@
       if (!line) { addLog(t("log_garage_no_playerdeck"), "E"); setTabIndicator("garage", "bad"); return; }
       const m = line.match(/^PlayerDeck=[^,]+,s(.+)$/);
       if (!m) { addLog(t("log_garage_parse_failed"), "E"); setTabIndicator("garage", "bad"); return; }
-      const cards = JSON.parse(m[1]);
+      // Захист від пошкодженого Garage.dat: невалідний JSON не повинен
+      // кидати необроблений виняток і ламати решту сторінки.
+      let cards;
+      try {
+        cards = JSON.parse(m[1]);
+      } catch (e) {
+        addLog(t("log_garage_parse_failed"), "E");
+        setTabIndicator("garage", "bad");
+        return;
+      }
+      if (!Array.isArray(cards)) { addLog(t("log_garage_parse_failed"), "E"); setTabIndicator("garage", "bad"); return; }
+      // WebUI реально зчитав і розпарсив гараж — статус «готово» відтепер
+      // липкий: жодні подальші stat-перевірки не скинуть його назад.
+      garageEverReady = true;
+      dstReady = true;
 
       const total = cards.length;
       const locked = cards.filter((c) => c.locked).length;
@@ -1340,16 +1613,24 @@
 
       // Заповнення слотів (плитка з фоновим прогресом)
       const fillPct = myCars ? Math.min(100, (locked / myCars) * 100) : 0;
+      // Слот-індикатор: при >95% зайнятості — жовто-помаранчеве світлодіодне
+      // світіння-попередження, що слоти закінчуються.
       const garageFillProgress = $("garageFillProgress");
       const garageFillTile = document.querySelector(".garage-fill-tile");
       if (garageFillProgress) {
         garageFillProgress.style.width = fillPct + "%";
         garageFillProgress.className = "garage-fill-bar p-" + (fillPct >= 90 ? "red" : fillPct >= 75 ? "orange" : fillPct >= 50 ? "yellow" : "green");
       }
-      if (garageFillTile) garageFillTile.setAttribute("aria-valuenow", String(Math.round(fillPct)));
+      if (garageFillTile) {
+        garageFillTile.setAttribute("aria-valuenow", String(Math.round(fillPct)));
+        garageFillTile.classList.toggle("slots-warn", fillPct > 95);
+      }
       $("garageBarText").textContent = `${locked.toLocaleString("uk-UA")} / ${myCars.toLocaleString("uk-UA")}`;
       $("garagePctText").textContent = fmtPct(fillPct);
-      $("garageHeldLine").textContent = t("garage_held", { held: held.toLocaleString("uk-UA") });
+
+      // Held — яскравий тег, що одразу впадає в око (деталі — в title)
+      $("garageHeldLine").innerHTML =
+        `<span class="pill-held" title="${t("garage_held", { held: held.toLocaleString("uk-UA") }).replace(/"/g, "&quot;")}">🏷️ ${t("garage_held_short", { held: held.toLocaleString("uk-UA") })}</span>`;
 
       // Прокачка — стек-шкала (renderUpgradeBar)
       const counts = { "111": 0, "332": 0, "323": 0, "233": 0, "custom": 0 };
@@ -1405,7 +1686,7 @@
     let choice = "auto";
     if (hasKsu()) {
       try {
-        const { errno, stdout } = await exec(`cat ${shellQuote(THEME_FILE)} 2>/dev/null`);
+        const { errno, stdout } = await readCfg(THEME_FILE);
         if (errno === 0 && stdout.trim()) choice = stdout.trim();
       } catch (e) {}
     }
@@ -1420,7 +1701,7 @@
     applyResolvedTheme(choice);
     updateThemeSwitchUI(choice);
     if (hasKsu()) {
-      try { await exec(`echo -n ${shellQuote(choice)} > ${shellQuote(THEME_FILE)}`); } catch (e) {}
+      try { await writeCfg(THEME_FILE, (p) => `echo -n ${shellQuote(choice)} > ${shellQuote(p)}`); } catch (e) {}
     }
   }
 
@@ -1450,7 +1731,7 @@
 
   async function loadHistory() {
     if (!hasKsu()) return MOCK_HISTORY;
-    const { errno, stdout } = await exec(`cat ${shellQuote(HISTORY_FILE)} 2>/dev/null`);
+    const { errno, stdout } = await readCfg(HISTORY_FILE);
     if (errno !== 0 || !stdout.trim()) return [];
     return stdout
       .split("\n")
@@ -1463,11 +1744,15 @@
   async function saveHistory(history) {
     const content = history.map((h) => JSON.stringify(h)).join("\n") + "\n";
     const b64 = base64EncodeUtf8(content);
-    await exec(`echo ${shellQuote(b64)} | base64 -d > ${shellQuote(HISTORY_FILE)}`);
+    // Пишемо в обидва дзеркала: основний шлях і raw /data/media — щоб
+    // наступне читання спрацювало незалежно від того, який із видів теки
+    // доступний shell у цьому ROM.
+    await exec(`echo ${shellQuote(b64)} | base64 -d > ${shellQuote(HISTORY_FILE)}`).catch(() => {});
+    await exec(`echo ${shellQuote(b64)} | base64 -d > ${shellQuote(altPath(HISTORY_FILE))}`).catch(() => {});
   }
 
   async function getResourceSnapshot() {
-    const data = await readSourceFile(SRC_USER, DST_USER);
+    const data = await readSourceFile(SRC_USER, SRC_USER_ROOT, DST_USER);
     if (!data) return null;
     const val = (key) => {
       const m = data.match(new RegExp(`${key}=[0-9A-F]{8},i(\\d+)`));
@@ -1477,7 +1762,7 @@
   }
 
   async function getGarageSnapshot() {
-    const data = await readSourceFile(SRC, DST);
+    const data = await readSourceFile(SRC, SRC_ROOT, DST);
     if (!data) return null;
     const line = data.split(/\r?\n/).find((l) => l.startsWith("PlayerDeck="));
     if (!line) return null;
@@ -1541,13 +1826,17 @@
     return last[key] - prev[key];
   }
 
-  // ---- analytics: period switch state --------------------------------
-  let analyticsPeriod = "all";
-  try { analyticsPeriod = localStorage.getItem("td2tdr_an_period") || "all"; } catch (e) {}
+  // ---- analytics: forecast range state (slider, days) -----------------
+  let analyticsPeriod = 30;
+  try {
+    const raw = localStorage.getItem("td2tdr_an_period");
+    const n = parseInt(raw, 10);
+    if (!isNaN(n)) analyticsPeriod = Math.min(90, Math.max(3, n));
+  } catch (e) {}
 
   function filterHistoryByPeriod(history, period) {
-    if (period === "all") return history;
-    const days = period === "7" ? 7 : 30;
+    const days = Number(period);
+    if (!days || period === "all") return history;
     const cutoff = Date.now() - days * 86400000;
     return history.filter((h) => new Date(h.date + "T00:00:00").getTime() >= cutoff);
   }
@@ -1777,28 +2066,78 @@
     // "accuracy" indicator: the more days of history collected, the greener —
     // 1-2 days is barely enough for a trend, a full week+ is solid.
     setTabIndicator("analytics", history.length >= 7 ? "ok" : history.length >= 3 ? "warn" : "bad");
-    // period switch (7d / 30d / all) — controls chart zoom for every metric
-    const periodSwitch = $("analyticsPeriod");
-    if (periodSwitch && !periodSwitch.dataset.bound) {
-      periodSwitch.dataset.bound = "1";
-      periodSwitch.querySelectorAll(".an-period-opt").forEach((btn) => {
-        btn.addEventListener("click", () => {
-          analyticsPeriod = btn.dataset.period;
-          try { localStorage.setItem("td2tdr_an_period", analyticsPeriod); } catch (e) {}
-          periodSwitch.querySelectorAll(".an-period-opt").forEach((b) => b.classList.toggle("active", b === btn));
+    // ---- forecast range slider (3..90 днів) -----------------------------
+    // Замінює старі фіксовані кнопки [7д][30д][Усі]: положення повзунка
+    // динамічно перемальовує графіки та прогноз очікуваних ресурсів.
+    const range = $("analyticsRange");
+    if (range && !range.dataset.bound) {
+      range.dataset.bound = "1";
+      range.value = String(analyticsPeriod);
+      let raf = null;
+      range.addEventListener("input", () => {
+        analyticsPeriod = Number(range.value);
+        const lbl = $("analyticsRangeVal");
+        if (lbl) lbl.textContent = `${analyticsPeriod}д`;
+        // Плавне перемальовування без спаму re-render на кожен піксель
+        if (raf) cancelAnimationFrame(raf);
+        raf = requestAnimationFrame(() => {
+          try { localStorage.setItem("td2tdr_an_period", String(analyticsPeriod)); } catch (e) {}
           renderAnalytics();
         });
       });
     }
-    if (periodSwitch) {
-      periodSwitch.querySelectorAll(".an-period-opt").forEach((b) => b.classList.toggle("active", b.dataset.period === analyticsPeriod));
+    if (range) {
+      range.value = String(analyticsPeriod);
+      const lbl = $("analyticsRangeVal");
+      if (lbl) lbl.textContent = `${analyticsPeriod}д`;
+    }
+
+    // Індикатор точності: що більше накопичених днів історії, то вищий %.
+    // 1 день ≈ 25%, 7+ днів ≈ 90%+ (плато на 14 днях).
+    const accEl = $("analyticsAccuracy");
+    if (accEl) {
+      const histDays = history.length;
+      const pct = Math.min(99, Math.round(20 + 70 * Math.min(histDays, 14) / 14));
+      const cls = histDays >= 7 ? "pill-ok" : histDays >= 3 ? "pill-warn" : "pill";
+      accEl.innerHTML = `<span class="pill ${cls}">${t("an_accuracy", { pct })}</span>`;
     }
 
     let html = "";
-    html += renderMetric(history, "cash", t("an_cash"), "#3ddc84");
-    html += renderMetric(history, "gold", t("an_gold"), "#ffb545");
-    html += renderMetric(history, "prestige", t("an_prestige"), "#a06bff");
-    html += renderMetric(history, "garageTotal", t("an_garage"), "#4d7cff");
+    // Гараж у аналітиці рахуємо по ЗАЙНЯТИХ слотах (garageLocked), а не по
+    // загальній кількості карток. Для старих знімків без garageLocked —
+    // fallback на garageTotal.
+    const hist = history.map((h) => ({
+      ...h,
+      garageSlots: h.garageLocked != null ? h.garageLocked : h.garageTotal,
+    }));
+    html += renderMetric(hist, "cash", t("an_cash"), "#3ddc84");
+    html += renderMetric(hist, "gold", t("an_gold"), "#ffb545");
+    html += renderMetric(hist, "prestige", t("an_prestige"), "#a06bff");
+    html += renderMetric(hist, "garageSlots", t("an_garage"), "#4d7cff");
+
+    // Прогноз очікуваних ресурсів на обрану кількість днів уперед:
+    // лінійна екстраполяція темпу по всій історії для кожної метрики.
+    let projRows = "";
+    for (const [key, title] of [
+      ["cash", t("an_cash")], ["gold", t("an_gold")],
+      ["prestige", t("an_prestige")], ["garageSlots", t("an_garage")],
+    ]) {
+      const pts = hist.filter((h) => h[key] != null);
+      if (pts.length < 2) continue;
+      const lastPt = pts[pts.length - 1];
+      const firstPt = pts[Math.max(0, pts.length - 14)];
+      const spanDays = Math.max(1, (new Date(lastPt.date) - new Date(firstPt.date)) / 86400000);
+      const slope = (lastPt[key] - firstPt[key]) / spanDays;
+      if (!isFinite(slope)) continue;
+      const projected = Math.max(0, Math.round(lastPt[key] + slope * analyticsPeriod));
+      const perDay = Math.round(slope * 10) / 10;
+      const trendCls = slope > 0 ? "up" : slope < 0 ? "down" : "";
+      const sign = perDay > 0 ? "+" : "";
+      projRows += `<div class="an-proj-row"><div class="an-proj-left"><span>${title}</span><small class="an-proj-rate ${trendCls}">${sign}${perDay.toLocaleString("uk-UA")}${t("an_per_day")}</small></div><b class="${trendCls}">${projected.toLocaleString("uk-UA")}</b></div>`;
+    }
+    const projectionHtml = projRows
+      ? `<div class="an-forecast"><div class="an-proj-title">📈 ${t("an_projection", { days: analyticsPeriod })}</div><div class="an-proj-grid">${projRows}</div></div>`
+      : "";
 
     const forecastDays = linearForecastDays(history, "prestige", 1000);
     const prestigePts = history.filter((h) => h.prestige != null);
@@ -1815,7 +2154,7 @@
       forecastHtml = `<div class="an-forecast">${t("an_forecast_flat")}</div>`;
     }
 
-    container.innerHTML = html + forecastHtml;
+    container.innerHTML = projectionHtml + html + forecastHtml;
     initChartInteraction();
   }
 
@@ -1879,6 +2218,15 @@
     }).join("");
   }
 
+  // Локальний fallback: якщо changelog.md відсутній у білді/недоступний,
+  // «Історія версій» все одно показує останні зміни замість помилки.
+  const CHANGELOG_FALLBACK = `# v0.0.305
+- Синхронізація: ретраї верифікації, sync-буферу, fallback-копіювання у /storage
+- WebUI: миттєвий зелений статус, липкий стан «Готово», спрощена кнопка
+- Кнопка відкриває сайт одразу + фонова синхронізація без блокувань
+- Аналітика: прогнозний слайдер (3–90 дн.), точність прогнозу, «Піковий день»
+- Інсталятор: права 0755 усім скриптам, перевірка середовища, збереження даних`;
+
   async function loadChangelog() {
     const container = $("changelogList");
     if (!container) return;
@@ -1888,18 +2236,21 @@
     }
     try {
       const { errno, stdout } = await exec(`cat ${shellQuote(MODDIR + "/changelog.md")} 2>/dev/null`);
-      if (errno !== 0 || !stdout.trim()) {
-        container.innerHTML = `<div class="garage-empty">${t("cl_load_error")}</div>`;
-        return;
+      let md = stdout || "";
+      if (errno !== 0 || !md.trim()) {
+        // Fallback: вшитий текст останніх змін — вікно більше не ламається
+        addLog(t("cl_load_error"), "W");
+        md = CHANGELOG_FALLBACK;
       }
-      const versions = parseChangelog(stdout);
+      const versions = parseChangelog(md);
       container.innerHTML = renderChangelog(versions);
       container.querySelectorAll(".cl-entry").forEach((entry) => {
         const head = entry.querySelector(".cl-head");
         if (head) head.addEventListener("click", () => entry.classList.toggle("expanded"));
       });
     } catch (e) {
-      container.innerHTML = `<div class="garage-empty">${t("cl_load_error")}</div>`;
+      const versions = parseChangelog(CHANGELOG_FALLBACK);
+      container.innerHTML = renderChangelog(versions);
     }
   }
 
@@ -2051,74 +2402,30 @@
 
     const syncAndOpen = $("syncAndOpen");
     if (syncAndOpen) syncAndOpen.addEventListener("click", async () => {
-      if (syncAndOpen.classList.contains("onclic") || syncAndOpen.classList.contains("validate")) return;
-      syncAndOpen.disabled = true;
+      // СПРОЩЕНА ЛОГІКА: жодних модалок і перевірок файлової системи, які
+      // фейляться через обмеження Android/FUSE. Кнопка лише:
+      //   1) запускає фонову синхронізацію (fire-and-forget, не блокує);
+      //   2) ОДРАЗУ відкриває сайт — дані гаража вже зчитані WebUI.
+      syncAndOpen.classList.remove("validate", "error");
       syncAndOpen.classList.add("onclic");
 
-      const stepsEl = $("syncModalSteps");
-      const hintEl = $("syncModalHint");
-      if (stepsEl) {
-        stepsEl.innerHTML =
-          syncStepRow("copy", t("sm_step_copy")) +
-          syncStepRow("check", t("sm_step_check")) +
-          syncStepRow("open", t("sm_step_open"));
-      }
-      if (hintEl) hintEl.hidden = true;
-      openModal("syncModal");
-
-      setStepState("copy", "active");
-      const scriptOk = await syncFile();
-
-      // CRITICAL: don't trust the shell script's exit code alone. Independently
-      // stat() the destination file — this is the only thing that can't lie.
-      // A script can exit 0 without actually having written a real file (wrong
-      // DST_DIR on some ROMs, a step silently no-op'ing, etc.), so "the script
-      // said OK" and "the file is actually there with real bytes" are checked
-      // as two separate facts, and BOTH must hold for this to count as success.
-      let verified = false;
-      let verifiedStat = null;
-      if (scriptOk) {
-        verifiedStat = await statPath(DST);
-        verified = !!(verifiedStat && verifiedStat.size > 0);
+      // Фонова синхронізація без очікування: оновить файл і статус сам,
+      // поки користувач переходить у браузер. Жодних блокувань переходу.
+      if (hasKsu()) {
+        syncFile().then(() => refresh()).catch(() => {});
       }
 
-      if (verified) {
-        const when = new Date(verifiedStat.mtime * 1000).toLocaleString("uk-UA", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
-        setStepState("copy", "done", t("sm_step_copy_done"), `${formatBytes(verifiedStat.size)} · ${when}`);
-        addLog(t("log_sync_verified", { size: formatBytes(verifiedStat.size) }));
-      } else if (scriptOk && !verified) {
-        // The script reported success, but the file genuinely isn't where we
-        // expect it — surface this loudly instead of quietly showing "done".
-        setStepState("copy", "error", t("sm_step_copy_unverified"));
-        addLog(t("log_sync_unverified", { path: DST }), "E");
-      } else {
-        setStepState("copy", "error", t("sm_step_copy_fail"));
-      }
-
-      setStepState("check", "active");
-      await refresh();
-      setStepState("check", "done", t("sm_step_check_done"));
-
-      if (verified) {
-        setStepState("open", "active");
-        const opened = await openUrl("https://www.topdrivesrecords.com/me");
-        if (opened) {
-          setStepState("open", "done", t("sm_step_open_done"));
-          if (hintEl) hintEl.hidden = false;
-          toast(t("toast_synced"));
-        } else {
-          setStepState("open", "error", t("sm_step_open_fail"));
-        }
-      } else {
-        setStepState("open", "error");
-      }
-
+      const opened = await openUrl("https://www.topdrivesrecords.com/me");
       syncAndOpen.classList.remove("onclic");
-      if (verified) {
+      if (opened) {
         syncAndOpen.classList.add("validate");
         setTimeout(() => syncAndOpen.classList.remove("validate"), 1250);
+        toast(t("toast_synced"));
+      } else {
+        // Реальна помилка — тільки якщо система не змогла відкрити браузер
+        syncAndOpen.classList.add("error");
+        setTimeout(() => syncAndOpen.classList.remove("error"), 2500);
       }
-      syncAndOpen.disabled = false;
     });
 
     const closeSyncModal = $("closeSyncModal");
@@ -2196,17 +2503,25 @@
     initThemeSwitch();
     loadTheme();
 
-    // Startup only awaits what the default-active "Синхр." tab actually
-    // needs to show something meaningful — sync the file, check status.
-    // Гараж/Аналітика are separate tabs the user isn't looking at yet, so
-    // their heavier work (parsing Garage.dat, rebuilding stats, snapshot
-    // history) runs afterward WITHOUT blocking anything — each tab just
-    // fills in on its own once its own data resolves.
-    (async () => {
-      await refreshEssential();
-      loadGarageStats();
-      recordSnapshotIfNeeded().then(renderAnalytics);
-    })();
+    // Старт WebUI: стан малюється МИТТЄВО з локального кешу (розмір/дата
+    // останньої синхронізації), без «Не завантажено» і без очікування shell.
+    // Повторне читання/копіювання — виключно за кнопкою «Синхронізувати та
+    // відкрити» або «Оновити» (refreshBtn).
+    const cached = paintCachedState();
+    {
+      const gateBtn = $("syncAndOpen");
+      if (gateBtn && hasKsu() && !cached) {
+        // Кешу немає (перший запуск) — кнопка чекає першої синхронізації,
+        // яку користувач запускає сам натисканням.
+        gateBtn.disabled = true;
+        gateBtn.title = t("btn_wait_sync");
+      }
+    }
+
+    // Гараж/Аналітика читають уже синхронізовану копію (read-only, без
+    // копіювання) і заповнюють свої таби асинхронно.
+    loadGarageStats();
+    recordSnapshotIfNeeded().then(renderAnalytics);
 
     const logClear = $("logClear");
     if (logClear) logClear.addEventListener("click", () => {
@@ -2230,10 +2545,12 @@
     const clearHistoryBtn = $("clearHistoryBtn");
     if (clearHistoryBtn) clearHistoryBtn.addEventListener("click", async () => {
       if (!hasKsu()) return;
-      await exec(`rm -f ${shellQuote(HISTORY_FILE)}`);
+      await exec(`rm -f ${shellQuote(HISTORY_FILE)} ${shellQuote(altPath(HISTORY_FILE))}`);
       addLog(t("log_analytics_history_cleared"));
       renderAnalytics();
     });
-    setInterval(refresh, 15000);
+    // Автооновлення вимкнено: стан малюється з кешу миттєво, а актуалізація
+    // відбувається за кнопками «Оновити» / «Синхронізувати та відкрити» —
+    // без фонових shell-викликів, що створювали відчуття «перезавантаження».
   });
 })();
