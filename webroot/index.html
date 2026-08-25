@@ -342,6 +342,12 @@
         <button id="clearHistoryBtn" class="an-stat-sticker" title="Натисніть, щоб скинути історію аналітики"><span id="statDaysText">Статистика: 0 дн.</span></button>
       </div>
       <div id="analyticsNote" class="import-hint" data-i18n="an_hint">Знімок стану записується автоматично раз на добу — при відкритті WebUI, якщо дані вже синхронізовані</div>
+      <!-- Тулбар: експорт/імпорт бекапу -->
+      <div class="an-toolbar">
+        <button id="anExportBtn" class="an-mini-btn">📥 <span data-i18n="an_export">Експорт</span></button>
+        <label for="anImportInput" class="an-mini-btn">📤 <span data-i18n="an_import">Імпорт</span></label>
+        <input type="file" id="anImportInput" accept=".json,.jsonl,application/json" hidden>
+      </div>
       <div class="an-range-wrap">
         <div class="an-range-head">
           <span class="an-range-title" data-i18n="an_range_title">Прогнозний період</span>

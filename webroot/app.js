@@ -45,6 +45,22 @@
   function lsSet(key, value) {
     try { localStorage.setItem(key, value); } catch (e) {}
   }
+  // Сучасне закриття динамічних модалок: кнопка ✕ у кутку картки +
+  // клік по затемненому фону (overlay). Без виходу з модуля.
+  function wireModalClose(overlay) {
+    const card = overlay.querySelector(".install-card");
+    if (card && !card.querySelector(".overlay-x")) {
+      const x = document.createElement("button");
+      x.className = "overlay-x";
+      x.setAttribute("aria-label", "close");
+      x.textContent = "✕";
+      card.appendChild(x);
+      x.addEventListener("click", () => overlay.remove());
+    }
+    overlay.addEventListener("click", (e) => {
+      if (e.target === overlay) overlay.remove();
+    });
+  }
   async function migrateAndRemoveCfg(file, key) {
     if (!hasKsu()) return;
     if (!lsGet(key)) {
@@ -302,11 +318,17 @@
       an_depletes_in: "вичерпається за {days} дн.",
       an_spend: "витрати",
       an_load_error: "Не вдалося завантажити аналітику — перевірте Журнал",
-      an_stat_days: "Статистика: {n} дн.",
+      an_stat_days: "{n} дн.",
       an_reset_title: "Скидання історії аналітики",
       an_reset_text: "Статистика збирається вже {n} дн. (з {date}). Ви дійсно бажаєте видалити всі збережені знімки історії ресурсів?",
       an_reset_confirm: "🗑️ Скинути дані",
       an_cancel: "Скасувати",
+      an_export: "Експорт",
+      an_import: "Імпорт",
+      an_imp_found: "Знайдено {n} записів. Об'єднати з поточною історією чи перезаписати?",
+      an_imp_merge: "Об'єднати",
+      an_imp_overwrite: "Перезаписати",
+      an_imp_done: "Імпортовано: історія містить {n} записів",
       upd_installing: "Завантаження оновлення...",
       upd_dl: "Завантаження архіву оновлення…",
       upd_verify: "Перевірка SHA-256…",
@@ -517,11 +539,17 @@
       an_depletes_in: "runs out in {days} days",
       an_spend: "spend",
       an_load_error: "Failed to load analytics — check the Log",
-      an_stat_days: "Stats: {n} d",
+      an_stat_days: "{n} d",
       an_reset_title: "Reset analytics history",
       an_reset_text: "Statistics has been collected for {n} days (since {date}). Do you really want to delete all saved resource snapshots?",
       an_reset_confirm: "🗑️ Reset data",
       an_cancel: "Cancel",
+      an_export: "Export",
+      an_import: "Import",
+      an_imp_found: "Found {n} records. Merge with current history or overwrite?",
+      an_imp_merge: "Merge",
+      an_imp_overwrite: "Overwrite",
+      an_imp_done: "Imported: history now has {n} records",
       upd_installing: "Downloading update...",
       upd_dl: "Downloading update archive…",
       upd_verify: "Verifying SHA-256…",
@@ -1878,6 +1906,7 @@
     const n = parseInt(raw, 10);
     if (!isNaN(n)) analyticsPeriod = Math.min(90, Math.max(3, n));
   } catch (e) {}
+  // Вікно перемикача доходу видалено у v0.0.509 — фіксовані останні 14 днів.
 
   function filterHistoryByPeriod(history, period) {
     const days = Number(period);
@@ -2210,23 +2239,34 @@
       const pts = hist.filter((h) => h[key] != null);
       if (pts.length < 2) continue;
       const lastPt = pts[pts.length - 1];
-      const firstPt = pts[Math.max(0, pts.length - 14)];
-      const spanDays = Math.max(1, (new Date(lastPt.date) - new Date(firstPt.date)) / 86400000);
-      // НОВА КОНЦЕПЦІЯ: прогноз = лінійне накопичення ЧИСТОГО ДОХОДУ.
-      // Темп прибутку рахується ТІЛЬКИ по позитивних дельтах — одноразові
-      // витрати минулих днів (пак, прокачка) не створюють «щоденний мінус».
+      // Єдиний надійний розрахунок середнього доходу: останні 14 днів,
+      // тільки позитивні дельти (чистий заробіток).
+      const winCut = Date.now() - 14 * 86400000;
+      const winPts = pts.filter((p) => new Date(p.date + "T00:00:00").getTime() >= winCut);
+      const ratePts = winPts.length >= 2 ? winPts : pts.slice(-2);
       let posSum = 0;
-      for (let i = 1; i < pts.length; i++) {
-        const d = pts[i][key] - pts[i - 1][key];
+      for (let i = 1; i < ratePts.length; i++) {
+        const d = ratePts[i][key] - ratePts[i - 1][key];
         if (d > 0) posSum += d;
       }
+      const rFirst = ratePts[0];
+      const spanDays = Math.max(1, (new Date(lastPt.date) - new Date(rFirst.date)) / 86400000);
       const incomeRate = posSum / spanDays;   // середній прибуток/добу
       if (!isFinite(incomeRate)) continue;
       const current = lastPt[key];
       // Forecast_Balance = Current + Average_Daily_Income × Days
       const projected = Math.max(0, Math.round(current + incomeRate * analyticsPeriod));
       const perDay = Math.round(incomeRate * 10) / 10;
-      projRows += `<div class="an-proj-row"><div class="an-proj-left"><span>${title}</span></div><div class="an-proj-right"><b class="up">${projected.toLocaleString("uk-UA")}</b><small class="an-proj-net up">🟢 +${perDay.toLocaleString("uk-UA")}${t("an_per_day")}</small></div></div>`;
+      // Кольорова ієрархія: назва нейтральна (CSS), сума — колір ресурсу,
+      // темп прибутку — дрібний зелений з 🟢 (не зливається із сумою).
+      const PROJ_COLORS = {
+        cash: "#3ddc84",
+        gold: "#ffb545",
+        prestige: "#a06bff",
+        garageSlots: "#4d7cff",
+      };
+      const accentColor = PROJ_COLORS[key] || "var(--text)";
+      projRows += `<div class="an-proj-row"><div class="an-proj-left"><span>${title}</span></div><div class="an-proj-right"><b class="up" style="color:${accentColor}">${projected.toLocaleString("uk-UA")}</b><small class="an-proj-net">🟢 +${perDay.toLocaleString("uk-UA")}${t("an_per_day")}</small></div></div>`;
     }
     const projectionHtml = projRows
       ? `<div class="an-forecast"><div class="an-proj-title">📈 ${t("an_projection", { days: analyticsPeriod })}</div><div class="an-proj-grid">${projRows}</div></div>`
@@ -2434,6 +2474,7 @@
           <div class="install-log" id="installLog"></div>
         </div>`;
       document.body.appendChild(overlay);
+      wireModalClose(overlay);
       const ilog = (msg) => {
         const box = overlay.querySelector("#installLog");
         if (box) {
@@ -2729,6 +2770,84 @@
       });
     });
 
+    // ---- Експорт / Імпорт бекапу історії аналітики -----------------------
+    const anExportBtn = $("anExportBtn");
+    if (anExportBtn) anExportBtn.addEventListener("click", async () => {
+      if (!hasKsu()) { toast(t("log_sync_unavailable_demo")); return; }
+      const history = await loadHistory();
+      if (!history.length) { toast(t("an_stat_days", { n: 0 })); return; }
+      const content = history.map((h) => JSON.stringify(h)).join("\n") + "\n";
+      const b64 = base64EncodeUtf8(content);
+      const fname = `td2tdr_history_${new Date().toISOString().slice(0, 10)}.jsonl`;
+      const dest = `/sdcard/Download/${fname}`;
+      const r = await exec(`echo ${shellQuote(b64)} | base64 -d > ${shellQuote(dest)}`);
+      if (r.errno === 0) {
+        toast(t("toast_log_saved", { path: dest }));
+        addLog(t("log_log_saved", { path: dest }));
+      } else {
+        addLog(t("log_sync_error", { reason: "export failed" }), "E");
+      }
+    });
+
+    const anImportInput = $("anImportInput");
+    if (anImportInput) anImportInput.addEventListener("change", async () => {
+      const file = anImportInput.files && anImportInput[0];
+      anImportInput.value = "";
+      if (!file || !hasKsu()) return;
+      let imported = [];
+      try {
+        const text = await file.text();
+        // Підтримка JSONL (по рядку на запис) та масиву JSON
+        if (text.trim().startsWith("[")) {
+          imported = JSON.parse(text);
+        } else {
+          imported = text.split(/\r?\n/).map((l) => l.trim()).filter(Boolean)
+            .map((l) => { try { return JSON.parse(l); } catch (e) { return null; } })
+            .filter(Boolean);
+        }
+      } catch (e) {
+        toast(t("cl_load_error"));
+        return;
+      }
+      imported = imported.filter((h) => h && typeof h.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(h.date));
+      if (!imported.length) { toast(t("cl_load_error")); return; }
+
+      // Модальне підтвердження: об'єднати чи перезаписати
+      const overlay = document.createElement("div");
+      overlay.className = "install-overlay";
+      overlay.innerHTML = `
+        <div class="install-card">
+          <div class="install-title">📤 ${t("an_import")}</div>
+          <div class="install-reset-text">${t("an_imp_found", { n: imported.length })}</div>
+          <div class="install-reset-actions">
+            <button class="btn-icon btn-text" id="impCancel">${t("an_cancel")}</button>
+            <button class="btn-icon btn-text" id="impMerge">${t("an_imp_merge")}</button>
+            <button class="btn-icon btn-text install-reset-confirm" id="impOverwrite">${t("an_imp_overwrite")}</button>
+          </div>
+        </div>`;
+      document.body.appendChild(overlay);
+      wireModalClose(overlay);
+
+      const doImport = async (mode) => {
+        overlay.remove();
+        const current = mode === "overwrite" ? [] : await loadHistory();
+        const byDate = {};
+        for (const h of current) byDate[h.date] = h;
+        for (const h of imported) byDate[h.date] = Object.assign(byDate[h.date] || {}, h);
+        const merged = Object.values(byDate).sort((a, b) => a.date.localeCompare(b.date));
+        await saveHistory(merged);
+        await renderAnalytics();
+        addLog(t("log_analytics_history_cleared").replace(/.*/, t("an_imp_done", { n: merged.length })));
+        renderAnalytics();
+      };
+      overlay.querySelector("#impCancel").addEventListener("click", () => overlay.remove());
+      overlay.querySelector("#impMerge").addEventListener("click", () => doImport("merge"));
+      overlay.querySelector("#impOverwrite").addEventListener("click", () => doImport("overwrite"));
+    });
+
+    // ---- Перемикач вікна доходу видалено у v0.0.509: один надійний
+    // розрахунок по останніх 14 днях (див. коментар у renderAnalytics).
+
     const clearHistoryBtn = $("clearHistoryBtn");
     if (clearHistoryBtn) clearHistoryBtn.addEventListener("click", async () => {
       if (!hasKsu()) return;
@@ -2753,6 +2872,7 @@
           </div>
         </div>`;
       document.body.appendChild(overlay);
+      wireModalClose(overlay);
 
       const close = () => overlay.remove();
       overlay.querySelector("#resetCancel").addEventListener("click", close);
