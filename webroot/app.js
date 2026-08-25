@@ -30,23 +30,29 @@
   const DST_USER_ALT = `${DST_DIR_ALT}/user.dat`;
   const altPath = (p) => p.replace(DST_DIR, DST_DIR_ALT);
 
-  // ---- helpers for persistent config files (locale/theme/ui_lang/history) --
-  // Читання: спершу основний шлях (/storage), при невдачі — raw /data/media.
-  async function readCfg(path) {
-    if (!hasKsu()) return { errno: -1, stdout: "" };
-    const first = await exec(`cat ${shellQuote(path)} 2>/dev/null`);
-    if (first.errno === 0 && first.stdout) return first;
-    const alt = await exec(`cat ${shellQuote(altPath(path))} 2>/dev/null`);
-    if (alt.errno === 0 && alt.stdout) return alt;
-    return first;
+  // ---- helpers: конфіги UI у localStorage --------------------------------
+  // У папці td2tdr_sync мають лишатися ТІЛЬКИ Garage.dat/user.dat/history.jsonl.
+  // locale/theme/ui_lang зберігаємо в LS; старі файл-конфіги мігруємо один
+  // раз і видаляємо з обох дзеркал теки.
+  const CFG_KEYS = {
+    ui_lang: "td2tdr_ui_lang",
+    theme: "td2tdr_theme",
+    game_locale: "td2tdr_game_locale",
+  };
+  function lsGet(key) {
+    try { return localStorage.getItem(key); } catch (e) { return null; }
   }
-  // Запис: у основний шлях; якщо він не вдався (FUSE/SELinux) — дубль в raw.
-  async function writeCfg(path, shellCmd) {
-    const r = await exec(shellCmd(path));
-    if (r.errno !== 0) {
-      await exec(shellCmd(altPath(path)));
+  function lsSet(key, value) {
+    try { localStorage.setItem(key, value); } catch (e) {}
+  }
+  async function migrateAndRemoveCfg(file, key) {
+    if (!hasKsu()) return;
+    if (!lsGet(key)) {
+      const r = await exec(`cat ${shellQuote(file)} 2>/dev/null`);
+      if (r.errno === 0 && r.stdout.trim()) lsSet(key, r.stdout.trim());
     }
-    return r;
+    // Видаляємо дрібний файл-конфіг з обох дзеркал теки
+    await exec(`rm -f ${shellQuote(file)} ${shellQuote(altPath(file))}`).catch(() => {});
   }
 
   // ---- ksu bridge -----------------------------------------------------
@@ -292,6 +298,17 @@
       an_period_7d_label: "7д",
       an_period_30d_label: "30д",
       an_record_gain: "Піковий день: <b>+{value}</b> ({date})",
+      an_record_loss: "Витрата: <b>-{value}</b> ({date})",
+      an_depletes_in: "вичерпається за {days} дн.",
+      an_spend: "витрати",
+      an_load_error: "Не вдалося завантажити аналітику — перевірте Журнал",
+      upd_installing: "Завантаження оновлення...",
+      upd_dl: "Завантаження архіву оновлення…",
+      upd_verify: "Перевірка SHA-256…",
+      upd_installing_module: "Встановлення модуля…",
+      upd_done: "Готово!",
+      upd_done_reboot: "Оновлення встановлено — перезавантажте пристрій",
+      upd_done_short: "Встановлено ✓",
       an_accuracy: "Точність прогнозу: {pct}%",
       an_projection: "Прогноз на {days} дн.:",
       an_per_day: " / день",
@@ -491,6 +508,17 @@
       an_period_7d_label: "7d",
       an_period_30d_label: "30d",
       an_record_gain: "Best day: <b>+{value}</b> ({date})",
+      an_record_loss: "Last spend: <b>-{value}</b> ({date})",
+      an_depletes_in: "runs out in {days} days",
+      an_spend: "spend",
+      an_load_error: "Failed to load analytics — check the Log",
+      upd_installing: "Downloading update...",
+      upd_dl: "Downloading update archive…",
+      upd_verify: "Verifying SHA-256…",
+      upd_installing_module: "Installing module…",
+      upd_done: "Done!",
+      upd_done_reboot: "Update installed — reboot your device",
+      upd_done_short: "Installed ✓",
       an_accuracy: "Forecast accuracy: {pct}%",
       an_projection: "{days}-day projection:",
       an_per_day: " / day",
@@ -598,13 +626,8 @@
   let currentUiLangChoice = "auto";
 
   async function loadUiLang() {
-    let choice = "auto";
-    if (hasKsu()) {
-      try {
-        const { errno, stdout } = await readCfg(UI_LANG_FILE);
-        if (errno === 0 && stdout.trim()) choice = stdout.trim();
-      } catch (e) {}
-    }
+    await migrateAndRemoveCfg(UI_LANG_FILE, CFG_KEYS.ui_lang);
+    let choice = lsGet(CFG_KEYS.ui_lang) || "auto";
     if (!["auto", "uk", "en"].includes(choice)) choice = "auto";
     currentUiLangChoice = choice;
     currentUiLang = choice === "auto" ? detectAutoUiLang() : choice;
@@ -622,9 +645,7 @@
     renderAnalytics();
     loadChangelog();
     renderLangUI();
-    if (hasKsu()) {
-      try { await writeCfg(UI_LANG_FILE, (p) => `echo -n ${shellQuote(choice)} > ${shellQuote(p)}`); } catch (e) {}
-    }
+    lsSet(CFG_KEYS.ui_lang, choice);
   }
 
   function initUiLangSwitch() {
@@ -661,11 +682,17 @@
   }
 
   async function saveLocale(locale) {
+    // Мова гри тепер у localStorage (файл locale з папки видалено).
+    // Активне застосування відбувається через cmd locale у applyLocale.
     if (locale) {
-      await exec(`echo -n ${shellQuote(locale)} > ${shellQuote(LANG_FILE)}`);
+      lsSet(CFG_KEYS.game_locale, locale);
     } else {
-      await exec(`rm -f ${shellQuote(LANG_FILE)}`);
+      try { localStorage.removeItem(CFG_KEYS.game_locale); } catch (e) {}
     }
+  }
+
+  async function migrateGameLocale() {
+    await migrateAndRemoveCfg(LANG_FILE, CFG_KEYS.game_locale);
   }
 
   // Ask Android's LocaleManager what language the game is actually running
@@ -1683,13 +1710,8 @@
   let currentThemeChoice = "auto";
 
   async function loadTheme() {
-    let choice = "auto";
-    if (hasKsu()) {
-      try {
-        const { errno, stdout } = await readCfg(THEME_FILE);
-        if (errno === 0 && stdout.trim()) choice = stdout.trim();
-      } catch (e) {}
-    }
+    await migrateAndRemoveCfg(THEME_FILE, CFG_KEYS.theme);
+    let choice = lsGet(CFG_KEYS.theme) || "auto";
     if (!["auto", "light", "dark", "amoled"].includes(choice)) choice = "amoled";
     currentThemeChoice = choice;
     applyResolvedTheme(choice);
@@ -1700,9 +1722,7 @@
     currentThemeChoice = choice;
     applyResolvedTheme(choice);
     updateThemeSwitchUI(choice);
-    if (hasKsu()) {
-      try { await writeCfg(THEME_FILE, (p) => `echo -n ${shellQuote(choice)} > ${shellQuote(p)}`); } catch (e) {}
-    }
+    lsSet(CFG_KEYS.theme, choice);
   }
 
   function initThemeSwitch() {
@@ -1731,8 +1751,23 @@
 
   async function loadHistory() {
     if (!hasKsu()) return MOCK_HISTORY;
-    const { errno, stdout } = await readCfg(HISTORY_FILE);
-    if (errno !== 0 || !stdout.trim()) return [];
+    // Читання з фолбеком на /data/media-дзеркало + повний try/catch:
+    // пошкоджений/відсутній history.jsonl не повинен лишати таб
+    // «Аналітика» у стані вічного завантаження.
+    let stdout = "";
+    try {
+      const first = await exec(`cat ${shellQuote(HISTORY_FILE)} 2>/dev/null`);
+      if (first.errno === 0 && first.stdout.trim()) {
+        stdout = first.stdout;
+      } else {
+        const alt = await exec(`cat ${shellQuote(altPath(HISTORY_FILE))} 2>/dev/null`);
+        if (alt.errno === 0 && alt.stdout.trim()) stdout = alt.stdout;
+      }
+    } catch (e) {
+      addLog(t("log_analytics_snapshot_error", { message: String(e && e.message || e) }), "E");
+      return [];
+    }
+    if (!stdout.trim()) return [];
     return stdout
       .split("\n")
       .map((l) => l.trim())
@@ -1869,6 +1904,18 @@
     return best > 0 ? { gain: best, date: bestDate } : null;
   }
 
+  // найбільший одноденний спад (витрати) за історію — «Піковий день витрат»
+  function computeWorstLoss(history, key) {
+    const withKey = history.filter((h) => h[key] != null);
+    if (withKey.length < 2) return null;
+    let worst = Infinity, worstDate = null;
+    for (let i = 1; i < withKey.length; i++) {
+      const delta = withKey[i][key] - withKey[i - 1][key];
+      if (delta < worst) { worst = delta; worstDate = withKey[i].date; }
+    }
+    return worst < 0 ? { loss: -worst, date: worstDate } : null;
+  }
+
   function formatShortDate(dateStr) {
     try {
       const d = new Date(dateStr + "T00:00:00");
@@ -1978,6 +2025,18 @@
       ? `<div class="an-record"><span class="an-record-badge">🏆</span>${t("an_record_gain", { value: best.gain.toLocaleString("uk-UA"), date: formatShortDate(best.date) })}</div>`
       : "";
 
+    // «Остання велика витрата» 🛍️ — довідково, останній факт списання
+    // (НЕ входить у прогноз: прогноз рахується тільки від прибутку)
+    const withKeyHist = history.filter((h) => h[key] != null);
+    let lastSpend = null;
+    for (let i = withKeyHist.length - 1; i >= 1; i--) {
+      const d = withKeyHist[i][key] - withKeyHist[i - 1][key];
+      if (d < 0) { lastSpend = { spend: -d, date: withKeyHist[i].date }; break; }
+    }
+    const lossRow = lastSpend && lastSpend.spend > 0
+      ? `<div class="an-record an-record-loss"><span class="an-record-badge">🛍️</span>${t("an_record_loss", { value: lastSpend.spend.toLocaleString("uk-UA"), date: formatShortDate(lastSpend.date) })}</div>`
+      : "";
+
     const periodPoints = filterHistoryByPeriod(history, analyticsPeriod);
 
     return `
@@ -1990,6 +2049,7 @@
         ${periodsRow}
         ${renderSparkline(periodPoints, key, color)}
         ${recordRow}
+        ${lossRow}
       </div>
     `;
   }
@@ -2127,13 +2187,21 @@
       const lastPt = pts[pts.length - 1];
       const firstPt = pts[Math.max(0, pts.length - 14)];
       const spanDays = Math.max(1, (new Date(lastPt.date) - new Date(firstPt.date)) / 86400000);
-      const slope = (lastPt[key] - firstPt[key]) / spanDays;
-      if (!isFinite(slope)) continue;
-      const projected = Math.max(0, Math.round(lastPt[key] + slope * analyticsPeriod));
-      const perDay = Math.round(slope * 10) / 10;
-      const trendCls = slope > 0 ? "up" : slope < 0 ? "down" : "";
-      const sign = perDay > 0 ? "+" : "";
-      projRows += `<div class="an-proj-row"><div class="an-proj-left"><span>${title}</span><small class="an-proj-rate ${trendCls}">${sign}${perDay.toLocaleString("uk-UA")}${t("an_per_day")}</small></div><b class="${trendCls}">${projected.toLocaleString("uk-UA")}</b></div>`;
+      // НОВА КОНЦЕПЦІЯ: прогноз = лінійне накопичення ЧИСТОГО ДОХОДУ.
+      // Темп прибутку рахується ТІЛЬКИ по позитивних дельтах — одноразові
+      // витрати минулих днів (пак, прокачка) не створюють «щоденний мінус».
+      let posSum = 0;
+      for (let i = 1; i < pts.length; i++) {
+        const d = pts[i][key] - pts[i - 1][key];
+        if (d > 0) posSum += d;
+      }
+      const incomeRate = posSum / spanDays;   // середній прибуток/добу
+      if (!isFinite(incomeRate)) continue;
+      const current = lastPt[key];
+      // Forecast_Balance = Current + Average_Daily_Income × Days
+      const projected = Math.max(0, Math.round(current + incomeRate * analyticsPeriod));
+      const perDay = Math.round(incomeRate * 10) / 10;
+      projRows += `<div class="an-proj-row"><div class="an-proj-left"><span>${title}</span></div><div class="an-proj-right"><b class="up">${projected.toLocaleString("uk-UA")}</b><small class="an-proj-net up">🟢 +${perDay.toLocaleString("uk-UA")}${t("an_per_day")}</small></div></div>`;
     }
     const projectionHtml = projRows
       ? `<div class="an-forecast"><div class="an-proj-title">📈 ${t("an_projection", { days: analyticsPeriod })}</div><div class="an-proj-grid">${projRows}</div></div>`
@@ -2318,8 +2386,86 @@
         <span class="pill pill-warn">${t("upd_available")} · v${escapeHtml(String(remote.version || remoteCode))}</span>
       </div>
       <div class="update-card-actions">
-        <a class="btn-icon btn-text btn-accent" href="${escapeHtml(remote.zipUrl || "#")}" target="_blank" rel="noopener" style="text-decoration:none;">${t("upd_open")}</a>
+        <button id="updateInstallBtn" class="btn-icon btn-text btn-accent" style="text-decoration:none;">${t("upd_open")}</button>
       </div>`;
+    if (badge) badge.hidden = false;
+
+    // Реальна установка: завантаження zip → перевірка SHA-256 → встановлення
+    // через менеджер модулів (magisk --install-module / ksud module install).
+    const installBtn = $("updateInstallBtn");
+    if (installBtn) installBtn.addEventListener("click", async () => {
+      if (!hasKsu()) { toast(t("log_sync_unavailable_demo")); return; }
+      if (installBtn.disabled) return;
+      installBtn.disabled = true;
+      installBtn.classList.add("spinning");
+      installBtn.textContent = t("upd_installing");
+
+      const overlay = document.createElement("div");
+      overlay.className = "install-overlay";
+      overlay.innerHTML = `
+        <div class="install-card">
+          <div class="install-title">⬇️ ${t("upd_installing")}</div>
+          <div class="install-bar"><div class="install-bar-fill"></div></div>
+          <div class="install-log" id="installLog"></div>
+        </div>`;
+      document.body.appendChild(overlay);
+      const ilog = (msg) => {
+        const box = overlay.querySelector("#installLog");
+        if (box) {
+          const line = document.createElement("div");
+          line.className = "install-log-line";
+          line.textContent = msg;
+          box.appendChild(line);
+          box.scrollTop = box.scrollHeight;
+        }
+      };
+      const setBar = (pct) => {
+        const f = overlay.querySelector(".install-bar-fill");
+        if (f) f.style.width = Math.min(100, Math.max(0, pct)) + "%";
+      };
+
+      let ok = false;
+      try {
+        ilog(t("upd_dl"));
+        setBar(15);
+        const dl = await exec(
+          `curl -L --fail -s -o /data/local/tmp/td2tdr_update.zip ${shellQuote(remote.zipUrl)} && stat -c %s /data/local/tmp/td2tdr_update.zip`
+        );
+        if (dl.errno !== 0 || !Number(dl.stdout.trim())) throw new Error("download failed");
+        ilog(t("upd_verify"));
+        setBar(45);
+        if (remote.sha256) {
+          const sh = await exec(`sha256sum /data/local/tmp/td2tdr_update.zip 2>/dev/null`);
+          if (sh.errno === 0 && !sh.stdout.toLowerCase().startsWith(String(remote.sha256).toLowerCase())) {
+            throw new Error("sha256 mismatch");
+          }
+        }
+        ilog(t("upd_installing_module"));
+        setBar(70);
+        const inst = await exec(
+          `su -c 'magisk --install-module /data/local/tmp/td2tdr_update.zip' 2>&1 || su -c '/data/adb/ksud module install /data/local/tmp/td2tdr_update.zip' 2>&1`
+        );
+        setBar(100);
+        if (inst.errno !== 0 || /failed|error/i.test(inst.stdout + inst.stderr)) {
+          throw new Error((inst.stderr || inst.stdout || "install failed").trim().slice(0, 200));
+        }
+        ok = true;
+        ilog(t("upd_done"));
+        overlay.querySelector(".install-title").textContent = "✅ " + t("upd_done");
+        overlay.querySelector(".install-card").classList.add("done");
+        toast(t("upd_done_reboot"));
+        addLog(t("upd_done_reboot"));
+      } catch (e) {
+        ilog("❌ " + String(e && e.message || e));
+        overlay.querySelector(".install-title").textContent = "❌ " + t("toast_sync_failed");
+        overlay.querySelector(".install-card").classList.add("error");
+        addLog(t("log_sync_error", { reason: String(e && e.message || e) }), "E");
+      }
+      setTimeout(() => overlay.remove(), ok ? 6000 : 10000);
+      installBtn.classList.remove("spinning");
+      installBtn.disabled = false;
+      installBtn.textContent = ok ? t("upd_done_short") : t("upd_open");
+    });
     if (badge) badge.hidden = false;
   }
 
@@ -2371,6 +2517,15 @@
     window.addEventListener("unhandledrejection", (e) => addLog(t("log_js_unhandled", { reason: e.reason }), "E"));
 
     ensureDataDir();
+    // Одноразова міграція конфігів у localStorage + зачистка дрібних файлів
+    // locale / theme / ui_lang із папки td2tdr_sync (залишаються лише
+    // Garage.dat, user.dat та history.jsonl).
+    if (hasKsu()) {
+      migrateGameLocale().then(() => {
+        migrateAndRemoveCfg(THEME_FILE, CFG_KEYS.theme);
+        migrateAndRemoveCfg(UI_LANG_FILE, CFG_KEYS.ui_lang);
+      }).catch(() => {});
+    }
     applyI18n();
     initUiLangSwitch();
     loadUiLang();
@@ -2520,7 +2675,15 @@
     // Гараж/Аналітика читають уже синхронізовану копію (read-only, без
     // копіювання) і заповнюють свої таби асинхронно.
     loadGarageStats();
-    recordSnapshotIfNeeded().then(renderAnalytics);
+    recordSnapshotIfNeeded()
+      .then(renderAnalytics)
+      .catch((e) => {
+        // Захист від «вічного завантаження»: будь-яка помилка аналітики
+        // показує повідомлення в табі, а не крутить спінер назавжди.
+        addLog(t("log_analytics_snapshot_error", { message: String(e && e.message || e) }), "E");
+        const list = $("analyticsList");
+        if (list) list.innerHTML = `<div class="garage-empty">${t("an_load_error")}</div>`;
+      });
 
     const logClear = $("logClear");
     if (logClear) logClear.addEventListener("click", () => {

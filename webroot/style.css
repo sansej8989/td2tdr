@@ -2918,3 +2918,228 @@ body {
   padding: 5px 13px;
   box-shadow: 0 0 18px -4px rgba(255, 181, 69, 0.75), 0 2px 10px -4px rgba(0,0,0,0.4);
 }
+
+/* ---------- analytics: risk zone + peak spend day ---------- */
+/* Від'ємний прогноз = «зона ризику»: легка червона підкладка рядка */
+.an-proj-row.risk {
+  background: rgba(248, 113, 113, 0.08);
+  border-radius: 6px;
+  padding-left: 5px;
+  padding-right: 5px;
+}
+[data-theme="light"] .an-proj-row.risk {
+  background: rgba(220, 38, 38, 0.07);
+}
+
+/* Бейдж «вичерпається за N дн.» */
+.an-proj-badge {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  font-size: 8.5px;
+  font-weight: 800;
+  color: #ff9f43;
+  background: rgba(255, 159, 67, 0.14);
+  border: 1px solid rgba(255, 159, 67, 0.4);
+}
+
+/* Піковий день витрат — у червоній гамі (дзеркалить an-record) */
+.an-record-loss .an-record-badge { background: rgba(248, 113, 113, 0.15); }
+.an-record-loss { color: var(--text-dim); }
+.an-record-loss b { color: #f87171; }
+
+/* ---------- v0.0.502-beta: minimal unified garage cards ---------- */
+/* Єдиний стриманий стиль: тонка рамка, без важких градієнтів та світінь */
+.garage-section-card.accent-upgrades {
+  border-width: 1px;
+  border-color: rgba(127, 127, 127, 0.28);
+  background: transparent;
+  box-shadow: none;
+}
+[data-theme="light"] .garage-section-card.accent-upgrades {
+  border-color: rgba(20, 22, 30, 0.16);
+}
+.garage-battle-group.accent-battles {
+  border-width: 1px;
+  border-color: rgba(127, 127, 127, 0.28);
+  background: transparent;
+  box-shadow: none;
+}
+[data-theme="light"] .garage-battle-group.accent-battles {
+  border-color: rgba(20, 22, 30, 0.16);
+}
+.garage-battle-tile,
+.garage-fill-tile {
+  box-shadow: none !important;
+}
+.garage-section-card .upgrade-stack-val { font-size: 17px; }
+.garage-donut-legend { font-size: 11px; }
+
+/* ---------- v0.0.503-beta: journal redesign, analytics guard, garage minimal ---------- */
+/* Журнал: більша корисна площа */
+.log-box {
+  min-height: 300px;
+  max-height: 58vh;
+  font-size: 11.5px;
+  line-height: 1.7;
+}
+
+/* Кольори рівнів за ТЗ: INFO — блакитний, WARN — помаранчевий,
+   ERR — яскраво-червоний, DEBUG — приглушений сірий */
+.log-level-i { color: #67b7ff; }
+.log-line[data-level="I"] { color: rgba(210, 228, 255, 0.92); }
+.log-level-w { color: var(--warn); }
+.log-line[data-level="W"] { color: #ffd9a8; background: rgba(255, 159, 67, 0.07); border-radius: 4px; }
+.log-level-e { color: #ff5c7a; }
+.log-line[data-level="E"] { color: #ffb3c2; background: rgba(255, 92, 122, 0.1); border-radius: 4px; }
+.log-level-d { color: var(--text-dimmer); opacity: 0.75; }
+[data-theme="light"] .log-line[data-level="I"] { color: #1f3a5f; }
+[data-theme="light"] .log-line[data-level="W"] { color: #8a5b00; }
+[data-theme="light"] .log-line[data-level="E"] { color: #b3122e; }
+
+/* Таб «Журнал»: миготіння індикатора при помилках */
+.tab-indicator.bad { animation: tabBlinkBad 0.9s ease-in-out infinite; }
+@keyframes tabBlinkBad {
+  0%, 100% { box-shadow: 0 0 6px -1px rgba(255, 92, 122, 0.85); opacity: 1; }
+  50% { box-shadow: 0 0 16px 2px rgba(255, 92, 122, 1); opacity: 0.45; }
+}
+
+/* Гараж: donut видалено — стек-шкала знову в колонку, без зайвих акцентів */
+.upgrade-stack-wrap { flex-direction: column !important; align-items: stretch; gap: 6px; }
+.upgrade-donut { display: none !important; }
+.garage-section-card.accent-upgrades,
+.garage-battle-group.accent-battles {
+  border-color: var(--card-border) !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+/* ---------- v0.0.504-beta: journal full-height, install UI, landscape ---------- */
+/* Журнал: розтягується до нижнього таб-бару */
+.tab-panel[data-panel="log"] {
+  display: flex;
+  flex-direction: column;
+}
+.log-card { display: flex; flex-direction: column; flex: 1; }
+.log-box { flex: 1; min-height: 300px; max-height: none; height: calc(100vh - 235px); }
+
+/* Витрати в прогнозі — приглушений червоний */
+.an-proj-spend {
+  display: block;
+  font-size: 9.5px;
+  font-weight: 600;
+  color: #f87171;
+}
+[data-theme="light"] .an-proj-spend { color: #b3122e; }
+
+/* Custom installer overlay */
+.install-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(5, 8, 14, 0.86);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.install-card {
+  width: min(420px, 92vw);
+  background: var(--card-bg, #10131c);
+  border: 1px solid var(--card-border);
+  border-radius: 16px;
+  padding: 18px 16px;
+  animation: installPop 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@keyframes installPop { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+.install-title { font-size: 15px; font-weight: 800; margin-bottom: 12px; }
+.install-bar {
+  height: 8px;
+  border-radius: 4px;
+  background: rgba(127, 127, 127, 0.2);
+  overflow: hidden;
+  margin-bottom: 10px;
+}
+.install-bar-fill {
+  height: 100%;
+  width: 0;
+  border-radius: 4px;
+  background: linear-gradient(90deg, #67e8f9, #34d399);
+  transition: width 0.5s ease;
+}
+.install-log {
+  max-height: 140px;
+  overflow-y: auto;
+  font-family: "SF Mono", monospace;
+  font-size: 10.5px;
+  color: var(--text-dim);
+  background: rgba(0, 0, 0, 0.25);
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+.install-log-line { padding: 1px 0; white-space: pre-wrap; word-break: break-all; }
+.install-card.done .install-title { color: var(--ok); }
+.install-card.error .install-title { color: var(--bad); }
+.btn-icon.spinning svg { animation: spinSmooth 1s linear infinite; }
+
+/* ---------- LANDSCAPE ---------- */
+@media (orientation: landscape) and (min-width: 640px) {
+  /* Контент: двоколонковий лейаут там, де це має сенс */
+  .garage-meta {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    align-items: start;
+  }
+  .garage-fill-group { border-bottom: none; padding-bottom: 0; }
+  .garage-battle-group.accent-battles { margin-top: 0; }
+
+  #analyticsList {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    align-items: start;
+  }
+  .an-metric { break-inside: avoid; }
+  .an-forecast, .an-proj-grid { grid-template-columns: unset; }
+
+  /* Таб-бар: компактніший, не перекриває контент */
+  .tab-bar { padding-bottom: 4px; }
+  .wrap { padding-bottom: 66px !important; }
+
+  /* Журнал: висота по залишку екрана в landscape */
+  .log-box { height: calc(100vh - 175px); }
+
+  /* Ширші картки статусу: потік у рядок */
+  .sync-flow { position: static; max-height: none; opacity: 1; padding: 12px 14px; }
+}
+
+/* ---------- v0.0.505-beta: journal isolation fix ---------- */
+/* КРИТИЧНО: журнал відображається ТІЛЬКИ у своїй активній вкладці.
+   Попереднє правило .tab-panel[data-panel=log] { display:flex } застосовувалось
+   незалежно від active-стану і «протікало» на інші таби. */
+.tab-panel[data-panel="log"] { display: none !important; }
+.tab-panel[data-panel="log"].active {
+  display: flex !important;
+  flex-direction: column;
+}
+.log-card { flex: 1; min-height: 0; }
+.log-box { flex: 1; min-height: 260px; height: auto; max-height: none; }
+@media (orientation: landscape) and (min-width: 640px) {
+  .log-box { min-height: 200px; }
+}
+
+/* ---------- v0.0.505-beta: clean projection cards ---------- */
+.an-proj-row { align-items: center; }
+.an-proj-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  line-height: 1.25;
+}
+.an-proj-right b { font-size: 13px; }
+.an-proj-net { font-size: 9.5px; font-weight: 700; opacity: 0.9; }
+.an-proj-net.up { color: #34d399; }
+.an-proj-net.down { color: #f87171; }
