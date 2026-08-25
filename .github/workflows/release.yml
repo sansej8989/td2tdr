@@ -76,13 +76,9 @@ jobs:
         id: changelog
         run: |
           VER="v${{ steps.version.outputs.VERSION }}"
-          # Витягуємо з changelog.md лише секцію цієї версії: від рядка
-          "# v<ver>" до наступного заголовка "# v..." (або EOF).
-          awk -v ver="$VER" '
-            $0 ~ "^#+ " ver "([[:space:]]|$)" { found=1; next }
-              found && $0 ~ "^#+ v" { exit }
-              found { print }
-          ' changelog.md > release_body.md
+          # Витягуємо з changelog.md лише секцію цієї версії (окремий
+          # python-скрипт — стабільно та без awk-регексів).
+          python3 scripts/extract_changelog.py "$VER" > release_body.md
           if [ ! -s release_body.md ]; then
             # Fallback: якщо секції немає (забули оновити changelog),
             # використовуємо весь файл, щоб реліз не лишився без опису.
