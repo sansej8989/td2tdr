@@ -121,7 +121,7 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add update.json
           git commit -m "chore: bump update.json to v${{ steps.version.outputs.VERSION }}"
-          git push origin HEAD:${GITHUB_REF_NAME:-master}
+          git push origin HEAD:master
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
