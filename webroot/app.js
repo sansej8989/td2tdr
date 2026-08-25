@@ -302,6 +302,11 @@
       an_depletes_in: "вичерпається за {days} дн.",
       an_spend: "витрати",
       an_load_error: "Не вдалося завантажити аналітику — перевірте Журнал",
+      an_stat_days: "Статистика: {n} дн.",
+      an_reset_title: "Скидання історії аналітики",
+      an_reset_text: "Статистика збирається вже {n} дн. (з {date}). Ви дійсно бажаєте видалити всі збережені знімки історії ресурсів?",
+      an_reset_confirm: "🗑️ Скинути дані",
+      an_cancel: "Скасувати",
       upd_installing: "Завантаження оновлення...",
       upd_dl: "Завантаження архіву оновлення…",
       upd_verify: "Перевірка SHA-256…",
@@ -512,6 +517,11 @@
       an_depletes_in: "runs out in {days} days",
       an_spend: "spend",
       an_load_error: "Failed to load analytics — check the Log",
+      an_stat_days: "Stats: {n} d",
+      an_reset_title: "Reset analytics history",
+      an_reset_text: "Statistics has been collected for {n} days (since {date}). Do you really want to delete all saved resource snapshots?",
+      an_reset_confirm: "🗑️ Reset data",
+      an_cancel: "Cancel",
       upd_installing: "Downloading update...",
       upd_dl: "Downloading update archive…",
       upd_verify: "Verifying SHA-256…",
@@ -2114,10 +2124,25 @@
     list.addEventListener("pointerleave", hideAll);
   }
 
+  // Кількість днів збору статистики: від першого знімка до сьогодні
+  // (включно). Порожня історія = 0 (стан одразу після скидання).
+  function getStatDays(history) {
+    if (!history.length) return 0;
+    const first = new Date(history[0].date + "T00:00:00").getTime();
+    const now = new Date(); now.setHours(0, 0, 0, 0);
+    return Math.max(1, Math.floor((now.getTime() - first) / 86400000) + 1);
+  }
+
   async function renderAnalytics() {
     const container = $("analyticsList");
     if (!container) return;
     const history = await loadHistory();
+    // Інтерактивний стикер «Статистика: N дн.» — днів від першого знімка
+    // до сьогодні (мінімум 1 при наявності історії; 0 після скидання).
+    {
+      const st = $("statDaysText");
+      if (st) st.textContent = t("an_stat_days", { n: getStatDays(history) });
+    }
     if (!history.length) {
       container.innerHTML = `<div class="garage-empty">${t("an_no_data")}</div>`;
       setTabIndicator("analytics", null);
@@ -2707,9 +2732,39 @@
     const clearHistoryBtn = $("clearHistoryBtn");
     if (clearHistoryBtn) clearHistoryBtn.addEventListener("click", async () => {
       if (!hasKsu()) return;
-      await exec(`rm -f ${shellQuote(HISTORY_FILE)} ${shellQuote(altPath(HISTORY_FILE))}`);
-      addLog(t("log_analytics_history_cleared"));
-      renderAnalytics();
+      // НЕ очищаємо миттєво — спершу рахуємо період збору і показуємо
+      // модальне вікно підтвердження зі стилем інсталятора.
+      const history = await loadHistory();
+      const n = getStatDays(history);
+      const firstDate = history.length ? history[0].date : null;
+
+      const overlay = document.createElement("div");
+      overlay.className = "install-overlay";
+      overlay.innerHTML = `
+        <div class="install-card">
+          <div class="install-title">🗑️ ${t("an_reset_title")}</div>
+          <div class="install-reset-text">${t("an_reset_text", {
+            n,
+            date: firstDate ? formatShortDate(firstDate) : t("an_stat_days", { n: 0 }).replace(/.*: /, ""),
+          })}</div>
+          <div class="install-reset-actions">
+            <button class="btn-icon btn-text" id="resetCancel">${t("an_cancel")}</button>
+            <button class="btn-icon btn-text install-reset-confirm" id="resetConfirm">${t("an_reset_confirm")}</button>
+          </div>
+        </div>`;
+      document.body.appendChild(overlay);
+
+      const close = () => overlay.remove();
+      overlay.querySelector("#resetCancel").addEventListener("click", close);
+      overlay.querySelector("#resetConfirm").addEventListener("click", async () => {
+        await exec(`rm -f ${shellQuote(HISTORY_FILE)} ${shellQuote(altPath(HISTORY_FILE))}`);
+        // Скидаємо лічильник на 0 та оновлюємо графіки/прогноз
+        const st = $("statDaysText");
+        if (st) st.textContent = t("an_stat_days", { n: 0 });
+        addLog(t("log_analytics_history_cleared"));
+        renderAnalytics();
+        close();
+      });
     });
     // Автооновлення вимкнено: стан малюється з кешу миттєво, а актуалізація
     // відбувається за кнопками «Оновити» / «Синхронізувати та відкрити» —
