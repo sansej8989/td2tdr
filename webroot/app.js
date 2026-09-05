@@ -2677,9 +2677,39 @@
         }
         ilog(t("upd_installing_module"));
         setBar(70);
-        const inst = await exec(
-          `su -c 'magisk --install-module /data/local/tmp/td2tdr_update.zip' 2>&1 || su -c '/data/adb/ksud module install /data/local/tmp/td2tdr_update.zip' 2>&1`
+        // v0.0.513: визначаємо, який root-менеджер доступний (magisk / ksud /
+        // apd) і використовуємо ВІДРАЗУ його команду, без «провального
+        // magisk → fallback на ksud» (це й спричиняло «magisk: inaccessible
+        // or not found» на KSU/APatch у попередніх версіях).
+        //   magisk --install-module <zip>
+        //   ksud module install <zip>   (KernelSU / KernelSU-Next)
+        //   apd module install <zip>    (APatch)
+        const ZIP = "/data/local/tmp/td2tdr_update.zip";
+        // POSIX-сумісний probe через `[ -x PATH ]` — працює в мінімальних
+        // shell-середовищах Magisk/KSU/APatch (де `command -v` може бути
+        // недоступним). Перевіряємо і канонічні шляхи, і `which`.
+        const probe = await exec(
+          "su -c 'if [ -x /data/adb/magisk/magisk ] || [ -x /sbin/magisk ] || which magisk >/dev/null 2>&1; then echo MAGISK; " +
+          "elif [ -x /data/adb/ksud ] || which ksud >/dev/null 2>&1; then echo KSUD; " +
+          "elif [ -x /data/adb/ap/bin/apd ] || [ -x /sbin/apd ] || which apd >/dev/null 2>&1; then echo APDATCH; " +
+          "else echo NONE; fi' 2>&1"
         );
+        const which = String(probe.stdout || "").trim().toUpperCase();
+        let installCmd;
+        if (which === "MAGISK") {
+          installCmd = `su -c 'magisk --install-module ${shellQuote(ZIP)}' 2>&1`;
+        } else if (which === "KSUD") {
+          installCmd = `su -c 'ksud module install ${shellQuote(ZIP)}' 2>&1`;
+        } else if (which === "APDATCH") {
+          installCmd = `su -c 'apd module install ${shellQuote(ZIP)}' 2>&1`;
+        } else {
+          // Невідомий root-менеджер — явна помилка (НЕ викликаємо magisk
+          // «на удачу», щоб не отримати «magisk: inaccessible or not found»
+          // у stdout).
+          setBar(100);
+          throw new Error("Unknown root manager: none of {magisk, ksud, apd} found in $PATH");
+        }
+        const inst = await exec(installCmd);
         setBar(100);
         if (inst.errno !== 0 || /failed|error/i.test(inst.stdout + inst.stderr)) {
           throw new Error((inst.stderr || inst.stdout || "install failed").trim().slice(0, 200));
