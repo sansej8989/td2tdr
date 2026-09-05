@@ -1,5 +1,14 @@
 
 
+# v0.0.516
+- Feat: автоматичний фоновий збір та оновлення історії ресурсів при збереженні/закритті гри та за таймером у service.sh
+- Fix & Protection: Patch I (захист від порожніх знімків), Patch K (fallback-парсери ресурсів) та Patch L (захист від застарілих копій)
+- Shell: sync_now.sh тепер парсить Cash/Gold/Prestige + garageTotal/garageLocked і атомарно записує в history.jsonl (primary + alt)
+- Shell: service.sh має періодичний force-sync кожні 6 годин навіть без змін mtime
+- Shell: dedup за сьогоднішньою датою — один рядок на день, перезаписується при кожному sync
+- JS: 3-tier regex fallback у getResourceSnapshot (Tier 1: KEY=8hex,iN | Tier 2: KEY=Nhex,iN | Tier 3: KEY=iN)
+- JS: warning у Журналі, якщо копія user.dat старша за 30 хвилин
+
 # v0.0.515
 - UI Cleanup: усунено дублювання текстів періоду в прогнозі, роблено акцент на дату прогнозу
 - WebUI: блок прогнозу — єдиний акцентний заголовок DD.MM.YYYY (більше немає «Прогноз на N д.» всередині картки)

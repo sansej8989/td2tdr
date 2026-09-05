@@ -271,6 +271,7 @@
       log_garage_analyzed: "Гараж проаналізовано: {total} авто ({locked} locked, {held} held)",
       log_garage_analyze_error: "Помилка аналізу гаража: {message}",
       log_analytics_snapshot_error: "Аналітика: помилка запису знімка ({message})",
+      an_stale_copy_warn: "⚠ Фіксація знімка з копії user.dat (вік: {age} хв)",
       log_js_error: "ПОМИЛКА: {message}",
       log_js_unhandled: "НЕОБРОБЛЕНА ПОМИЛКА: {reason}",
       toast_synced: "Синхронізовано",
@@ -493,6 +494,7 @@
       log_garage_analyzed: "Garage analyzed: {total} cars ({locked} locked, {held} held)",
       log_garage_analyze_error: "Garage analysis error: {message}",
       log_analytics_snapshot_error: "Analytics: snapshot write error ({message})",
+      an_stale_copy_warn: "⚠ Snapshot recorded from stale user.dat copy (age: {age} min)",
       log_js_error: "ERROR: {message}",
       log_js_unhandled: "UNHANDLED ERROR: {reason}",
       toast_synced: "Synced",
@@ -1913,11 +1915,25 @@
   async function getResourceSnapshot() {
     const data = await readSourceFile(SRC_USER, SRC_USER_ROOT, DST_USER);
     if (!data) return null;
+    // v0.0.516 Patch K: 3-tier fallback parser. Tier 1 — канонічний формат
+    // KEY=[0-9A-F]{8},i<digits>. Tier 2 — гнучкий hex (різна довжина).
+    // Tier 3 — без hex-префікса взагалі (`KEY=i<digits>`). Якщо Hutch змінить
+    // формат серіалізації user.dat, ми не втратимо дані.
     const val = (key) => {
-      const m = data.match(new RegExp(`${key}=[0-9A-F]{8},i(\\d+)`));
-      return m ? Number(m[1]) : null;
+      let m = data.match(new RegExp(`(?:^|\\n)${key}=[0-9A-F]{8},i(\\d+)`));
+      if (m) return Number(m[1]);
+      m = data.match(new RegExp(`(?:^|\\n)${key}=[0-9A-F]+,i(\\d+)`));
+      if (m) return Number(m[1]);
+      m = data.match(new RegExp(`(?:^|\\n)${key}=i(\\d+)`));
+      if (m) return Number(m[1]);
+      return null;
     };
-    return { cash: val("Cash"), gold: val("Gold"), prestige: val("FestivalPasses") };
+    const r = { cash: val("Cash"), gold: val("Gold"), prestige: val("FestivalPasses") };
+    // v0.0.516 Patch I: якщо ВСІ поля null — це помилка парсингу, а не
+    // реальний баланс 0/0/0. Повертаємо null, щоб recordSnapshotIfNeeded
+    // не створював «порожній» знімок.
+    if (r.cash == null && r.gold == null && r.prestige == null) return null;
+    return r;
   }
 
   async function getGarageSnapshot() {
@@ -1940,6 +1956,19 @@
   async function recordSnapshotIfNeeded() {
     if (!hasKsu()) return;
     try {
+      // v0.0.516 Patch L: попередження про застарілу копію user.dat (>30 хв).
+      // Якщо service.sh / sync_now.sh не оновлювали копію понад 30 хв — фіксуємо
+      // це у Журналі, щоб користувач розумів, що сьогоднішній знімок може
+      // базуватися на застарілих даних.
+      try {
+        const st = await statPath(DST_USER);
+        if (st && st.mtime) {
+          const ageMin = Math.round((Date.now() / 1000 - st.mtime) / 60);
+          if (ageMin > 30) {
+            addLog(t("an_stale_copy_warn", { age: ageMin }), "W");
+          }
+        }
+      } catch (e) { /* non-fatal */ }
       const [res, gar] = await Promise.all([getResourceSnapshot(), getGarageSnapshot()]);
       if (!res && !gar) return;
       const history = await loadHistory();

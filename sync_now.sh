@@ -30,6 +30,130 @@ pause() {
     sleep 0.3 2>/dev/null || sleep 1
 }
 
+# ----- v0.0.516: фоновий автозапис знімка в history.jsonl -----
+# Аргументи:
+#   $1 = DST_DIR (primary)         напр. /data/media/0/Download/td2tdr_sync
+#   $2 = DST_DIR_ALT (mirror)     напр. /storage/emulated/0/Download/td2tdr_sync
+#   $3 = DST_USER (скопійований user.dat)
+#   $4 = DST     (скопійований Garage.dat)
+# Поведінка:
+#   - Парсить Cash / Gold / FestivalPasses із user.dat за 3-tier regex
+#     (canonical → flexible hex → bare `i<digits>`).
+#   - Парсить garageTotal / garageLocked із Garage.dat PlayerDeck=...
+#   - Якщо ВСІ ресурси null → WARN і повернення без запису (Patch I в shell).
+#   - Dedup за сьогоднішньою датою (ISO YYYY-MM-DD): якщо рядок вже є —
+#     перезаписуємо його полями (Object.assign-аналог в shell).
+#   - Атомарний запис у primary + alt через `<file>.tmp` + `mv -f`.
+record_history_snapshot() {
+    local PRIMARY_DIR="$1"
+    local ALT_DIR="$2"
+    local USER_FILE="$3"
+    local GARAGE_FILE="$4"
+    local HISTORY="$PRIMARY_DIR/history.jsonl"
+    local HISTORY_ALT="$ALT_DIR/history.jsonl"
+    local HISTORY_TMP="$HISTORY.tmp"
+    local HISTORY_ALT_TMP="$HISTORY_ALT.tmp"
+    local TODAY
+    TODAY=$(date +%Y-%m-%d)
+    local NOW_TS
+    NOW_TS=$(date +%s)000  # мілісекунди, як у JS Date.now()
+
+    # --- 1. Парсинг ресурсів (3-tier fallback) ---
+    # Кожна змінна отримує значення, якщо знайдено; інакше залишається "".
+    parse_val() {
+        local key="$1" file="$2"
+        [ -f "$file" ] || return 1
+        local v
+        # Tier 1: KEY=[0-9A-F]{8},i(\d+)
+        v=$(grep -oE "^${key}=[0-9A-F]{8},i[0-9]+" "$file" 2>/dev/null | head -n1 | sed -E "s/^${key}=[0-9A-F]{8},i//")
+        # Tier 2: KEY=[0-9A-F]+,i(\d+)
+        if [ -z "$v" ]; then
+            v=$(grep -oE "^${key}=[0-9A-F]+,i[0-9]+" "$file" 2>/dev/null | head -n1 | sed -E "s/^${key}=[0-9A-F]+,i//")
+        fi
+        # Tier 3: KEY=i(\d+) (без hex-префікса)
+        if [ -z "$v" ]; then
+            v=$(grep -oE "^${key}=i[0-9]+" "$file" 2>/dev/null | head -n1 | sed -E "s/^${key}=i//")
+        fi
+        [ -n "$v" ] && echo "$v" || return 1
+    }
+
+    local CASH GLD PRESTIGE
+    CASH=$(parse_val "Cash" "$USER_FILE")
+    GLD=$(parse_val "Gold" "$USER_FILE")
+    PRESTIGE=$(parse_val "FestivalPasses" "$USER_FILE")
+
+    # Garage: PlayerDeck=<hex>,s<JSON-array>; cards мають поле `locked`.
+    # Витягуємо JSON-частину через sed і рахуємо масив.
+    local G_TOTAL G_LOCKED=""
+    if [ -f "$GARAGE_FILE" ]; then
+        local DECK_JSON
+        DECK_JSON=$(grep -oE '^PlayerDeck=[^,]+,s\[.*\]' "$GARAGE_FILE" 2>/dev/null | head -n1 | sed -E 's/^PlayerDeck=[^,]+,s//')
+        if [ -n "$DECK_JSON" ]; then
+            # Валідація через sed: підраховуємо об'єкти `{...}` на верхньому рівні.
+            # Спрощений підрахунок: кількість "locked":true/false.
+            G_TOTAL=$(echo "$DECK_JSON" | grep -oE '\{[^{}]*\}' | wc -l | tr -d ' ')
+            G_LOCKED=$(echo "$DECK_JSON" | grep -oE '\{[^{}]*"locked":(true|false)[^{}]*\}' | grep -c '"locked":true' || true)
+        fi
+    fi
+
+    # --- 2. Patch I в shell: захист від порожнього знімка ---
+    if [ -z "$CASH$GLD$PRESTIGE$G_TOTAL" ]; then
+        log "WARN: history snapshot — усі ресурси порожні (user.dat пошкоджений?), знімок пропущено"
+        return 0
+    fi
+
+    # --- 3. Побудувати JSON-рядок нового запису ---
+    # Уникаємо залежностей від jq: формуємо вручну через printf.
+    local ENTRY
+    ENTRY=$(printf '{"date":"%s","ts":%s' "$TODAY" "$NOW_TS")
+    [ -n "$CASH" ]     && ENTRY=$(printf '%s,"cash":%s'     "$ENTRY" "$CASH")
+    [ -n "$GLD" ]      && ENTRY=$(printf '%s,"gold":%s'      "$ENTRY" "$GLD")
+    [ -n "$PRESTIGE" ] && ENTRY=$(printf '%s,"prestige":%s' "$ENTRY" "$PRESTIGE")
+    [ -n "$G_TOTAL" ]  && ENTRY=$(printf '%s,"garageTotal":%s'  "$ENTRY" "$G_TOTAL")
+    [ -n "$G_LOCKED" ] && ENTRY=$(printf '%s,"garageLocked":%s' "$ENTRY" "$G_LOCKED")
+    ENTRY="$ENTRY}"
+
+    # --- 4. Дедуплікація: прочитати існуючий history.jsonl, видалити рядки з
+    # сьогоднішньою датою, додати новий рядок, посортувати (якщо немає —
+    # просто створюємо новий файл). ---
+    local EXISTING=""
+    if [ -f "$HISTORY" ]; then
+        EXISTING=$(grep -v "^${TODAY}," "$HISTORY" 2>/dev/null || true)
+    fi
+    local NEW_CONTENT
+    if [ -n "$EXISTING" ]; then
+        # EXISTING вже містить \n на кінці (або ні, якщо файл без фінального
+        # переведення рядка). Гарантуємо відсутність подвійного \n.
+        NEW_CONTENT=$(printf '%s\n%s\n' "$EXISTING" "$ENTRY")
+    else
+        NEW_CONTENT=$(printf '%s\n' "$ENTRY")
+    fi
+
+    # --- 5. Атомарний запис: tmp + mv у primary, потім у alt ---
+    if ! printf '%s' "$NEW_CONTENT" > "$HISTORY_TMP" 2>>"$LOG"; then
+        log "history snapshot: помилка запису tmp ($HISTORY_TMP)"
+        return 1
+    fi
+    if ! mv -f "$HISTORY_TMP" "$HISTORY" 2>>"$LOG"; then
+        log "history snapshot: помилка mv ($HISTORY_TMP -> $HISTORY)"
+        return 1
+    fi
+    chmod 0644 "$HISTORY" 2>/dev/null
+
+    # Дзеркало: best-effort (збій не блокує primary).
+    if [ -f "$HISTORY_ALT" ] || [ -d "$ALT_DIR" ]; then
+        if printf '%s' "$NEW_CONTENT" > "$HISTORY_ALT_TMP" 2>>"$LOG" \
+            && mv -f "$HISTORY_ALT_TMP" "$HISTORY_ALT" 2>>"$LOG"; then
+            chmod 0644 "$HISTORY_ALT" 2>/dev/null
+        else
+            log "history snapshot: дзеркало не оновлено (не критично)"
+        fi
+    fi
+
+    log "history snapshot: $TODAY записано (cash=$CASH gold=$GLD prestige=$PRESTIGE gTotal=$G_TOTAL gLocked=$G_LOCKED)"
+    return 0
+}
+
 # Wait until size stops changing (game still flushing) and is > 0.
 wait_stable() {
     local f="$1" s d i=0
@@ -203,4 +327,14 @@ fi
 
 sync
 log "Синхронізовано: $SRC -> ${DST_DIR}/Garage.dat"
+
+# ----- v0.0.516: фоновий запис знімка в history.jsonl -----
+# Парсимо вже скопійовані файли (DST_USER / DST) — гарантовано свіжі після
+# `wait_stable` у copy_one. Це подія-орієнтований запис: спрацьовує
+# щоразу, коли sync_now.sh завершується успіхом, незалежно від того,
+# хто його викликав (service.sh polling/inotifywait, WebUI "Sync & Open",
+# cron, adb shell тощо).
+record_history_snapshot "$DST_DIR" "$DST_DIR_ALT" "$DST_USER" "$DST" || \
+    log "history snapshot: помилка запису (не критично)"
+
 exit 0

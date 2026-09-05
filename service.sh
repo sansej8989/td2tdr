@@ -85,12 +85,33 @@ if [ ! -f "$SRC" ] && [ ! -f "/data/media/0/Android/data/com.hutchgames.cccg/fil
     sync_file
 fi
 
+# v0.0.516: мінімальний інтервал між гарантованими записами знімків.
+# Якщо гра відкрита тривалий час без змін Garage.dat, polling/inotifywait
+# можуть довго не спрацьовувати — а нам потрібен хоча б один знімок на
+# HISTORY_FORCE_INTERVAL секунд, щоб зафіксувати зміни Cash/Gold/Prestige,
+# які гра пише окремо від Garage.dat.
+HISTORY_FORCE_INTERVAL=21600  # 6 годин
+LAST_HISTORY_FORCE=$(date +%s)
+
+maybe_force_history() {
+    local NOW
+    NOW=$(date +%s)
+    if [ $((NOW - LAST_HISTORY_FORCE)) -ge $HISTORY_FORCE_INTERVAL ]; then
+        log "force: періодичний запис знімка (≥ $HISTORY_FORCE_INTERVAL с)"
+        sync_file
+        LAST_HISTORY_FORCE=$NOW
+    fi
+}
+
 # Якщо є inotifywait (busybox) — стежимо за файлом у реальному часі
 if command -v inotifywait >/dev/null 2>&1; then
     log "Запускаю режим стеження через inotifywait"
     while true; do
-        inotifywait -e close_write,create,moved_to \
+        inotifywait -e close_write,create,moved_to -t $HISTORY_FORCE_INTERVAL \
             "$(dirname "$SRC")" 2>/dev/null | grep -q "Garage.dat" && sync_file
+        # Якщо inotifywait нічого не дав за HISTORY_FORCE_INTERVAL секунд
+        # (через -t), все одно виконуємо sync для запису знімка.
+        maybe_force_history
     done
 else
     # Резервний варіант — періодична перевірка за розміром + mtime.
@@ -120,5 +141,9 @@ else
             fi
         fi
         sleep $POLL
+        # Періодичний примусовий sync — гарантує знімок раз на 6 годин,
+        # навіть якщо mtime файлу не змінився (гра могла оновити лише user.dat
+        # або просто тримати сесію без збереження Garage.dat).
+        maybe_force_history
     done
 fi
