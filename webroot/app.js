@@ -343,9 +343,8 @@
       upd_done_reboot: "Оновлення встановлено — перезавантажте пристрій",
       upd_done_short: "Встановлено ✓",
       an_accuracy: "Точність прогнозу: {pct}%",
-      an_projection: "Прогноз на {days} дн.:",
       an_per_day: " / день",
-      an_range_title: "Прогнозний період",
+      an_range_title: "Прогнозований період",
       an_forecast_conf_label_low: "точність: низька",
       an_forecast_conf_label_med: "точність: середня",
       an_forecast_conf_label_high: "точність: висока",
@@ -354,7 +353,6 @@
       an_forecast_flat: "📉 Темп зростання престижу зараз не додатний — прогноз побудувати не вдалося.",
       an_mode_daily: "Денні зміни",
       an_mode_cumulative: "Накопичувальний",
-      an_forecast_period: "Прогнозний період",
       an_forecast_date: "Дата прогнозу",
       an_tooltip_date: "Дата",
       an_tooltip_delta: "Зміна за день",
@@ -567,7 +565,6 @@
       upd_done_reboot: "Update installed — reboot your device",
       upd_done_short: "Installed ✓",
       an_accuracy: "Forecast accuracy: {pct}%",
-      an_projection: "{days}-day projection:",
       an_per_day: " / day",
       an_range_title: "Forecast period",
       an_forecast_conf_label_low: "confidence: low",
@@ -578,7 +575,6 @@
       an_forecast_flat: "📉 Prestige isn't trending upward right now — couldn't build a forecast.",
       an_mode_daily: "Daily Δ",
       an_mode_cumulative: "Cumulative",
-      an_forecast_period: "Forecast period",
       an_forecast_date: "Forecast date",
       an_tooltip_date: "Date",
       an_tooltip_delta: "Daily Δ",
@@ -2369,18 +2365,14 @@
       `);
     }
     if (!rows.length) return "";
+    // v0.0.515: прибрано дублювання «Прогноз на N д.» — дата DD.MM.YYYY
+    // тепер єдиний акцентний заголовок картки. Індикатор періоду живе
+    // поруч зі слайдером (статичний HTML), а не всередині блоку.
     return `
       <div class="an-forecast an-forecast-card" data-forecast-block>
-        <div class="an-proj-title">📈 ${t("an_projection", { days: N })}</div>
-        <div class="an-forecast-meta">
-          <div class="an-forecast-meta-item">
-            <span class="an-forecast-meta-label">${t("an_forecast_period")}</span>
-            <span class="an-forecast-meta-value" data-forecast-period>${N} ${t("an_per_day").trim()}</span>
-          </div>
-          <div class="an-forecast-meta-item an-forecast-meta-accent">
-            <span class="an-forecast-meta-label">${t("an_forecast_date")}</span>
-            <span class="an-forecast-meta-value" data-forecast-date>${forecastDate}</span>
-          </div>
+        <div class="an-forecast-date-head">
+          <span class="an-forecast-date-label">${t("an_forecast_date")}</span>
+          <span class="an-forecast-date-value" data-forecast-date>${forecastDate}</span>
         </div>
         <div class="an-proj-grid">${rows.join("")}</div>
       </div>

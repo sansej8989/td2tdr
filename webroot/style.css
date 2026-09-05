@@ -3383,50 +3383,41 @@ body {
   padding: 12px 14px;
   margin: 0 0 12px;
 }
-.an-forecast-card .an-proj-title {
-  margin-bottom: 8px;
-  font-size: 12px;
-}
-.an-forecast-meta {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-  margin-bottom: 10px;
-}
-.an-forecast-meta-item {
+/* v0.0.515: дата DD.MM.YYYY — єдиний акцентний заголовок картки.
+   Раніше була сітка meta-item із двома полями (період + дата) + окремий
+   заголовок «Прогноз на N дн.» — через це період дублювався тричі. */
+.an-forecast-date-head {
   display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: 8px 10px;
-  background: rgba(127, 127, 127, 0.06);
-  border-radius: 10px;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 10px;
+  margin-bottom: 6px;
+  border-bottom: 1px solid rgba(127, 127, 127, 0.10);
 }
-.an-forecast-meta-label {
-  font-size: 9.5px;
+.an-forecast-date-label {
+  font-size: 10px;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.06em;
   color: var(--text-dim);
   font-weight: 700;
 }
-.an-forecast-meta-value {
-  font-size: 14px;
-  font-weight: 800;
-  color: var(--text);
-}
-.an-forecast-meta-accent .an-forecast-meta-value {
-  color: var(--accent-2, #67e8f9);
-  font-size: 16px;
+.an-forecast-date-value {
+  font-size: 20px;
+  font-weight: 900;
   letter-spacing: 0.02em;
+  color: var(--accent-2, #67e8f9);
+  font-variant-numeric: tabular-nums;
 }
 [data-theme="light"] .an-forecast-card {
   background: rgba(20, 22, 30, 0.035);
   border-color: rgba(20, 22, 30, 0.08);
 }
-[data-theme="light"] .an-forecast-meta-item {
-  background: rgba(20, 22, 30, 0.06);
-}
-[data-theme="light"] .an-forecast-meta-accent .an-forecast-meta-value {
+[data-theme="light"] .an-forecast-date-value {
   color: #0e7490;
+}
+[data-theme="light"] .an-forecast-date-head {
+  border-bottom-color: rgba(20, 22, 30, 0.08);
 }
 
 .an-proj-scenarios,
@@ -3437,9 +3428,6 @@ body {
   /* v0.0.512: сценарії Песиміст/Оптиміст видалено — класи лишаються
      невидимими на випадок залишкового HTML. */
   display: none;
-}
-@media (min-width: 480px) {
-  .an-forecast-meta { grid-template-columns: 1fr 1fr 1fr; }
 }
 
 /* Розкладка прогнозних рядків: 2-колонкова (назва + баланс/темп) */
