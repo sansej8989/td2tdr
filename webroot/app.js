@@ -357,6 +357,23 @@
       an_forecast_max: "🏆 Престиж вже на максимумі (1000) — не забудьте його витратити.",
       an_forecast_days: "📈 За поточним темпом до <b>1000 престижу</b> залишилось приблизно <b>{days} дн.</b> Це груба оцінка на основі останніх днів, не гарантія.",
       an_forecast_flat: "📉 Темп зростання престижу зараз не додатний — прогноз побудувати не вдалося.",
+      an_kpi_net: "Баланс",
+      an_kpi_avg: "Середнє / день",
+      an_kpi_max: "Рекорд / день",
+      an_kpi_trend: "Динаміка 7д",
+      an_kpi_trend_na: "—",
+      an_mode_daily: "Денні зміни",
+      an_mode_cumulative: "Накопичувальний",
+      an_forecast_period: "Прогнозний період",
+      an_forecast_date: "Дата прогнозу",
+      an_forecast_delta: "Очікуваний приріст",
+      an_forecast_total: "Прогнозований баланс",
+      an_forecast_scenarios: "Сценарії (мін / макс за місяць)",
+      an_forecast_pess: "Песиміст.",
+      an_forecast_opt: "Оптиміст.",
+      an_tooltip_date: "Дата",
+      an_tooltip_delta: "Зміна за день",
+      an_tooltip_balance: "Баланс на день",
       settings_title: "Налаштування",
       settings_theme: "Тема",
       theme_auto: "Авто",
@@ -579,6 +596,23 @@
       an_forecast_max: "🏆 Prestige is already maxed (1000) — don't forget to spend it.",
       an_forecast_days: "📈 At the current pace, reaching <b>1000 prestige</b> will take roughly <b>{days} days</b>. This is a rough estimate, not a guarantee.",
       an_forecast_flat: "📉 Prestige isn't trending upward right now — couldn't build a forecast.",
+      an_kpi_net: "Net balance",
+      an_kpi_avg: "Avg / day",
+      an_kpi_max: "Max / day",
+      an_kpi_trend: "7d trend",
+      an_kpi_trend_na: "—",
+      an_mode_daily: "Daily Δ",
+      an_mode_cumulative: "Cumulative",
+      an_forecast_period: "Forecast period",
+      an_forecast_date: "Forecast date",
+      an_forecast_delta: "Expected gain",
+      an_forecast_total: "Projected balance",
+      an_forecast_scenarios: "Scenarios (min / max last 30d)",
+      an_forecast_pess: "Pessimistic",
+      an_forecast_opt: "Optimistic",
+      an_tooltip_date: "Date",
+      an_tooltip_delta: "Daily Δ",
+      an_tooltip_balance: "Balance",
       settings_title: "Settings",
       settings_theme: "Theme",
       theme_auto: "Auto",
@@ -1916,32 +1950,24 @@
   try {
     const raw = localStorage.getItem("td2tdr_an_period");
     const n = parseInt(raw, 10);
-    if (!isNaN(n)) analyticsPeriod = Math.min(90, Math.max(3, n));
+    if (!isNaN(n)) analyticsPeriod = Math.min(90, Math.max(1, n));
   } catch (e) {}
-  // Вікно перемикача доходу видалено у v0.0.509 — фіксовані останні 14 днів.
+  // v0.0.511: повзунок прогнозу живе ОКРЕМО від графіків — input-handler
+  // оновлює ТІЛЬКИ блок прогнозу (`updateForecastBlock`), не викликаючи
+  // renderAnalytics(). Графіки за замовчуванням показують ВСЮ історію.
+  let analyticsChartMode = "cumulative";
+  try {
+    const m = localStorage.getItem("td2tdr_an_chart_mode");
+    if (m === "daily" || m === "cumulative") analyticsChartMode = m;
+  } catch (e) {}
+  // Останній розрахований зріз історії — кеш для ізольованого апдейту
+  // прогнозу без повторного виклику renderAnalytics().
+  let _analyticsLastHist = null;
+  let _analyticsLastMetricRenders = null;
 
-  function filterHistoryByPeriod(history, period) {
-    const days = Number(period);
-    if (!days || period === "all") return history;
-    const cutoff = Date.now() - days * 86400000;
-    return history.filter((h) => new Date(h.date + "T00:00:00").getTime() >= cutoff);
-  }
-
-  // best-effort delta over the last N days (falls back to the oldest point
-  // available if history doesn't go back that far — shows "since start" then)
-  function computeDeltaOverDays(history, key, days) {
-    const withKey = history.filter((h) => h[key] != null);
-    if (withKey.length < 2) return null;
-    const last = withKey[withKey.length - 1];
-    const lastDate = new Date(last.date + "T00:00:00").getTime();
-    const cutoff = lastDate - days * 86400000;
-    let ref = withKey[0];
-    for (let i = 0; i < withKey.length - 1; i++) {
-      if (new Date(withKey[i].date + "T00:00:00").getTime() >= cutoff) { ref = withKey[i]; break; }
-    }
-    if (ref === last) return null;
-    return last[key] - ref[key];
-  }
+  // v0.0.511: filterHistoryByPeriod видалено — графіки завжди показують
+  // ВСЮ історію (від першого до останнього запису). Повзунок прогнозу не
+  // впливає на графіки, лише на блок прогнозу.
 
   // biggest single-day-over-day gain recorded so far (all-time, not period-limited)
   function computeBestGain(history, key) {
@@ -1967,6 +1993,87 @@
     return worst < 0 ? { loss: -worst, date: worstDate } : null;
   }
 
+  // v0.0.511: середньодобова зміна по ВСІЙ історії (тільки позитивні
+  // дельти). Використовується для KPI #2 «Avg/day» — це «чистий заробіток»
+  // за весь доступний період, без впливу випадкових списань.
+  function computeAvgRateFull(history, key) {
+    const withKey = history.filter((h) => h[key] != null);
+    if (withKey.length < 2) return null;
+    let posSum = 0;
+    let spanDays = 0;
+    for (let i = 1; i < withKey.length; i++) {
+      const a = withKey[i - 1], b = withKey[i];
+      const d = b[key] - a[key];
+      if (d > 0) posSum += d;
+      const dayGap = Math.max(1, Math.round(
+        (new Date(b.date + "T00:00:00") - new Date(a.date + "T00:00:00")) / 86400000
+      ));
+      spanDays += dayGap;
+    }
+    if (spanDays <= 0) return null;
+    const rate = posSum / spanDays;
+    return isFinite(rate) ? rate : null;
+  }
+
+  // v0.0.511: тижнева динаміка — порівняння приросту останніх 7 днів проти
+  // попередніх 7 днів. Повертає число у відсотках або null, якщо даних мало.
+  function computeTrend7d(history, key) {
+    const withKey = history.filter((h) => h[key] != null);
+    if (withKey.length < 3) return null;
+    const lastDate = new Date(withKey[withKey.length - 1].date + "T00:00:00").getTime();
+    const DAY = 86400000;
+    const last7Start = lastDate - 7 * DAY;
+    const prev7Start = lastDate - 14 * DAY;
+    let firstLast7 = null, firstPrev7 = null;
+    for (let i = withKey.length - 1; i >= 0; i--) {
+      const t = new Date(withKey[i].date + "T00:00:00").getTime();
+      if (t <= last7Start && firstLast7 == null) firstLast7 = withKey[i];
+      if (t <= prev7Start) { firstPrev7 = withKey[i]; break; }
+    }
+    if (!firstLast7) firstLast7 = withKey[0];
+    const last = withKey[withKey.length - 1];
+    const last7Delta = last[key] - firstLast7[key];
+    if (firstPrev7 == null) {
+      // Немає повних 14 днів — повертаємо відсоток приросту за доступні
+      // попередні 7 днів як знаменник «1», щоб хоч щось показати.
+      return last7Delta > 0 ? 100 : last7Delta < 0 ? -100 : 0;
+    }
+    const prev7Delta = firstLast7[key] - firstPrev7[key];
+    if (prev7Delta === 0) {
+      return last7Delta > 0 ? 100 : last7Delta < 0 ? -100 : 0;
+    }
+    return Math.round(((last7Delta - prev7Delta) / Math.abs(prev7Delta)) * 100);
+  }
+
+  // v0.0.511: сценарії прогнозу на основі мін/макс одноденного приросту за
+  // останні 30 днів. Песиміст = min(Δ), оптиміст = max(Δ); повертає
+  // абсолютні значення денного приросту для подальшого множення на N.
+  function computeScenarios(history, key, windowDays) {
+    const withKey = history.filter((h) => h[key] != null);
+    if (withKey.length < 2) return null;
+    const win = windowDays || 30;
+    const cutoff = Date.now() - win * 86400000;
+    const winPts = withKey.filter((p) => new Date(p.date + "T00:00:00").getTime() >= cutoff);
+    const pts = winPts.length >= 2 ? winPts : withKey.slice(-Math.min(7, withKey.length));
+    if (pts.length < 2) return null;
+    let minD = Infinity, maxD = -Infinity;
+    for (let i = 1; i < pts.length; i++) {
+      const d = pts[i][key] - pts[i - 1][key];
+      if (d < minD) minD = d;
+      if (d > maxD) maxD = d;
+    }
+    return { min: minD, max: maxD };
+  }
+
+  function formatForecastDate(daysAhead) {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    d.setDate(d.getDate() + Number(daysAhead || 0));
+    const dd = String(d.getDate()).padStart(2, "0");
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    return `${dd}.${mm}.${d.getFullYear()}`;
+  }
+
   function formatShortDate(dateStr) {
     try {
       const d = new Date(dateStr + "T00:00:00");
@@ -1975,15 +2082,29 @@
   }
 
 
-  function renderSparkline(history, key, color) {
+  // v0.0.511: графік тепер підтримує ДВА режими:
+  //   • "cumulative" — значення балансу на кінець кожного дня (як раніше).
+  //   • "daily"      — дельта за день (perDay) між сусідніми знімками.
+  // У data-points серіалізується трійка [date, value, perDay, balance]
+  // щоб tooltip міг показати і зміну, і баланс незалежно від режиму.
+  function buildChartSeries(history, key) {
     const points = history.filter((h) => h[key] != null);
-    if (points.length < 2) {
-      const have = points.length;
+    return points.map((p, i) => {
+      const prev = i > 0 ? points[i - 1][key] : null;
+      const delta = prev != null ? p[key] - prev : null;
+      return { date: p.date, value: p[key], delta, balance: p[key] };
+    });
+  }
+
+  function renderSparkline(history, key, color, mode) {
+    const series = buildChartSeries(history, key);
+    if (series.length < 2) {
+      const have = series.length;
       const need = 2;
       const dots = Array.from({ length: need }, (_, i) =>
         `<span class="an-progress-dot${i < have ? " filled" : ""}"></span>`
       ).join("");
-      const lastVal = have ? points[have - 1][key] : null;
+      const lastVal = have ? series[have - 1].value : null;
       return `
         <div class="an-empty an-empty-progress">
           <div class="an-progress-row">
@@ -1994,25 +2115,39 @@
         </div>
       `;
     }
-    const values = points.map((p) => p[key]);
-    const min = Math.min(...values);
-    const max = Math.max(...values);
+    const isDaily = mode === "daily";
+    const plotValues = isDaily
+      ? series.map((s) => s.delta == null ? 0 : s.delta)
+      : series.map((s) => s.value);
+    const min = Math.min(...plotValues);
+    const max = Math.max(...plotValues);
     const range = max - min || 1;
     const W = 300, H = 60, PAD = 4;
-    const stepX = (W - PAD * 2) / (points.length - 1);
-    const coords = points.map((p, i) => {
+    const stepX = (W - PAD * 2) / (series.length - 1);
+    const coords = series.map((p, i) => {
       const x = PAD + i * stepX;
-      const y = H - PAD - ((p[key] - min) / range) * (H - PAD * 2);
+      const y = H - PAD - ((plotValues[i] - min) / range) * (H - PAD * 2);
       return [x, y];
     });
     const path = coords.map((c, i) => (i === 0 ? "M" : "L") + c[0].toFixed(1) + "," + c[1].toFixed(1)).join(" ");
     const last = coords[coords.length - 1];
     const first = coords[0];
     const areaPath = `${path} L${last[0].toFixed(1)},${H - PAD} L${first[0].toFixed(1)},${H - PAD} Z`;
-    const dataPoints = escapeAttr(JSON.stringify(points.map((p) => [p.date, p[key]])));
+    // Серіалізуємо всі три поля (date / value / perDay) для tooltip'а —
+    // initChartInteraction дізнається режим із DOM-класу.
+    const dataPoints = escapeAttr(JSON.stringify(
+      series.map((s) => [s.date, s.value, s.delta == null ? null : s.delta, s.balance])
+    ));
+    const zeroY = isDaily && min < 0 && max > 0
+      ? H - PAD - ((0 - min) / range) * (H - PAD * 2)
+      : null;
+    const zeroLine = zeroY != null
+      ? `<line x1="${PAD.toFixed(1)}" y1="${zeroY.toFixed(1)}" x2="${(W - PAD).toFixed(1)}" y2="${zeroY.toFixed(1)}" stroke="var(--text-dimmer)" stroke-width="0.5" stroke-dasharray="2 2" opacity="0.6"></line>`
+      : "";
     return `
-      <div class="an-chart-wrap" data-points="${dataPoints}">
+      <div class="an-chart-wrap an-chart-mode-${mode}" data-mode="${mode}" data-points="${dataPoints}">
         <svg viewBox="0 0 ${W} ${H}" class="an-chart" preserveAspectRatio="none">
+          ${zeroLine}
           <path d="${areaPath}" fill="${color}" opacity="0.14"></path>
           <path d="${path}" fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"></path>
           <circle cx="${last[0].toFixed(1)}" cy="${last[1].toFixed(1)}" r="3" fill="${color}"></circle>
@@ -2020,7 +2155,7 @@
           <circle class="an-chart-cursor-dot" r="4" fill="${color}" stroke="#0a0a12" stroke-width="1.5"></circle>
           <rect class="an-chart-hit" x="0" y="0" width="${W}" height="${H}"></rect>
         </svg>
-        <div class="an-tooltip"><b></b><span></span></div>
+        <div class="an-tooltip"><b></b><span></span><em></em></div>
       </div>
     `;
   }
@@ -2059,17 +2194,9 @@
     const deltaCls = delta == null ? "flat" : delta > 0 ? "up" : delta < 0 ? "down" : "flat";
     const deltaText = delta == null ? "—" : (delta > 0 ? "+" : "") + delta.toLocaleString("uk-UA");
 
-    const delta7 = computeDeltaOverDays(history, key, 7);
-    const delta30 = computeDeltaOverDays(history, key, 30);
-    const periodChip = (d, label) => {
-      if (d == null) return "";
-      const cls = d > 0 ? "up" : d < 0 ? "down" : "";
-      const txt = (d > 0 ? "+" : "") + d.toLocaleString("uk-UA");
-      return `<span class="${cls}">${label}: <b>${txt}</b></span>`;
-    };
-    const periodsRow = (delta7 != null || delta30 != null)
-      ? `<div class="an-metric-periods">${periodChip(delta7, t("an_period_7d_label"))}${periodChip(delta30, t("an_period_30d_label"))}</div>`
-      : "";
+    // v0.0.511: чіпи «7д / 30д» видалені — усі агреговані значення тепер
+    // живуть у KPI-дашборді над графіками. Тут лишаємо тільки дельту за
+    // останню добу (як раніше) та два довідкових рекорди.
 
     const best = computeBestGain(history, key);
     const recordRow = best
@@ -2088,17 +2215,21 @@
       ? `<div class="an-record an-record-loss"><span class="an-record-badge">🛍️</span>${t("an_record_loss", { value: lastSpend.spend.toLocaleString("uk-UA"), date: formatShortDate(lastSpend.date) })}</div>`
       : "";
 
-    const periodPoints = filterHistoryByPeriod(history, analyticsPeriod);
-
+    // v0.0.511: повний графік + перемикач режимів (Денні / Накопичувальний)
+    const mode = analyticsChartMode;
+    const isDaily = mode === "daily";
     return `
-      <div class="an-metric">
+      <div class="an-metric" data-key="${escapeAttr(key)}">
         <div class="an-metric-head">
           <span class="an-metric-title">${title}</span>
           <span class="an-metric-value">${fmtNum(last)}</span>
           <span class="an-delta ${deltaCls}">${deltaText} ${t("an_delta_24h")}</span>
         </div>
-        ${periodsRow}
-        ${renderSparkline(periodPoints, key, color)}
+        <div class="an-mode-toggle" role="tablist" aria-label="chart mode">
+          <button type="button" class="an-mode-btn${!isDaily ? " active" : ""}" data-mode="cumulative" role="tab" aria-selected="${!isDaily}">${t("an_mode_cumulative")}</button>
+          <button type="button" class="an-mode-btn${isDaily ? " active" : ""}" data-mode="daily" role="tab" aria-selected="${isDaily}">${t("an_mode_daily")}</button>
+        </div>
+        ${renderSparkline(history, key, color, mode)}
         ${recordRow}
         ${lossRow}
       </div>
@@ -2106,6 +2237,9 @@
   }
 
   // ---- analytics: tap/hold tooltip on chart points -----------------------
+  // v0.0.511: tooltip тепер показує три поля (date / perDay / balance) і
+  // позиціонує курсор на графіку відповідно до вибраного режиму
+  // (cumulative → баланс; daily → дельта).
   function initChartInteraction() {
     const list = $("analyticsList");
     if (!list || list.dataset.chartBound) return;
@@ -2132,28 +2266,50 @@
       frac = Math.max(0, Math.min(1, frac));
 
       const idx = Math.round(frac * (points.length - 1));
-      const [date, value] = points[idx];
+      const pt = points[idx];
+      const date = pt[0];
+      const value = pt[1];
+      const perDay = pt[2];
+      const balance = pt[3];
 
-      const values = points.map((p) => p[1]);
-      const min = Math.min(...values), max = Math.max(...values);
+      const mode = wrap.dataset.mode === "daily" ? "daily" : "cumulative";
+      // В cumulative — курсор по value, в daily — по perDay.
+      const plotValues = mode === "daily"
+        ? points.map((p) => p[2] == null ? 0 : p[2])
+        : points.map((p) => p[1]);
+      const min = Math.min(...plotValues);
+      const max = Math.max(...plotValues);
       const range = max - min || 1;
       const W = 300, H = 60, PAD = 4;
       const stepX = (W - PAD * 2) / (points.length - 1);
       const x = PAD + idx * stepX;
-      const y = H - PAD - ((value - min) / range) * (H - PAD * 2);
+      const plotY = mode === "daily" ? (perDay == null ? 0 : perDay) : value;
+      const y = H - PAD - ((plotY - min) / range) * (H - PAD * 2);
 
       const line = wrap.querySelector(".an-chart-cursor-line");
       const dot = wrap.querySelector(".an-chart-cursor-dot");
-      if (line) { line.setAttribute("x1", x); line.setAttribute("x2", x); }
-      if (dot) { dot.setAttribute("cx", x); dot.setAttribute("cy", y); }
+      if (line) { line.setAttribute("x1", x.toFixed(1)); line.setAttribute("x2", x.toFixed(1)); }
+      if (dot) { dot.setAttribute("cx", x.toFixed(1)); dot.setAttribute("cy", y.toFixed(1)); }
 
       const tip = wrap.querySelector(".an-tooltip");
       if (tip) {
         tip.style.left = ((x / W) * 100) + "%";
         const b = tip.querySelector("b");
         const s = tip.querySelector("span");
-        if (b) b.textContent = fmtNum(value);
-        if (s) s.textContent = formatShortDate(date);
+        const em = tip.querySelector("em");
+        if (b) b.textContent = formatShortDate(date);
+        if (s) {
+          // В cumulative — показуємо баланс; в daily — дельту за день.
+          const head = mode === "daily"
+            ? `${t("an_tooltip_delta")}: ${(perDay == null ? "—" : (perDay > 0 ? "+" : "") + perDay.toLocaleString("uk-UA"))}`
+            : `${t("an_tooltip_balance")}: ${fmtNum(value)}`;
+          s.textContent = head;
+        }
+        if (em) {
+          em.textContent = mode === "daily"
+            ? `${t("an_tooltip_balance")}: ${fmtNum(balance)}`
+            : (perDay == null ? "" : `${t("an_tooltip_delta")}: ${(perDay > 0 ? "+" : "") + perDay.toLocaleString("uk-UA")}`);
+        }
       }
       wrap.classList.add("hovering");
     };
@@ -2174,85 +2330,94 @@
     return Math.max(1, Math.floor((now.getTime() - first) / 86400000) + 1);
   }
 
-  async function renderAnalytics() {
-    const container = $("analyticsList");
-    if (!container) return;
-    const history = await loadHistory();
-    // Інтерактивний стикер «Статистика: N дн.» — днів від першого знімка
-    // до сьогодні (мінімум 1 при наявності історії; 0 після скидання).
-    {
-      const st = $("statDaysText");
-      if (st) st.textContent = t("an_stat_days", { n: getStatDays(history) });
+  // v0.0.511: KPI-дашборд (4 картки) — Net / Avg/day / Max/day / Trend 7d.
+  // Показує лише агрегати по ВСІЙ історії; конкретні ресурси — нижче
+  // у вигляді окремих графіків.
+  function renderKpi(hist) {
+    const keys = ["cash", "gold", "prestige", "garageSlots"];
+    const colors = { cash: "#3ddc84", gold: "#ffb545", prestige: "#a06bff", garageSlots: "#4d7cff" };
+    // Net: підсумок останніх значень (для гаражу — поточна кількість слотів).
+    let net = 0;
+    let haveAny = false;
+    for (const k of keys) {
+      const pts = hist.filter((h) => h[k] != null);
+      if (pts.length) { net += pts[pts.length - 1][k]; haveAny = true; }
     }
-    if (!history.length) {
-      container.innerHTML = `<div class="garage-empty">${t("an_no_data")}</div>`;
-      setTabIndicator("analytics", null);
-      return;
+    // Avg / day: середнє позитивних дельт по всій історії, агреговане.
+    let posSum = 0, spanDays = 0;
+    for (const k of keys) {
+      const pts = hist.filter((h) => h[k] != null);
+      for (let i = 1; i < pts.length; i++) {
+        const d = pts[i][k] - pts[i - 1][k];
+        if (d > 0) posSum += d;
+        const gap = Math.max(1, Math.round(
+          (new Date(pts[i].date + "T00:00:00") - new Date(pts[i - 1].date + "T00:00:00")) / 86400000
+        ));
+        spanDays += gap;
+      }
     }
-    // "accuracy" indicator: the more days of history collected, the greener —
-    // 1-2 days is barely enough for a trend, a full week+ is solid.
-    setTabIndicator("analytics", history.length >= 7 ? "ok" : history.length >= 3 ? "warn" : "bad");
-    // ---- forecast range slider (3..90 днів) -----------------------------
-    // Замінює старі фіксовані кнопки [7д][30д][Усі]: положення повзунка
-    // динамічно перемальовує графіки та прогноз очікуваних ресурсів.
-    const range = $("analyticsRange");
-    if (range && !range.dataset.bound) {
-      range.dataset.bound = "1";
-      range.value = String(analyticsPeriod);
-      let raf = null;
-      range.addEventListener("input", () => {
-        analyticsPeriod = Number(range.value);
-        const lbl = $("analyticsRangeVal");
-        if (lbl) lbl.textContent = `${analyticsPeriod}д`;
-        // Плавне перемальовування без спаму re-render на кожен піксель
-        if (raf) cancelAnimationFrame(raf);
-        raf = requestAnimationFrame(() => {
-          try { localStorage.setItem("td2tdr_an_period", String(analyticsPeriod)); } catch (e) {}
-          renderAnalytics();
-        });
-      });
+    const avg = spanDays > 0 ? posSum / spanDays : null;
+    // Max / day: найбільший одноденний приріст за весь час.
+    let best = -Infinity, bestKey = "cash";
+    for (const k of keys) {
+      const r = computeBestGain(hist, k);
+      if (r && r.gain > best) { best = r.gain; bestKey = k; }
     }
-    if (range) {
-      range.value = String(analyticsPeriod);
-      const lbl = $("analyticsRangeVal");
-      if (lbl) lbl.textContent = `${analyticsPeriod}д`;
-    }
+    // Trend 7d: середнє по 4 ключах.
+    const trends = keys.map((k) => computeTrend7d(hist, k)).filter((v) => v != null);
+    const avgTrend = trends.length
+      ? Math.round(trends.reduce((s, v) => s + v, 0) / trends.length)
+      : null;
 
-    // Індикатор точності: що більше накопичених днів історії, то вищий %.
-    // 1 день ≈ 25%, 7+ днів ≈ 90%+ (плато на 14 днях).
-    const accEl = $("analyticsAccuracy");
-    if (accEl) {
-      const histDays = history.length;
-      const pct = Math.min(99, Math.round(20 + 70 * Math.min(histDays, 14) / 14));
-      const cls = histDays >= 7 ? "pill-ok" : histDays >= 3 ? "pill-warn" : "pill";
-      accEl.innerHTML = `<span class="pill ${cls}">${t("an_accuracy", { pct })}</span>`;
-    }
+    const trendCls = avgTrend == null ? "flat" : avgTrend > 0 ? "up" : avgTrend < 0 ? "down" : "flat";
+    const trendArrow = avgTrend == null ? "" : avgTrend > 0 ? "↗" : avgTrend < 0 ? "↘" : "→";
+    const trendSign = avgTrend == null ? "" : (avgTrend > 0 ? "+" : "");
+    const trendText = avgTrend == null ? t("an_kpi_trend_na") : `${trendSign}${avgTrend}%`;
+    const netText = haveAny ? fmtNum(Math.round(net)) : "—";
+    const avgText = avg == null ? "—" : ((avg > 0 ? "+" : "") + Math.round(avg * 10) / 10).toLocaleString("uk-UA");
+    const bestText = !isFinite(best) ? "—" : "+" + Math.round(best).toLocaleString("uk-UA");
+    const bestColor = colors[bestKey] || "var(--text)";
 
-    let html = "";
-    // Гараж у аналітиці рахуємо по ЗАЙНЯТИХ слотах (garageLocked), а не по
-    // загальній кількості карток. Для старих знімків без garageLocked —
-    // fallback на garageTotal.
-    const hist = history.map((h) => ({
-      ...h,
-      garageSlots: h.garageLocked != null ? h.garageLocked : h.garageTotal,
-    }));
-    html += renderMetric(hist, "cash", t("an_cash"), "#3ddc84");
-    html += renderMetric(hist, "gold", t("an_gold"), "#ffb545");
-    html += renderMetric(hist, "prestige", t("an_prestige"), "#a06bff");
-    html += renderMetric(hist, "garageSlots", t("an_garage"), "#4d7cff");
+    return `
+      <div class="an-kpi-grid">
+        <div class="an-kpi">
+          <div class="an-kpi-label">${t("an_kpi_net")}</div>
+          <div class="an-kpi-value">${netText}</div>
+        </div>
+        <div class="an-kpi">
+          <div class="an-kpi-label">${t("an_kpi_avg")}</div>
+          <div class="an-kpi-value ${avg == null ? "flat" : avg > 0 ? "up" : avg < 0 ? "down" : "flat"}">${avgText} ${avg != null && avg > 0 ? "🟢" : avg != null && avg < 0 ? "🔴" : ""}</div>
+        </div>
+        <div class="an-kpi">
+          <div class="an-kpi-label">${t("an_kpi_max")}</div>
+          <div class="an-kpi-value" style="color:${bestColor}">${bestText}</div>
+        </div>
+        <div class="an-kpi">
+          <div class="an-kpi-label">${t("an_kpi_trend")}</div>
+          <div class="an-kpi-value ${trendCls}">${trendArrow} ${trendText}</div>
+        </div>
+      </div>
+    `;
+  }
 
-    // Прогноз очікуваних ресурсів на обрану кількість днів уперед:
-    // лінійна екстраполяція темпу по всій історії для кожної метрики.
-    let projRows = "";
-    for (const [key, title] of [
-      ["cash", t("an_cash")], ["gold", t("an_gold")],
-      ["prestige", t("an_prestige")], ["garageSlots", t("an_garage")],
-    ]) {
+  // v0.0.511: ізольований блок прогнозу. Викликається як при першому
+  // рендері, так і при русі повзунка (без renderAnalytics).
+  // Повертає HTML для всього блоку .an-forecast (включно із сценаріями).
+  function renderForecastBlockHtml(hist, days) {
+    const N = Math.max(1, Math.min(90, Number(days) || 1));
+    const forecastDate = formatForecastDate(N);
+    const PROJ_COLORS = {
+      cash: "#3ddc84", gold: "#ffb545", prestige: "#a06bff", garageSlots: "#4d7cff",
+    };
+    const PROJ_TITLES = {
+      cash: t("an_cash"), gold: t("an_gold"),
+      prestige: t("an_prestige"), garageSlots: t("an_garage"),
+    };
+    const rows = [];
+    for (const key of ["cash", "gold", "prestige", "garageSlots"]) {
       const pts = hist.filter((h) => h[key] != null);
       if (pts.length < 2) continue;
-      const lastPt = pts[pts.length - 1];
-      // Єдиний надійний розрахунок середнього доходу: останні 14 днів,
-      // тільки позитивні дельти (чистий заробіток).
+      // Темп — як у v0.0.509: вікно 14 днів, тільки позитивні дельти.
       const winCut = Date.now() - 14 * 86400000;
       const winPts = pts.filter((p) => new Date(p.date + "T00:00:00").getTime() >= winCut);
       const ratePts = winPts.length >= 2 ? winPts : pts.slice(-2);
@@ -2262,23 +2427,26 @@
         if (d > 0) posSum += d;
       }
       const rFirst = ratePts[0];
+      const lastPt = pts[pts.length - 1];
       const spanDays = Math.max(1, (new Date(lastPt.date) - new Date(rFirst.date)) / 86400000);
-      const incomeRate = posSum / spanDays;   // середній прибуток/добу
+      const incomeRate = posSum / spanDays;
       if (!isFinite(incomeRate)) continue;
       const current = lastPt[key];
-      // Forecast_Balance = Current + Average_Daily_Income × Days
-      const projected = Math.max(0, Math.round(current + incomeRate * analyticsPeriod));
+      const expectedDelta = Math.round(incomeRate * N);
+      const projected = Math.max(0, Math.round(current + expectedDelta));
       const perDay = Math.round(incomeRate * 10) / 10;
-      // Кольорова ієрархія: назва нейтральна (CSS), сума — колір ресурсу,
-      // темп прибутку — дрібний 🟢 зелений для прибутку, 🔴 червоний для
-      // спаду, «—» при нульовому темпі (без підпису +0 / день).
-      const PROJ_COLORS = {
-        cash: "#3ddc84",
-        gold: "#ffb545",
-        prestige: "#a06bff",
-        garageSlots: "#4d7cff",
-      };
-      const accentColor = PROJ_COLORS[key] || "var(--text)";
+
+      // Сценарії (мін/макс за 30 днів) — абсолютні денні дельти.
+      const sc = computeScenarios(hist, key, 30);
+      let pessTxt = "—", optTxt = "—";
+      if (sc) {
+        const pessDelta = Math.round(sc.min * N);
+        const optDelta = Math.round(sc.max * N);
+        pessTxt = (pessDelta > 0 ? "+" : "") + pessDelta.toLocaleString("uk-UA");
+        optTxt = (optDelta > 0 ? "+" : "") + optDelta.toLocaleString("uk-UA");
+      }
+
+      const accent = PROJ_COLORS[key] || "var(--text)";
       let rateBadge;
       if (perDay > 0) {
         rateBadge = `<small class="an-proj-net up">🟢 +${perDay.toLocaleString("uk-UA")}${t("an_per_day")}</small>`;
@@ -2287,29 +2455,190 @@
       } else {
         rateBadge = `<small class="an-proj-net flat">—${t("an_per_day")}</small>`;
       }
-      projRows += `<div class="an-proj-row"><div class="an-proj-left"><span>${title}</span></div><div class="an-proj-right"><b class="up" style="color:${accentColor}">${projected.toLocaleString("uk-UA")}</b>${rateBadge}</div></div>`;
+      rows.push(`
+        <div class="an-proj-row" data-key="${escapeAttr(key)}">
+          <div class="an-proj-left"><span>${PROJ_TITLES[key]}</span></div>
+          <div class="an-proj-right">
+            <b class="up" style="color:${accent}">${projected.toLocaleString("uk-UA")}</b>
+            ${rateBadge}
+          </div>
+          <div class="an-proj-scenarios">
+            <span class="an-proj-sc an-proj-pess">${t("an_forecast_pess")}: <b>${pessTxt}</b></span>
+            <span class="an-proj-sc an-proj-opt">${t("an_forecast_opt")}: <b>${optTxt}</b></span>
+          </div>
+        </div>
+      `);
     }
-    const projectionHtml = projRows
-      ? `<div class="an-forecast"><div class="an-proj-title">📈 ${t("an_projection", { days: analyticsPeriod })}</div><div class="an-proj-grid">${projRows}</div></div>`
-      : "";
+    if (!rows.length) return "";
+    return `
+      <div class="an-forecast an-forecast-card" data-forecast-block>
+        <div class="an-proj-title">📈 ${t("an_projection", { days: N })}</div>
+        <div class="an-forecast-meta">
+          <div class="an-forecast-meta-item">
+            <span class="an-forecast-meta-label">${t("an_forecast_period")}</span>
+            <span class="an-forecast-meta-value" data-forecast-period>${N} ${t("an_per_day").trim()}</span>
+          </div>
+          <div class="an-forecast-meta-item an-forecast-meta-accent">
+            <span class="an-forecast-meta-label">${t("an_forecast_date")}</span>
+            <span class="an-forecast-meta-value" data-forecast-date>${forecastDate}</span>
+          </div>
+        </div>
+        <div class="an-proj-grid">${rows.join("")}</div>
+        <div class="an-forecast-scenarios-title">${t("an_forecast_scenarios")}</div>
+      </div>
+    `;
+  }
 
-    const forecastDays = linearForecastDays(history, "prestige", 1000);
-    const prestigePts = history.filter((h) => h.prestige != null);
-    const lastPrestige = prestigePts.length ? prestigePts[prestigePts.length - 1] : null;
-    let forecastHtml = "";
-    if (lastPrestige && lastPrestige.prestige >= 1000) {
-      forecastHtml = `<div class="an-forecast">${t("an_forecast_max")}</div>`;
-    } else if (forecastDays != null) {
-      const conf = forecastConfidence(history, "prestige");
+  // Ізольований апдейт ТІЛЬКИ блоку прогнозу (без renderAnalytics).
+  // Викликається при русі повзунка.
+  function updateForecastBlock() {
+    if (!_analyticsLastHist) return;
+    const root = $("analyticsList");
+    if (!root) return;
+    const old = root.querySelector("[data-forecast-block]");
+    const fresh = renderForecastBlockHtml(_analyticsLastHist, analyticsPeriod);
+    if (!fresh) {
+      if (old) old.remove();
+      return;
+    }
+    if (!old) {
+      // Блок ще не існує (наприклад, перший рендер) — вставляємо ПІСЛЯ
+      // KPI-сітки (або на початок, якщо KPI ще немає).
+      const kpi = root.querySelector(".an-kpi-grid");
+      if (kpi) kpi.insertAdjacentHTML("afterend", fresh);
+      else root.insertAdjacentHTML("afterbegin", fresh);
+    } else {
+      old.outerHTML = fresh;
+    }
+  }
+
+  // Стиснений прогноз по престижу (старий блок an-forecast для prestige→1000)
+  // лишаємо, але тепер він рендериться окремо і не залежить від слайдера.
+  function renderPrestigeForecastHtml(hist) {
+    const forecastDays = linearForecastDays(hist, "prestige", 1000);
+    const pts = hist.filter((h) => h.prestige != null);
+    const last = pts.length ? pts[pts.length - 1] : null;
+    if (last && last.prestige >= 1000) {
+      return `<div class="an-forecast">${t("an_forecast_max")}</div>`;
+    }
+    if (forecastDays != null) {
+      const conf = forecastConfidence(hist, "prestige");
       const confPillCls = conf === "high" ? "pill-ok" : conf === "med" ? "pill-warn" : "pill";
       const confLabel = t(`an_forecast_conf_label_${conf}`);
-      forecastHtml = `<div class="an-forecast">${t("an_forecast_days", { days: forecastDays })} <span class="pill ${confPillCls}" style="margin-top:6px;display:inline-block;">${confLabel}</span></div>`;
-    } else if (prestigePts.length >= 2) {
-      forecastHtml = `<div class="an-forecast">${t("an_forecast_flat")}</div>`;
+      return `<div class="an-forecast">${t("an_forecast_days", { days: forecastDays })} <span class="pill ${confPillCls}" style="margin-top:6px;display:inline-block;">${confLabel}</span></div>`;
+    }
+    if (pts.length >= 2) {
+      return `<div class="an-forecast">${t("an_forecast_flat")}</div>`;
+    }
+    return "";
+  }
+
+  async function renderAnalytics() {
+    const container = $("analyticsList");
+    if (!container) return;
+    const history = await loadHistory();
+    {
+      const st = $("statDaysText");
+      if (st) st.textContent = t("an_stat_days", { n: getStatDays(history) });
+    }
+    if (!history.length) {
+      container.innerHTML = `<div class="garage-empty">${t("an_no_data")}</div>`;
+      _analyticsLastHist = null;
+      setTabIndicator("analytics", null);
+      return;
+    }
+    setTabIndicator("analytics", history.length >= 7 ? "ok" : history.length >= 3 ? "warn" : "bad");
+
+    // v0.0.511: ізольований біндинг повзунка прогнозу. Слайдер НЕ
+    // викликає renderAnalytics — лише оновлює блок прогнозу.
+    const range = $("analyticsRange");
+    if (range && !range.dataset.bound) {
+      range.dataset.bound = "1";
+      range.min = "1";
+      range.max = "90";
+      range.value = String(analyticsPeriod);
+      range.addEventListener("input", () => {
+        analyticsPeriod = Math.max(1, Math.min(90, Number(range.value) || 1));
+        const lbl = $("analyticsRangeVal");
+        if (lbl) lbl.textContent = `${analyticsPeriod}д`;
+        try { localStorage.setItem("td2tdr_an_period", String(analyticsPeriod)); } catch (e) {}
+        updateForecastBlock();
+      });
+    }
+    if (range) {
+      range.value = String(analyticsPeriod);
+      const lbl = $("analyticsRangeVal");
+      if (lbl) lbl.textContent = `${analyticsPeriod}д`;
     }
 
-    container.innerHTML = projectionHtml + html + forecastHtml;
+    // Індикатор точності: що більше накопичених днів історії, то вищий %.
+    const accEl = $("analyticsAccuracy");
+    if (accEl) {
+      const histDays = history.length;
+      const pct = Math.min(99, Math.round(20 + 70 * Math.min(histDays, 14) / 14));
+      const cls = histDays >= 7 ? "pill-ok" : histDays >= 3 ? "pill-warn" : "pill";
+      accEl.innerHTML = `<span class="pill ${cls}">${t("an_accuracy", { pct })}</span>`;
+    }
+
+    const hist = history.map((h) => ({
+      ...h,
+      garageSlots: h.garageLocked != null ? h.garageLocked : h.garageTotal,
+    }));
+    // Кешуємо для updateForecastBlock.
+    _analyticsLastHist = hist;
+
+    let html = "";
+    // v0.0.511: KPI-дашборд (4 картки) — ПЕРШИМ, перед графіками та прогнозом.
+    html += renderKpi(hist);
+    // Блок прогнозу (одразу під KPI, перед ресурсними графіками).
+    html += renderForecastBlockHtml(hist, analyticsPeriod);
+    // Потім — 4 ресурсні графіки з повною історією.
+    html += renderMetric(hist, "cash", t("an_cash"), "#3ddc84");
+    html += renderMetric(hist, "gold", t("an_gold"), "#ffb545");
+    html += renderMetric(hist, "prestige", t("an_prestige"), "#a06bff");
+    html += renderMetric(hist, "garageSlots", t("an_garage"), "#4d7cff");
+    // Стиснений прогноз по престижу → 1000 — найнижче.
+    const forecastHtml = renderPrestigeForecastHtml(history);
+
+    container.innerHTML = html + forecastHtml;
     initChartInteraction();
+    bindChartModeToggles();
+  }
+
+  // v0.0.511: перемикач режимів графіка (Денні / Накопичувальний).
+  // Делегований обробник на контейнері — працює після кожного re-render.
+  function bindChartModeToggles() {
+    const list = $("analyticsList");
+    if (!list || list.dataset.modeBound) return;
+    list.dataset.modeBound = "1";
+    list.addEventListener("click", (e) => {
+      const btn = e.target.closest && e.target.closest(".an-mode-btn");
+      if (!btn) return;
+      const newMode = btn.dataset.mode === "daily" ? "daily" : "cumulative";
+      if (newMode === analyticsChartMode) return;
+      analyticsChartMode = newMode;
+      try { localStorage.setItem("td2tdr_an_chart_mode", newMode); } catch (err) {}
+      // Перемальовуємо ТІЛЬКИ графіки — без renderAnalytics.
+      list.querySelectorAll(".an-mode-btn").forEach((b) => {
+        const on = b.dataset.mode === newMode;
+        b.classList.toggle("active", on);
+        b.setAttribute("aria-selected", on ? "true" : "false");
+      });
+      list.querySelectorAll(".an-metric").forEach((metricEl) => {
+        const key = metricEl.dataset.key;
+        if (!key) return;
+        const color = ({
+          cash: "#3ddc84", gold: "#ffb545", prestige: "#a06bff", garageSlots: "#4d7cff"
+        })[key] || "var(--accent)";
+        const wrap = metricEl.querySelector(".an-chart-wrap");
+        if (!wrap) return;
+        const fresh = renderSparkline(_analyticsLastHist || [], key, color, newMode);
+        const tmp = document.createElement("div");
+        tmp.innerHTML = fresh;
+        const newWrap = tmp.firstElementChild;
+        if (newWrap) wrap.replaceWith(newWrap);
+      });
+    });
   }
 
   // ---- changelog ----------------------------------------------------------

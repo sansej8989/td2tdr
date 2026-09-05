@@ -600,23 +600,8 @@ body {
   box-shadow: 0 2px 8px -2px rgba(20, 22, 30, 0.14);
 }
 
-/* ---------- extra delta periods row (7d / 30d, below the 24h pill) ---------- */
-.an-metric-periods {
-  display: flex;
-  gap: 10px;
-  margin: -2px 0 7px;
-  font-size: 10.5px;
-  font-weight: 600;
-  color: var(--text-dimmer);
-}
-
-.an-metric-periods b {
-  color: var(--text-dim);
-  font-weight: 700;
-}
-
-.an-metric-periods .up b { color: #34d399; }
-.an-metric-periods .down b { color: #f87171; }
+/* v0.0.511: .an-metric-periods (7д/30д chips) видалено — значення
+   агреговано у KPI-дашборді над графіками. */
 
 /* ---------- records line ---------- */
 .an-record {
@@ -3107,6 +3092,9 @@ body {
   }
   .an-metric { break-inside: avoid; }
   .an-forecast, .an-proj-grid { grid-template-columns: unset; }
+  /* v0.0.511: KPI-дашборд і forecast-card мають займати ВСЮ ширину
+     навіть у landscape, інакше вони «застрягнуть» у 2-колонковій сітці. */
+  .an-kpi-grid, .an-forecast-card { grid-column: 1 / -1; }
 
   /* Таб-бар: компактніший, не перекриває контент */
   .tab-bar { padding-bottom: 4px; }
@@ -3338,3 +3326,183 @@ body {
 .an-proj-net.up { color: #34d399; }
 .an-proj-net.down { color: #f87171; }
 .an-proj-net.flat { color: var(--text-dim); }
+
+/* ---------- v0.0.511: KPI dashboard + chart-mode toggle + isolated forecast block ---------- */
+.an-kpi-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin: 0 0 12px;
+}
+.an-kpi {
+  background: var(--card-bg-soft, rgba(255, 255, 255, 0.03));
+  border: 1px solid var(--card-border);
+  border-radius: 12px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-height: 60px;
+}
+.an-kpi-label {
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-dim);
+  font-weight: 700;
+}
+.an-kpi-value {
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  line-height: 1.15;
+  color: var(--text);
+}
+.an-kpi-value.up { color: #34d399; }
+.an-kpi-value.down { color: #f87171; }
+.an-kpi-value.flat { color: var(--text-dim); }
+[data-theme="light"] .an-kpi {
+  background: rgba(20, 22, 30, 0.035);
+  border-color: rgba(20, 22, 30, 0.08);
+}
+
+/* Перемикач режимів графіка (Денні / Накопичувальний) */
+.an-mode-toggle {
+  display: inline-flex;
+  background: rgba(127, 127, 127, 0.08);
+  border: 1px solid var(--card-border);
+  border-radius: 10px;
+  padding: 2px;
+  margin: 4px 0 6px;
+  gap: 0;
+  align-self: flex-start;
+}
+.an-mode-btn {
+  background: transparent;
+  border: none;
+  font-family: inherit;
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--text-dim);
+  padding: 5px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.an-mode-btn:hover { color: var(--text); }
+.an-mode-btn.active {
+  background: var(--card-bg-soft, rgba(255, 255, 255, 0.06));
+  color: var(--text);
+  box-shadow: inset 0 0 0 1px rgba(127, 127, 127, 0.18);
+}
+[data-theme="light"] .an-mode-btn.active {
+  background: rgba(20, 22, 30, 0.08);
+  box-shadow: inset 0 0 0 1px rgba(20, 22, 30, 0.12);
+}
+
+/* Tooltip: додатковий рядок <em> для денної/загальної інформації */
+.an-tooltip em {
+  display: block;
+  font-style: normal;
+  font-size: 10px;
+  color: var(--text-dimmer);
+  margin-top: 1px;
+}
+
+/* Прогноз як окрема картка з акцентом на дату */
+.an-forecast-card {
+  background: var(--card-bg-soft, rgba(255, 255, 255, 0.03));
+  border: 1px solid var(--card-border);
+  border-radius: 14px;
+  padding: 12px 14px;
+  margin: 0 0 12px;
+}
+.an-forecast-card .an-proj-title {
+  margin-bottom: 8px;
+  font-size: 12px;
+}
+.an-forecast-meta {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.an-forecast-meta-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 10px;
+  background: rgba(127, 127, 127, 0.06);
+  border-radius: 10px;
+}
+.an-forecast-meta-label {
+  font-size: 9.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-dim);
+  font-weight: 700;
+}
+.an-forecast-meta-value {
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--text);
+}
+.an-forecast-meta-accent .an-forecast-meta-value {
+  color: var(--accent-2, #67e8f9);
+  font-size: 16px;
+  letter-spacing: 0.02em;
+}
+[data-theme="light"] .an-forecast-card {
+  background: rgba(20, 22, 30, 0.035);
+  border-color: rgba(20, 22, 30, 0.08);
+}
+[data-theme="light"] .an-forecast-meta-item {
+  background: rgba(20, 22, 30, 0.06);
+}
+[data-theme="light"] .an-forecast-meta-accent .an-forecast-meta-value {
+  color: #0e7490;
+}
+
+.an-proj-scenarios {
+  display: flex;
+  gap: 12px;
+  margin-top: 4px;
+  font-size: 10px;
+  color: var(--text-dim);
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+.an-proj-sc b { font-weight: 800; }
+.an-proj-pess b { color: #f87171; }
+.an-proj-opt b { color: #34d399; }
+.an-forecast-scenarios-title {
+  font-size: 9.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-dim);
+  font-weight: 700;
+  margin-top: 8px;
+  text-align: right;
+  opacity: 0.85;
+}
+@media (min-width: 480px) {
+  .an-forecast-meta { grid-template-columns: 1fr 1fr 1fr; }
+}
+
+/* Розкладка прогнозних рядків: 2-колонкова для назви+суми, сценарії знизу */
+.an-proj-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-areas:
+    "left right"
+    "scenarios scenarios";
+  align-items: center;
+  gap: 4px 10px;
+  padding: 6px 0;
+  border-top: 1px solid rgba(127, 127, 127, 0.08);
+}
+.an-proj-row:first-child { border-top: none; }
+.an-proj-left { grid-area: left; }
+.an-proj-right { grid-area: right; text-align: right; }
+.an-proj-scenarios { grid-area: scenarios; }
