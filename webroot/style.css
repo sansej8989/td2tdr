@@ -271,7 +271,10 @@ body {
   z-index: 1;
   max-width: 480px;
   margin: 0 auto;
-  padding: max(22px, env(safe-area-inset-top, 22px)) 16px 90px;
+  padding:
+    max(22px, env(safe-area-inset-top, 22px))
+    16px
+    calc(90px + env(safe-area-inset-bottom, 0px));
 }
 
 /* ---------- header ---------- */
@@ -3330,4 +3333,8 @@ body {
 .an-proj-net {
   font-size: 9.5px !important;
   opacity: 0.95;
+  color: #34d399;
 }
+.an-proj-net.up { color: #34d399; }
+.an-proj-net.down { color: #f87171; }
+.an-proj-net.flat { color: var(--text-dim); }

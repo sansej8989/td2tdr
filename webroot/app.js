@@ -46,7 +46,7 @@
     try { localStorage.setItem(key, value); } catch (e) {}
   }
   // Сучасне закриття динамічних модалок: кнопка ✕ у кутку картки +
-  // клік по затемненому фону (overlay). Без виходу з модуля.
+  // клік по затемненому фону (overlay) + клавіша Escape. Без виходу з модуля.
   function wireModalClose(overlay) {
     const card = overlay.querySelector(".install-card");
     if (card && !card.querySelector(".overlay-x")) {
@@ -60,6 +60,16 @@
     overlay.addEventListener("click", (e) => {
       if (e.target === overlay) overlay.remove();
     });
+    // v0.0.510: Escape закриває динамічну модалку (раніше працював лише
+    // для статичних .modal-overlay). Одноразовий слухач, що автоматично
+    // знімається після закриття — без витоку пам'яті.
+    const onKey = (e) => {
+      if (e.key === "Escape") {
+        overlay.remove();
+        document.removeEventListener("keydown", onKey, true);
+      }
+    };
+    document.addEventListener("keydown", onKey, true);
   }
   async function migrateAndRemoveCfg(file, key) {
     if (!hasKsu()) return;
@@ -329,6 +339,7 @@
       an_imp_merge: "Об'єднати",
       an_imp_overwrite: "Перезаписати",
       an_imp_done: "Імпортовано: історія містить {n} записів",
+      an_imp_error: "Не вдалося імпортувати: пошкоджений або невалідний файл",
       upd_installing: "Завантаження оновлення...",
       upd_dl: "Завантаження архіву оновлення…",
       upd_verify: "Перевірка SHA-256…",
@@ -550,6 +561,7 @@
       an_imp_merge: "Merge",
       an_imp_overwrite: "Overwrite",
       an_imp_done: "Imported: history now has {n} records",
+      an_imp_error: "Import failed: corrupted or invalid file",
       upd_installing: "Downloading update...",
       upd_dl: "Downloading update archive…",
       upd_verify: "Verifying SHA-256…",
@@ -2258,7 +2270,8 @@
       const projected = Math.max(0, Math.round(current + incomeRate * analyticsPeriod));
       const perDay = Math.round(incomeRate * 10) / 10;
       // Кольорова ієрархія: назва нейтральна (CSS), сума — колір ресурсу,
-      // темп прибутку — дрібний зелений з 🟢 (не зливається із сумою).
+      // темп прибутку — дрібний 🟢 зелений для прибутку, 🔴 червоний для
+      // спаду, «—» при нульовому темпі (без підпису +0 / день).
       const PROJ_COLORS = {
         cash: "#3ddc84",
         gold: "#ffb545",
@@ -2266,7 +2279,15 @@
         garageSlots: "#4d7cff",
       };
       const accentColor = PROJ_COLORS[key] || "var(--text)";
-      projRows += `<div class="an-proj-row"><div class="an-proj-left"><span>${title}</span></div><div class="an-proj-right"><b class="up" style="color:${accentColor}">${projected.toLocaleString("uk-UA")}</b><small class="an-proj-net">🟢 +${perDay.toLocaleString("uk-UA")}${t("an_per_day")}</small></div></div>`;
+      let rateBadge;
+      if (perDay > 0) {
+        rateBadge = `<small class="an-proj-net up">🟢 +${perDay.toLocaleString("uk-UA")}${t("an_per_day")}</small>`;
+      } else if (perDay < 0) {
+        rateBadge = `<small class="an-proj-net down">🔴 ${perDay.toLocaleString("uk-UA")}${t("an_per_day")}</small>`;
+      } else {
+        rateBadge = `<small class="an-proj-net flat">—${t("an_per_day")}</small>`;
+      }
+      projRows += `<div class="an-proj-row"><div class="an-proj-left"><span>${title}</span></div><div class="an-proj-right"><b class="up" style="color:${accentColor}">${projected.toLocaleString("uk-UA")}</b>${rateBadge}</div></div>`;
     }
     const projectionHtml = projRows
       ? `<div class="an-forecast"><div class="an-proj-title">📈 ${t("an_projection", { days: analyticsPeriod })}</div><div class="an-proj-grid">${projRows}</div></div>`
@@ -2806,11 +2827,11 @@
             .filter(Boolean);
         }
       } catch (e) {
-        toast(t("cl_load_error"));
+        toast(t("an_imp_error"));
         return;
       }
       imported = imported.filter((h) => h && typeof h.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(h.date));
-      if (!imported.length) { toast(t("cl_load_error")); return; }
+      if (!imported.length) { toast(t("an_imp_error")); return; }
 
       // Модальне підтвердження: об'єднати чи перезаписати
       const overlay = document.createElement("div");
