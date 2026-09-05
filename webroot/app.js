@@ -318,11 +318,6 @@
       an_prestige: "Престиж",
       an_garage: "Гараж (слотів)",
       an_delta_24h: "/ 24г",
-      an_period_7: "7д",
-      an_period_30: "30д",
-      an_period_all: "Усі",
-      an_period_7d_label: "7д",
-      an_period_30d_label: "30д",
       an_record_gain: "Піковий день: <b>+{value}</b> ({date})",
       an_record_loss: "Витрата: <b>-{value}</b> ({date})",
       an_depletes_in: "вичерпається за {days} дн.",
@@ -357,20 +352,10 @@
       an_forecast_max: "🏆 Престиж вже на максимумі (1000) — не забудьте його витратити.",
       an_forecast_days: "📈 За поточним темпом до <b>1000 престижу</b> залишилось приблизно <b>{days} дн.</b> Це груба оцінка на основі останніх днів, не гарантія.",
       an_forecast_flat: "📉 Темп зростання престижу зараз не додатний — прогноз побудувати не вдалося.",
-      an_kpi_net: "Баланс",
-      an_kpi_avg: "Середнє / день",
-      an_kpi_max: "Рекорд / день",
-      an_kpi_trend: "Динаміка 7д",
-      an_kpi_trend_na: "—",
       an_mode_daily: "Денні зміни",
       an_mode_cumulative: "Накопичувальний",
       an_forecast_period: "Прогнозний період",
       an_forecast_date: "Дата прогнозу",
-      an_forecast_delta: "Очікуваний приріст",
-      an_forecast_total: "Прогнозований баланс",
-      an_forecast_scenarios: "Сценарії (мін / макс за місяць)",
-      an_forecast_pess: "Песиміст.",
-      an_forecast_opt: "Оптиміст.",
       an_tooltip_date: "Дата",
       an_tooltip_delta: "Зміна за день",
       an_tooltip_balance: "Баланс на день",
@@ -557,11 +542,6 @@
       an_prestige: "Prestige",
       an_garage: "Garage (slots)",
       an_delta_24h: "/ 24h",
-      an_period_7: "7d",
-      an_period_30: "30d",
-      an_period_all: "All",
-      an_period_7d_label: "7d",
-      an_period_30d_label: "30d",
       an_record_gain: "Best day: <b>+{value}</b> ({date})",
       an_record_loss: "Last spend: <b>-{value}</b> ({date})",
       an_depletes_in: "runs out in {days} days",
@@ -596,20 +576,10 @@
       an_forecast_max: "🏆 Prestige is already maxed (1000) — don't forget to spend it.",
       an_forecast_days: "📈 At the current pace, reaching <b>1000 prestige</b> will take roughly <b>{days} days</b>. This is a rough estimate, not a guarantee.",
       an_forecast_flat: "📉 Prestige isn't trending upward right now — couldn't build a forecast.",
-      an_kpi_net: "Net balance",
-      an_kpi_avg: "Avg / day",
-      an_kpi_max: "Max / day",
-      an_kpi_trend: "7d trend",
-      an_kpi_trend_na: "—",
       an_mode_daily: "Daily Δ",
       an_mode_cumulative: "Cumulative",
       an_forecast_period: "Forecast period",
       an_forecast_date: "Forecast date",
-      an_forecast_delta: "Expected gain",
-      an_forecast_total: "Projected balance",
-      an_forecast_scenarios: "Scenarios (min / max last 30d)",
-      an_forecast_pess: "Pessimistic",
-      an_forecast_opt: "Optimistic",
       an_tooltip_date: "Date",
       an_tooltip_delta: "Daily Δ",
       an_tooltip_balance: "Balance",
@@ -1955,6 +1925,8 @@
   // v0.0.511: повзунок прогнозу живе ОКРЕМО від графіків — input-handler
   // оновлює ТІЛЬКИ блок прогнозу (`updateForecastBlock`), не викликаючи
   // renderAnalytics(). Графіки за замовчуванням показують ВСЮ історію.
+  // v0.0.512: дефолтний режим графіка — cumulative. Якщо localStorage
+  // порожній або містить невалідне значення, режим лишається cumulative.
   let analyticsChartMode = "cumulative";
   try {
     const m = localStorage.getItem("td2tdr_an_chart_mode");
@@ -1963,7 +1935,6 @@
   // Останній розрахований зріз історії — кеш для ізольованого апдейту
   // прогнозу без повторного виклику renderAnalytics().
   let _analyticsLastHist = null;
-  let _analyticsLastMetricRenders = null;
 
   // v0.0.511: filterHistoryByPeriod видалено — графіки завжди показують
   // ВСЮ історію (від першого до останнього запису). Повзунок прогнозу не
@@ -1993,77 +1964,11 @@
     return worst < 0 ? { loss: -worst, date: worstDate } : null;
   }
 
-  // v0.0.511: середньодобова зміна по ВСІЙ історії (тільки позитивні
-  // дельти). Використовується для KPI #2 «Avg/day» — це «чистий заробіток»
-  // за весь доступний період, без впливу випадкових списань.
-  function computeAvgRateFull(history, key) {
-    const withKey = history.filter((h) => h[key] != null);
-    if (withKey.length < 2) return null;
-    let posSum = 0;
-    let spanDays = 0;
-    for (let i = 1; i < withKey.length; i++) {
-      const a = withKey[i - 1], b = withKey[i];
-      const d = b[key] - a[key];
-      if (d > 0) posSum += d;
-      const dayGap = Math.max(1, Math.round(
-        (new Date(b.date + "T00:00:00") - new Date(a.date + "T00:00:00")) / 86400000
-      ));
-      spanDays += dayGap;
-    }
-    if (spanDays <= 0) return null;
-    const rate = posSum / spanDays;
-    return isFinite(rate) ? rate : null;
-  }
+  // v0.0.512: KPI-дашборд (renderKpi / computeAvgRateFull / computeTrend7d)
+  // видалено — спрощення UI. Метрики ресурсів доступні окремо у графіках.
 
-  // v0.0.511: тижнева динаміка — порівняння приросту останніх 7 днів проти
-  // попередніх 7 днів. Повертає число у відсотках або null, якщо даних мало.
-  function computeTrend7d(history, key) {
-    const withKey = history.filter((h) => h[key] != null);
-    if (withKey.length < 3) return null;
-    const lastDate = new Date(withKey[withKey.length - 1].date + "T00:00:00").getTime();
-    const DAY = 86400000;
-    const last7Start = lastDate - 7 * DAY;
-    const prev7Start = lastDate - 14 * DAY;
-    let firstLast7 = null, firstPrev7 = null;
-    for (let i = withKey.length - 1; i >= 0; i--) {
-      const t = new Date(withKey[i].date + "T00:00:00").getTime();
-      if (t <= last7Start && firstLast7 == null) firstLast7 = withKey[i];
-      if (t <= prev7Start) { firstPrev7 = withKey[i]; break; }
-    }
-    if (!firstLast7) firstLast7 = withKey[0];
-    const last = withKey[withKey.length - 1];
-    const last7Delta = last[key] - firstLast7[key];
-    if (firstPrev7 == null) {
-      // Немає повних 14 днів — повертаємо відсоток приросту за доступні
-      // попередні 7 днів як знаменник «1», щоб хоч щось показати.
-      return last7Delta > 0 ? 100 : last7Delta < 0 ? -100 : 0;
-    }
-    const prev7Delta = firstLast7[key] - firstPrev7[key];
-    if (prev7Delta === 0) {
-      return last7Delta > 0 ? 100 : last7Delta < 0 ? -100 : 0;
-    }
-    return Math.round(((last7Delta - prev7Delta) / Math.abs(prev7Delta)) * 100);
-  }
-
-  // v0.0.511: сценарії прогнозу на основі мін/макс одноденного приросту за
-  // останні 30 днів. Песиміст = min(Δ), оптиміст = max(Δ); повертає
-  // абсолютні значення денного приросту для подальшого множення на N.
-  function computeScenarios(history, key, windowDays) {
-    const withKey = history.filter((h) => h[key] != null);
-    if (withKey.length < 2) return null;
-    const win = windowDays || 30;
-    const cutoff = Date.now() - win * 86400000;
-    const winPts = withKey.filter((p) => new Date(p.date + "T00:00:00").getTime() >= cutoff);
-    const pts = winPts.length >= 2 ? winPts : withKey.slice(-Math.min(7, withKey.length));
-    if (pts.length < 2) return null;
-    let minD = Infinity, maxD = -Infinity;
-    for (let i = 1; i < pts.length; i++) {
-      const d = pts[i][key] - pts[i - 1][key];
-      if (d < minD) minD = d;
-      if (d > maxD) maxD = d;
-    }
-    return { min: minD, max: maxD };
-  }
+  // v0.0.511: сценарії (computeScenarios) видалено у v0.0.512 — блок
+  // прогнозу показує лише базовий баланс на вибрану дату.
 
   function formatForecastDate(daysAhead) {
     const d = new Date();
@@ -2330,79 +2235,11 @@
     return Math.max(1, Math.floor((now.getTime() - first) / 86400000) + 1);
   }
 
-  // v0.0.511: KPI-дашборд (4 картки) — Net / Avg/day / Max/day / Trend 7d.
-  // Показує лише агрегати по ВСІЙ історії; конкретні ресурси — нижче
-  // у вигляді окремих графіків.
-  function renderKpi(hist) {
-    const keys = ["cash", "gold", "prestige", "garageSlots"];
-    const colors = { cash: "#3ddc84", gold: "#ffb545", prestige: "#a06bff", garageSlots: "#4d7cff" };
-    // Net: підсумок останніх значень (для гаражу — поточна кількість слотів).
-    let net = 0;
-    let haveAny = false;
-    for (const k of keys) {
-      const pts = hist.filter((h) => h[k] != null);
-      if (pts.length) { net += pts[pts.length - 1][k]; haveAny = true; }
-    }
-    // Avg / day: середнє позитивних дельт по всій історії, агреговане.
-    let posSum = 0, spanDays = 0;
-    for (const k of keys) {
-      const pts = hist.filter((h) => h[k] != null);
-      for (let i = 1; i < pts.length; i++) {
-        const d = pts[i][k] - pts[i - 1][k];
-        if (d > 0) posSum += d;
-        const gap = Math.max(1, Math.round(
-          (new Date(pts[i].date + "T00:00:00") - new Date(pts[i - 1].date + "T00:00:00")) / 86400000
-        ));
-        spanDays += gap;
-      }
-    }
-    const avg = spanDays > 0 ? posSum / spanDays : null;
-    // Max / day: найбільший одноденний приріст за весь час.
-    let best = -Infinity, bestKey = "cash";
-    for (const k of keys) {
-      const r = computeBestGain(hist, k);
-      if (r && r.gain > best) { best = r.gain; bestKey = k; }
-    }
-    // Trend 7d: середнє по 4 ключах.
-    const trends = keys.map((k) => computeTrend7d(hist, k)).filter((v) => v != null);
-    const avgTrend = trends.length
-      ? Math.round(trends.reduce((s, v) => s + v, 0) / trends.length)
-      : null;
-
-    const trendCls = avgTrend == null ? "flat" : avgTrend > 0 ? "up" : avgTrend < 0 ? "down" : "flat";
-    const trendArrow = avgTrend == null ? "" : avgTrend > 0 ? "↗" : avgTrend < 0 ? "↘" : "→";
-    const trendSign = avgTrend == null ? "" : (avgTrend > 0 ? "+" : "");
-    const trendText = avgTrend == null ? t("an_kpi_trend_na") : `${trendSign}${avgTrend}%`;
-    const netText = haveAny ? fmtNum(Math.round(net)) : "—";
-    const avgText = avg == null ? "—" : ((avg > 0 ? "+" : "") + Math.round(avg * 10) / 10).toLocaleString("uk-UA");
-    const bestText = !isFinite(best) ? "—" : "+" + Math.round(best).toLocaleString("uk-UA");
-    const bestColor = colors[bestKey] || "var(--text)";
-
-    return `
-      <div class="an-kpi-grid">
-        <div class="an-kpi">
-          <div class="an-kpi-label">${t("an_kpi_net")}</div>
-          <div class="an-kpi-value">${netText}</div>
-        </div>
-        <div class="an-kpi">
-          <div class="an-kpi-label">${t("an_kpi_avg")}</div>
-          <div class="an-kpi-value ${avg == null ? "flat" : avg > 0 ? "up" : avg < 0 ? "down" : "flat"}">${avgText} ${avg != null && avg > 0 ? "🟢" : avg != null && avg < 0 ? "🔴" : ""}</div>
-        </div>
-        <div class="an-kpi">
-          <div class="an-kpi-label">${t("an_kpi_max")}</div>
-          <div class="an-kpi-value" style="color:${bestColor}">${bestText}</div>
-        </div>
-        <div class="an-kpi">
-          <div class="an-kpi-label">${t("an_kpi_trend")}</div>
-          <div class="an-kpi-value ${trendCls}">${trendArrow} ${trendText}</div>
-        </div>
-      </div>
-    `;
-  }
-
   // v0.0.511: ізольований блок прогнозу. Викликається як при першому
   // рендері, так і при русі повзунка (без renderAnalytics).
-  // Повертає HTML для всього блоку .an-forecast (включно із сценаріями).
+  // Повертає HTML для всього блоку .an-forecast.
+  // v0.0.512: сценарії Песиміст/Оптиміст видалено — лишаємо лише
+  // прогнозований баланс і дату-орієнтир.
   function renderForecastBlockHtml(hist, days) {
     const N = Math.max(1, Math.min(90, Number(days) || 1));
     const forecastDate = formatForecastDate(N);
@@ -2433,18 +2270,10 @@
       if (!isFinite(incomeRate)) continue;
       const current = lastPt[key];
       const expectedDelta = Math.round(incomeRate * N);
+      // v0.0.512: явна нижня межа 0 — баланс ресурсу не може бути від'ємним
+      // навіть при від'ємному темпі (наприклад, якщо користувач витрачає).
       const projected = Math.max(0, Math.round(current + expectedDelta));
       const perDay = Math.round(incomeRate * 10) / 10;
-
-      // Сценарії (мін/макс за 30 днів) — абсолютні денні дельти.
-      const sc = computeScenarios(hist, key, 30);
-      let pessTxt = "—", optTxt = "—";
-      if (sc) {
-        const pessDelta = Math.round(sc.min * N);
-        const optDelta = Math.round(sc.max * N);
-        pessTxt = (pessDelta > 0 ? "+" : "") + pessDelta.toLocaleString("uk-UA");
-        optTxt = (optDelta > 0 ? "+" : "") + optDelta.toLocaleString("uk-UA");
-      }
 
       const accent = PROJ_COLORS[key] || "var(--text)";
       let rateBadge;
@@ -2461,10 +2290,6 @@
           <div class="an-proj-right">
             <b class="up" style="color:${accent}">${projected.toLocaleString("uk-UA")}</b>
             ${rateBadge}
-          </div>
-          <div class="an-proj-scenarios">
-            <span class="an-proj-sc an-proj-pess">${t("an_forecast_pess")}: <b>${pessTxt}</b></span>
-            <span class="an-proj-sc an-proj-opt">${t("an_forecast_opt")}: <b>${optTxt}</b></span>
           </div>
         </div>
       `);
@@ -2484,13 +2309,13 @@
           </div>
         </div>
         <div class="an-proj-grid">${rows.join("")}</div>
-        <div class="an-forecast-scenarios-title">${t("an_forecast_scenarios")}</div>
       </div>
     `;
   }
 
   // Ізольований апдейт ТІЛЬКИ блоку прогнозу (без renderAnalytics).
-  // Викликається при русі повзунка.
+  // Викликається при русі повзунка. v0.0.512: KPI-дашборд видалено, тож
+  // блок прогнозу — перший елемент списку.
   function updateForecastBlock() {
     if (!_analyticsLastHist) return;
     const root = $("analyticsList");
@@ -2502,11 +2327,7 @@
       return;
     }
     if (!old) {
-      // Блок ще не існує (наприклад, перший рендер) — вставляємо ПІСЛЯ
-      // KPI-сітки (або на початок, якщо KPI ще немає).
-      const kpi = root.querySelector(".an-kpi-grid");
-      if (kpi) kpi.insertAdjacentHTML("afterend", fresh);
-      else root.insertAdjacentHTML("afterbegin", fresh);
+      root.insertAdjacentHTML("afterbegin", fresh);
     } else {
       old.outerHTML = fresh;
     }
@@ -2588,11 +2409,9 @@
     _analyticsLastHist = hist;
 
     let html = "";
-    // v0.0.511: KPI-дашборд (4 картки) — ПЕРШИМ, перед графіками та прогнозом.
-    html += renderKpi(hist);
-    // Блок прогнозу (одразу під KPI, перед ресурсними графіками).
+    // v0.0.512: KPI-дашборд видалено — блок прогнозу тепер найвищий.
     html += renderForecastBlockHtml(hist, analyticsPeriod);
-    // Потім — 4 ресурсні графіки з повною історією.
+    // 4 ресурсні графіки з повною історією.
     html += renderMetric(hist, "cash", t("an_cash"), "#3ddc84");
     html += renderMetric(hist, "gold", t("an_gold"), "#ffb545");
     html += renderMetric(hist, "prestige", t("an_prestige"), "#a06bff");
