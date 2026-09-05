@@ -1800,7 +1800,17 @@
   }
 
   function base64EncodeUtf8(str) {
-    return btoa(unescape(encodeURIComponent(str)));
+    // v0.0.514: сучасний UTF-8 encoder через TextEncoder (раніше —
+    // deprecated `unescape(encodeURIComponent(...))`).
+    const bytes = new TextEncoder().encode(str);
+    let bin = "";
+    // String.fromCharCode.apply — найшвидший спосіб зібрати бінарний рядок
+    // для btoa без оверхеду per-char.
+    const CHUNK = 0x8000;
+    for (let i = 0; i < bytes.length; i += CHUNK) {
+      bin += String.fromCharCode.apply(null, bytes.subarray(i, i + CHUNK));
+    }
+    return btoa(bin);
   }
 
   async function loadHistory() {
@@ -1822,22 +1832,86 @@
       return [];
     }
     if (!stdout.trim()) return [];
-    return stdout
-      .split("\n")
-      .map((l) => l.trim())
-      .filter(Boolean)
-      .map((l) => { try { return JSON.parse(l); } catch (e) { return null; } })
-      .filter(Boolean);
+    // v0.0.514: сувора схема-валідація кожного рядка перед прийняттям.
+    // Захищає від «брудних» файлів (ручне редагування, битий імпорт) і від
+    // можливих артефактів усіченого запису: відкидаємо рядки без валідної
+    // ISO-дати або з не-скінченними числовими полями.
+    const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+    const NUMERIC_FIELDS = ["cash", "gold", "prestige", "garageTotal", "garageLocked"];
+    const isValidEntry = (h) => {
+      if (!h || typeof h !== "object") return false;
+      if (typeof h.date !== "string" || !DATE_RE.test(h.date)) return false;
+      for (const k of NUMERIC_FIELDS) {
+        if (h[k] == null) continue;
+        if (typeof h[k] !== "number" || !Number.isFinite(h[k])) return false;
+      }
+      return true;
+    };
+    let dropped = 0;
+    const out = [];
+    for (const line of stdout.split("\n")) {
+      const t = line.trim();
+      if (!t) continue;
+      let parsed = null;
+      try { parsed = JSON.parse(t); } catch (e) { dropped++; continue; }
+      if (!isValidEntry(parsed)) { dropped++; continue; }
+      out.push(parsed);
+    }
+    if (dropped > 0) {
+      // v0.0.514: інформуємо користувача про відкинуті рядки (без шуму —
+      // тільки якщо щось реально було невалідне).
+      addLog(t("log_analytics_snapshot_error", {
+        message: `${dropped} invalid history line(s) skipped`
+      }), "W");
+    }
+    return out;
   }
 
   async function saveHistory(history) {
-    const content = history.map((h) => JSON.stringify(h)).join("\n") + "\n";
+    // v0.0.514 Patch B: дедуплікація за полем `date` перед записом. Захищає
+    // від дублікатів днів у разі ручного редагування файлу або повторних
+    // імпортів — лишаємо лише один канонічний запис на кожну дату (останній
+    // запис у масиві «перебиває» попередні).
+    const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+    const NUMERIC_FIELDS = ["cash", "gold", "prestige", "garageTotal", "garageLocked"];
+    const isValidEntry = (h) => {
+      if (!h || typeof h !== "object") return false;
+      if (typeof h.date !== "string" || !DATE_RE.test(h.date)) return false;
+      for (const k of NUMERIC_FIELDS) {
+        if (h[k] == null) continue;
+        if (typeof h[k] !== "number" || !Number.isFinite(h[k])) return false;
+      }
+      return true;
+    };
+    const byDate = {};
+    for (const h of history || []) {
+      if (!isValidEntry(h)) continue;
+      byDate[h.date] = Object.assign(byDate[h.date] || {}, h);
+    }
+    const deduped = Object.values(byDate).sort((a, b) => a.date.localeCompare(b.date));
+    const content = deduped.map((h) => JSON.stringify(h)).join("\n") + (deduped.length ? "\n" : "");
     const b64 = base64EncodeUtf8(content);
+    // v0.0.514 Patch A: атомарний запис через .tmp + mv. Якщо процес або
+    // пристрій впаде під час base64 -d, лишиться старий файл цілим —
+    // .tmp просто не буде перейменовано у фінальне ім'я.
+    const tmpMain = `${HISTORY_FILE}.tmp`;
+    const tmpAlt  = `${altPath(HISTORY_FILE)}.tmp`;
+    const writeAtomic = async (finalPath, tmpPath) => {
+      // `rm -f` на випадок, якщо .tmp лишився від попереднього збою
+      // (cleanup). Потім записуємо у .tmp і атомарно перейменовуємо.
+      // `chmod 0644` + `chown media_rw` щоб файл лишався доступним для
+      // наступного читання з WebUI/Chrome (аналог sync_now.sh fixup).
+      const r1 = await exec(
+        `rm -f ${shellQuote(tmpPath)} && echo ${shellQuote(b64)} | base64 -d > ${shellQuote(tmpPath)} && chmod 0644 ${shellQuote(tmpPath)} 2>/dev/null; mv -f ${shellQuote(tmpPath)} ${shellQuote(finalPath)}`
+      ).catch(() => null);
+      return r1;
+    };
     // Пишемо в обидва дзеркала: основний шлях і raw /data/media — щоб
     // наступне читання спрацювало незалежно від того, який із видів теки
-    // доступний shell у цьому ROM.
-    await exec(`echo ${shellQuote(b64)} | base64 -d > ${shellQuote(HISTORY_FILE)}`).catch(() => {});
-    await exec(`echo ${shellQuote(b64)} | base64 -d > ${shellQuote(altPath(HISTORY_FILE))}`).catch(() => {});
+    // доступний shell у цьому ROM. Дзеркала незалежні: збій в одному з
+    // них не блокує запис у інший (best-effort).
+    await writeAtomic(HISTORY_FILE, tmpMain);
+    await writeAtomic(altPath(HISTORY_FILE), tmpAlt);
   }
 
   async function getResourceSnapshot() {

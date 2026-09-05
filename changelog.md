@@ -1,5 +1,12 @@
 
 
+# v0.0.514
+- Fix & Security: атомарний запис history.jsonl (tmp + mv), дедуплікація днів, схема-валідація loadHistory та оновлення UTF-8 Base64 encoder
+- WebUI: saveHistory тепер атомарний (`.tmp` → `mv -f`) — раптовий reboot під час запису більше не пошкоджує файл
+- WebUI: дедуплікація за `date` перед записом — лише один канонічний запис на день
+- WebUI: loadHistory валідує кожен рядок (ISO-дата + Number.isFinite на полях) — «брудні» файли безпечно пропускаються
+- WebUI: TextEncoder замість deprecated `unescape(encodeURIComponent(...))` у base64
+
 # v0.0.513
 - Fix: універсальна сумісність інсталятора з KernelSU / APatch (усунено помилку magisk not found)
 - WebUI: probe root-менеджера перед викликом install (`magisk` / `ksud` / `apd`) — більше немає «провального magisk → fallback»
