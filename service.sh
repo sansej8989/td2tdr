@@ -15,6 +15,23 @@ DST_USER="$DST_DIR/user.dat"
 LOG="$MODDIR/sync.log"
 LOG_MAX_LINES=200
 
+# --- PID-lock: запобігаємо дублюванню екземплярів service.sh ---
+PIDFILE="$MODDIR/service.pid"
+if [ -f "$PIDFILE" ]; then
+    OLDPID=$(cat "$PIDFILE" 2>/dev/null)
+    if [ -n "$OLDPID" ] && kill -0 "$OLDPID" 2>/dev/null; then
+        echo "Another instance is already running (PID $OLDPID), exiting."
+        exit 0
+    fi
+    rm -f "$PIDFILE"
+fi
+echo $$ > "$PIDFILE"
+trap 'rm -f "$PIDFILE"' EXIT
+
+# --- Файл життєдіяльності для WebUI (heartbeat) ---
+ALIVE_FILE="$MODDIR/service.alive"
+touch "$ALIVE_FILE" 2>/dev/null || true
+
 log() {
     echo "$(date '+%Y-%m-%d %H:%M:%S') $1" >> "$LOG"
     # Ротація логів: тримаємо лише останні LOG_MAX_LINES рядків
@@ -107,6 +124,7 @@ maybe_force_history() {
 if command -v inotifywait >/dev/null 2>&1; then
     log "Запускаю режим стеження через inotifywait"
     while true; do
+        touch "$ALIVE_FILE" 2>/dev/null || true
         inotifywait -e close_write,create,moved_to -t $HISTORY_FORCE_INTERVAL \
             "$(dirname "$SRC")" 2>/dev/null | grep -q "Garage.dat" && sync_file
         # Якщо inotifywait нічого не дав за HISTORY_FORCE_INTERVAL секунд
@@ -123,6 +141,7 @@ else
     POLL=60
     POLL_MAX=300
     while true; do
+        touch "$ALIVE_FILE" 2>/dev/null || true
         if [ -f "$SRC" ]; then
             CUR_MTIME=$(stat -c %Y "$SRC" 2>/dev/null)
             CUR_SIZE=$(stat -c %s "$SRC" 2>/dev/null)

@@ -151,6 +151,20 @@
     return `'${String(str).replace(/'/g, `'\\''`)}'`;
   }
 
+  // v0.0.517: єдиний 3-tier парсер для user.dat — уніфікує loadResources,
+  // getResourceSnapshot і будь-які майбутні споживачі.
+  function parseUserResource(key, data) {
+    if (!key || !data) return null;
+    const s = String(data);
+    let m = s.match(new RegExp("(?:^|\\n)" + key + "=[0-9A-F]{8},i(\\d+)"));
+    if (m) return Number(m[1]);
+    m = s.match(new RegExp("(?:^|\\n)" + key + "=[0-9A-F]+,i(\\d+)"));
+    if (m) return Number(m[1]);
+    m = s.match(new RegExp("(?:^|\\n)" + key + "=i(\\d+)"));
+    if (m) return Number(m[1]);
+    return null;
+  }
+
   // ---- i18n (UI language: auto / uk / en) --------------------------------
   const I18N = {
     uk: {
@@ -787,6 +801,20 @@
     return null;
   }
 
+  // v0.0.517: перевірка «серцебиття» фонового демона service.sh через
+  // мітку життєдіяльності $MODDIR/service.alive. Якщо мітка не оновлювалася
+  // >15 хв — демон, швидше за все, впав або вбитий OOM-кілером.
+  async function checkDaemonAlive() {
+    if (!hasKsu()) return null;
+    const path = shellQuote(MODDIR + "/service.alive");
+    const { errno, stdout } = await exec(`stat -c '%Y' ${path} 2>/dev/null`);
+    if (errno !== 0 || !stdout.trim()) return null;
+    const aliveMtime = Number(stdout.trim());
+    const now = Math.floor(Date.now() / 1000);
+    if (now - aliveMtime > 900) return false;
+    return true;
+  }
+
   // Останній шлях, де Garage.dat було успішно знайдено — перевіряємо його
   // першим, щоб не гоняти весь ланцюжок кандидатів щоразу.
   let garagePathHint = null;
@@ -1162,7 +1190,7 @@
   async function refreshInner() {
     if (!hasKsu()) {
       dstReady = true; // демо-режим: вважаємо все готовим
-      $("statusMeta").textContent = t("status_demo_mode");
+      $("statusMeta").textContent = t("status_demo_mode") + " · " + t("status_no_ksu");
       $("checkSrc").className = "flow-dot ok";
       $("checkDst").className = "flow-dot ok";
       $("checkResult").className = "flow-dot ok";
@@ -1230,14 +1258,27 @@
     }
 
     // Оновлюємо дату останньої синхронізації лише при реальному stat-успіху,
-    // щоб липкий стан не переписував її на 1970 рік.
-    if (dst) $("lastSync").textContent = new Date(dst.mtime * 1000).toLocaleString("uk-UA");
+    // з захистом від mtime=0 (не показуємо 1970 рік).
+    if (dst && dst.mtime > 0) {
+      $("lastSync").textContent = new Date(dst.mtime * 1000).toLocaleString("uk-UA");
+    } else {
+      $("lastSync").textContent = "—";
+    }
+
+    // v0.0.517: моніторинг життєдіяльності фонового демона service.sh.
+    const daemonAlive = await checkDaemonAlive();
+    if (daemonAlive === false) {
+      addLog("⚠️ Фоновий демон синхронізації неактивний (service.alive > 15 хв)", "W");
+      if (statusIcon) statusIcon.className = "status-icon warn";
+      setTabIndicator("sync", "warn");
+    }
 
     if (refreshBtn) refreshBtn.classList.remove("spinning");
   }
 
   // ---- full refresh: sync file + status check + garage + analytics -------
   let refreshInFlight = false;
+  let renderAnalyticsInFlight = false;
   // Готовність копії Garage.dat: true лише коли файл фізично знайдено
   // (stat успішний хоча б по одному зі шляхів). Керує доступністю кнопки
   // «Синхронізувати та відкрити» — перехід на сайт блокується, поки false.
@@ -1434,10 +1475,7 @@
       $("resourcesGrid").style.display = "none";
       return;
     }
-    const val = (key) => {
-      const m = data.match(new RegExp(`${key}=[0-9A-F]{8},i(\\d+)`));
-      return m ? Number(m[1]) : null;
-    };
+    const val = (key) => parseUserResource(key, data);
     $("resCash").textContent = val("Cash") != null ? val("Cash").toLocaleString("uk-UA") : "—";
     $("resGold").textContent = val("Gold") != null ? val("Gold").toLocaleString("uk-UA") : "—";
     const fest = val("FestivalPasses");
@@ -1816,15 +1854,20 @@
     // Читання з фолбеком на /data/media-дзеркало + повний try/catch:
     // пошкоджений/відсутній history.jsonl не повинен лишати таб
     // «Аналітика» у стані вічного завантаження.
+    // v0.0.517: таймаут 5с — запобігає вічному очікуванню при пошкоджених
+    // або надто великих JSONL файлах.
     let stdout = "";
     try {
-      const first = await exec(`cat ${shellQuote(HISTORY_FILE)} 2>/dev/null`);
-      if (first.errno === 0 && first.stdout.trim()) {
-        stdout = first.stdout;
-      } else {
+      const task = (async () => {
+        const first = await exec(`cat ${shellQuote(HISTORY_FILE)} 2>/dev/null`);
+        if (first.errno === 0 && first.stdout.trim()) return first.stdout;
         const alt = await exec(`cat ${shellQuote(altPath(HISTORY_FILE))} 2>/dev/null`);
-        if (alt.errno === 0 && alt.stdout.trim()) stdout = alt.stdout;
-      }
+        return alt.errno === 0 && alt.stdout.trim() ? alt.stdout : "";
+      })();
+      const timeout = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("history load timeout")), 5000)
+      );
+      stdout = await Promise.race([task, timeout]);
     } catch (e) {
       addLog(t("log_analytics_snapshot_error", { message: String(e && e.message || e) }), "E");
       return [];
@@ -1915,20 +1958,7 @@
   async function getResourceSnapshot() {
     const data = await readSourceFile(SRC_USER, SRC_USER_ROOT, DST_USER);
     if (!data) return null;
-    // v0.0.516 Patch K: 3-tier fallback parser. Tier 1 — канонічний формат
-    // KEY=[0-9A-F]{8},i<digits>. Tier 2 — гнучкий hex (різна довжина).
-    // Tier 3 — без hex-префікса взагалі (`KEY=i<digits>`). Якщо Hutch змінить
-    // формат серіалізації user.dat, ми не втратимо дані.
-    const val = (key) => {
-      let m = data.match(new RegExp(`(?:^|\\n)${key}=[0-9A-F]{8},i(\\d+)`));
-      if (m) return Number(m[1]);
-      m = data.match(new RegExp(`(?:^|\\n)${key}=[0-9A-F]+,i(\\d+)`));
-      if (m) return Number(m[1]);
-      m = data.match(new RegExp(`(?:^|\\n)${key}=i(\\d+)`));
-      if (m) return Number(m[1]);
-      return null;
-    };
-    const r = { cash: val("Cash"), gold: val("Gold"), prestige: val("FestivalPasses") };
+    const r = { cash: parseUserResource("Cash", data), gold: parseUserResource("Gold", data), prestige: parseUserResource("FestivalPasses", data) };
     // v0.0.516 Patch I: якщо ВСІ поля null — це помилка парсингу, а не
     // реальний баланс 0/0/0. Повертаємо null, щоб recordSnapshotIfNeeded
     // не створював «порожній» знімок.
@@ -2450,9 +2480,12 @@
   }
 
   async function renderAnalytics() {
-    const container = $("analyticsList");
-    if (!container) return;
-    const history = await loadHistory();
+    if (renderAnalyticsInFlight) return;
+    renderAnalyticsInFlight = true;
+    try {
+      const container = $("analyticsList");
+      if (!container) return;
+      const history = await loadHistory();
     {
       const st = $("statDaysText");
       if (st) st.textContent = t("an_stat_days", { n: getStatDays(history) });
@@ -2517,6 +2550,9 @@
     container.innerHTML = html + forecastHtml;
     initChartInteraction();
     bindChartModeToggles();
+      } finally {
+        renderAnalyticsInFlight = false;
+      }
   }
 
   // v0.0.511: перемикач режимів графіка (Денні / Накопичувальний).
@@ -2916,27 +2952,25 @@
 
     const syncAndOpen = $("syncAndOpen");
     if (syncAndOpen) syncAndOpen.addEventListener("click", async () => {
-      // СПРОЩЕНА ЛОГІКА: жодних модалок і перевірок файлової системи, які
-      // фейляться через обмеження Android/FUSE. Кнопка лише:
-      //   1) запускає фонову синхронізацію (fire-and-forget, не блокує);
-      //   2) ОДРАЗУ відкриває сайт — дані гаража вже зчитані WebUI.
+      // v0.0.517: guard від повторних кліків — блокуємо кнопку, поки
+      // синхронізація і відкриття браузера не завершаться повністю.
+      if (syncAndOpen.classList.contains("onclic") || syncAndOpen.disabled) return;
+      syncAndOpen.disabled = true;
       syncAndOpen.classList.remove("validate", "error");
       syncAndOpen.classList.add("onclic");
 
-      // Фонова синхронізація без очікування: оновить файл і статус сам,
-      // поки користувач переходить у браузер. Жодних блокувань переходу.
       if (hasKsu()) {
-        syncFile().then(() => refresh()).catch(() => {});
+        await syncFile().then(() => refresh()).catch(() => {});
       }
 
       const opened = await openUrl("https://www.topdrivesrecords.com/me");
       syncAndOpen.classList.remove("onclic");
+      syncAndOpen.disabled = false;
       if (opened) {
         syncAndOpen.classList.add("validate");
         setTimeout(() => syncAndOpen.classList.remove("validate"), 1250);
         toast(t("toast_synced"));
       } else {
-        // Реальна помилка — тільки якщо система не змогла відкрити браузер
         syncAndOpen.classList.add("error");
         setTimeout(() => syncAndOpen.classList.remove("error"), 2500);
       }
@@ -3106,13 +3140,33 @@
       imported = imported.filter((h) => h && typeof h.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(h.date));
       if (!imported.length) { toast(t("an_imp_error")); return; }
 
+      // v0.0.517: повна schema-валідація імпортованих записів. Відкидаємо
+      // рядки з нечисловими або нескінченними полями, щоб не заповнювати
+      // історію "брудними" даними.
+      const IMPORT_NUMERIC_FIELDS = ["cash", "gold", "prestige", "garageTotal", "garageLocked"];
+      const isValidImportEntry = (h) => {
+        if (!h || typeof h !== "object") return false;
+        if (typeof h.date !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(h.date)) return false;
+        for (const k of IMPORT_NUMERIC_FIELDS) {
+          if (h[k] == null) continue;
+          if (typeof h[k] !== "number" || !Number.isFinite(h[k])) return false;
+        }
+        return true;
+      };
+      const beforeCount = imported.length;
+      imported = imported.filter(isValidImportEntry);
+      const skippedCount = beforeCount - imported.length;
+
       // Модальне підтвердження: об'єднати чи перезаписати
       const overlay = document.createElement("div");
       overlay.className = "install-overlay";
+      const impFoundText = skippedCount > 0
+        ? t("an_imp_found", { n: imported.length }) + ` (пропущено ${skippedCount} невалідних)`
+        : t("an_imp_found", { n: imported.length });
       overlay.innerHTML = `
         <div class="install-card">
           <div class="install-title">📤 ${t("an_import")}</div>
-          <div class="install-reset-text">${t("an_imp_found", { n: imported.length })}</div>
+          <div class="install-reset-text">${impFoundText}</div>
           <div class="install-reset-actions">
             <button class="btn-icon btn-text" id="impCancel">${t("an_cancel")}</button>
             <button class="btn-icon btn-text" id="impMerge">${t("an_imp_merge")}</button>

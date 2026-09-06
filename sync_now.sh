@@ -155,11 +155,20 @@ record_history_snapshot() {
 }
 
 # Wait until size stops changing (game still flushing) and is > 0.
+# v0.0.517: 8 ітерацій з поступовим зростанням паузи (0.3s → 0.5s) —
+# захищає від повільного запису великого Garage.dat, коли 0.3с між
+# знімками недостатньо для стабілізації розміру.
 wait_stable() {
     local f="$1" s d i=0
     s=$(stat -c %s "$f" 2>/dev/null) || return 1
-    while [ "$i" -lt 5 ]; do
-        pause
+    while [ "$i" -lt 8 ]; do
+        if [ "$i" -lt 2 ]; then
+            sleep 0.3 2>/dev/null || sleep 1
+        elif [ "$i" -lt 4 ]; then
+            sleep 0.4 2>/dev/null || sleep 1
+        else
+            sleep 0.5 2>/dev/null || sleep 1
+        fi
         d=$(stat -c %s "$f" 2>/dev/null) || return 1
         if [ -n "$s" ] && [ "$s" = "$d" ] && [ "$s" -gt 0 ]; then
             echo "$s"
@@ -299,18 +308,32 @@ if ! SIZE=$(verify_file "$FINAL"); then
         log "Файл знайдено у дзеркалі: $FINAL ($SIZE байт)"
     else
         # Fallback-копіювання напряму в публічний /storage шлях: деякі ROM
-        # не дають shell писати в /data/media, але дають в /storage/emulated/0
+        # не дають shell писати в /data/media, але дають в /storage/emulated/0.
+        # v0.0.517: чекаємо стабілізації джерела перед cp і перевіряємо
+        # розмір копії, щоб унеможливити torn write.
         log "Верифікація не пройшла (${FINAL}) — пробую fallback у /storage"
+        want=$(wait_stable "$EFF_SRC") || {
+            log "Fallback: джерело ще не стабілізувалося, копіювання скасовано"
+            echo "verify failed: source not stable for fallback" >&2
+            exit 3
+        }
         mkdir -p "/storage/emulated/0/Download/td2tdr_sync" 2>/dev/null
-        if cp -f "$EFF_SRC" "$PUB_FINAL" 2>>"$LOG" && [ -s "$PUB_FINAL" ]; then
-            chmod 0644 "$PUB_FINAL" 2>/dev/null
-            chown 1023:1023 "$PUB_FINAL" 2>/dev/null || chown media_rw:media_rw "$PUB_FINAL" 2>/dev/null
-            restorecon "$PUB_FINAL" 2>/dev/null || chcon u:object_r:media_rw_data_file:s0 "$PUB_FINAL" 2>/dev/null
-            FINAL="$PUB_FINAL"
-            SIZE=$(stat -c %s "$FINAL")
-            log "Fallback-копіювання вдалось: $FINAL ($SIZE байт)"
-            # Примусове оновлення MediaStore, щоб Chrome/ОС одразу бачили файл
-            scan "Garage.dat"
+        if cp -f "$EFF_SRC" "$PUB_FINAL" 2>>"$LOG"; then
+            got=$(stat -c %s "$PUB_FINAL" 2>/dev/null)
+            if [ -n "$got" ] && [ "$got" = "$want" ] && [ "$got" -gt 0 ]; then
+                chmod 0644 "$PUB_FINAL" 2>/dev/null
+                chown 1023:1023 "$PUB_FINAL" 2>/dev/null || chown media_rw:media_rw "$PUB_FINAL" 2>/dev/null
+                restorecon "$PUB_FINAL" 2>/dev/null || chcon u:object_r:media_rw_data_file:s0 "$PUB_FINAL" 2>/dev/null
+                FINAL="$PUB_FINAL"
+                SIZE="$got"
+                log "Fallback-копіювання вдалось: $FINAL ($SIZE байт)"
+                scan "Garage.dat"
+            else
+                rm -f "$PUB_FINAL"
+                log "ПОМИЛКА: fallback розмір копії ($got) не збігається з джерелом ($want)"
+                echo "verify failed: fallback size mismatch" >&2
+                exit 3
+            fi
         else
             log "ПОМИЛКА: файл не створено ні в одному з шляхів (перевірено ${FINAL}, ${ALT_FINAL}, ${PUB_FINAL})"
             echo "verify failed: Garage.dat missing/empty everywhere" >&2
