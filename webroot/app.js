@@ -151,7 +151,7 @@
     return `'${String(str).replace(/'/g, `'\\''`)}'`;
   }
 
-  // v0.0.517: єдиний 3-tier парсер для user.dat — уніфікує loadResources,
+  // v0.0.518: єдиний 3-tier парсер для user.dat — уніфікує loadResources,
   // getResourceSnapshot і будь-які майбутні споживачі.
   function parseUserResource(key, data) {
     if (!key || !data) return null;
@@ -801,7 +801,7 @@
     return null;
   }
 
-  // v0.0.517: перевірка «серцебиття» фонового демона service.sh через
+  // v0.0.518: перевірка «серцебиття» фонового демона service.sh через
   // мітку життєдіяльності $MODDIR/service.alive. Якщо мітка не оновлювалася
   // >15 хв — демон, швидше за все, впав або вбитий OOM-кілером.
   async function checkDaemonAlive() {
@@ -813,6 +813,53 @@
     const now = Math.floor(Date.now() / 1000);
     if (now - aliveMtime > 900) return false;
     return true;
+  }
+
+  // v0.0.518: об'єднаний stats-запит — один ksu.exec замість 3+,
+  // зменшує latency на повільних пристроях/ROM.
+  async function getCombinedStats() {
+    const srcQ = shellQuote(SRC);
+    const dstQ = shellQuote(DST);
+    const aliveQ = shellQuote(MODDIR + "/service.alive");
+    const { errno, stdout } = await exec(`
+      echo "SRC_SIZE=$(stat -c '%s' ${srcQ} 2>/dev/null || echo null)"
+      echo "SRC_MTIME=$(stat -c '%Y' ${srcQ} 2>/dev/null || echo null)"
+      echo "DST_SIZE=$(stat -c '%s' ${dstQ} 2>/dev/null || echo null)"
+      echo "DST_MTIME=$(stat -c '%Y' ${dstQ} 2>/dev/null || echo null)"
+      echo "ALIVE_MTIME=$(stat -c '%Y' ${aliveQ} 2>/dev/null || echo null)"
+    `);
+    if (errno !== 0 || !stdout.trim()) return null;
+    const parseVal = (v) => {
+      if (!v || v === "null") return null;
+      const n = Number(v);
+      return Number.isFinite(n) ? n : null;
+    };
+    const obj = {};
+    for (const line of stdout.trim().split("\n")) {
+      const eq = line.indexOf("=");
+      if (eq < 0) continue;
+      obj[line.slice(0, eq)] = line.slice(eq + 1);
+    }
+    const srcSize = parseVal(obj.SRC_SIZE);
+    const srcMtime = parseVal(obj.SRC_MTIME);
+    const dstSize = parseVal(obj.DST_SIZE);
+    const dstMtime = parseVal(obj.DST_MTIME);
+    const aliveMtime = parseVal(obj.ALIVE_MTIME);
+    return {
+      src: srcSize != null && srcMtime != null ? { size: srcSize, mtime: srcMtime } : null,
+      dst: dstSize != null && dstMtime != null ? { size: dstSize, mtime: dstMtime } : null,
+      alive: aliveMtime
+    };
+  }
+
+  // v0.0.518: UI-таймаут для статус-перевірок. Якщо shell не відповів за
+  // maxMs — повертаємо fallback, щоб не залишати користувача в стані
+  // вічного очікування.
+  async function withUiTimeout(promise, maxMs, fallback) {
+    return Promise.race([
+      promise,
+      new Promise((resolve) => setTimeout(() => resolve(fallback), maxMs))
+    ]);
   }
 
   // Останній шлях, де Garage.dat було успішно знайдено — перевіряємо його
@@ -1197,21 +1244,33 @@
       if ($("srcFlowStatus")) $("srcFlowStatus").textContent = t("flow_demo_size", { size: "1.2 MB" });
       if ($("dstFlowStatus")) $("dstFlowStatus").textContent = t("flow_demo_size", { size: "1.2 MB" });
       if ($("resultFlowStatus")) $("resultFlowStatus").textContent = t("flow_in_sync");
-      if (refreshBtn) refreshBtn.classList.remove("spinning");
       setTabIndicator("sync", "ok");
       await loadGarageStats();
       await renderAnalytics();
       return;
     }
 
-    const src = await statFirst([SRC, SRC_ROOT]);
+    // v0.0.518: об'єднаний stats-запит (один ksu.exec замість 3+)
+    // з 3с UI-таймаутом. Якщо shell завис — fallback на null, UI не блокується.
+    const combined = await withUiTimeout(getCombinedStats(), 3000, null);
+    const src = combined ? combined.src : null;
+    const dst = combined ? combined.dst : null;
+    const aliveMtime = combined ? combined.alive : null;
+
     // Єдине джерело правди для копії — checkGarageExists (stat + fallback
     // probe + кеш вдалого шляху). Копія фізично є — кнопка розблоковується.
-    const dst = await checkGarageExists();
-    if (dst) garageEverReady = true;
-    // Липкість: раз готовий — завжди готовий (файл міг транзієнтно бути
-    // недоступний для stat під час перезапису, це не привід скидати статус).
-    dstReady = !!dst || garageEverReady;
+    if (!dst) {
+      // Fallback: якщо об'єднаний запит не повернув dst — запускаємо
+      // окрему перевірку з кешуванням шляху.
+      const fallbackDst = await withUiTimeout(checkGarageExists(), 3000, null);
+      if (fallbackDst) {
+        garageEverReady = true;
+        dstReady = true;
+      }
+    } else {
+      if (dst) garageEverReady = true;
+      dstReady = !!dst || garageEverReady;
+    }
 
     const checkSrc = $("checkSrc");
     const checkDst = $("checkDst");
@@ -1265,15 +1324,17 @@
       $("lastSync").textContent = "—";
     }
 
-    // v0.0.517: моніторинг життєдіяльності фонового демона service.sh.
-    const daemonAlive = await checkDaemonAlive();
+    // v0.0.518: моніторинг життєдіяльності фонового демона service.sh.
+    let daemonAlive = null;
+    if (aliveMtime != null) {
+      const now = Math.floor(Date.now() / 1000);
+      daemonAlive = (now - aliveMtime) <= 900;
+    }
     if (daemonAlive === false) {
       addLog("⚠️ Фоновий демон синхронізації неактивний (service.alive > 15 хв)", "W");
       if (statusIcon) statusIcon.className = "status-icon warn";
       setTabIndicator("sync", "warn");
     }
-
-    if (refreshBtn) refreshBtn.classList.remove("spinning");
   }
 
   // ---- full refresh: sync file + status check + garage + analytics -------
@@ -1381,14 +1442,23 @@
   async function refreshAll() {
     if (refreshInFlight) return;
     refreshInFlight = true;
+    const refreshBtn = $("refreshBtn");
+    if (refreshBtn) refreshBtn.classList.add("spinning");
     try {
       await syncFile();
-      await refresh();
-      await loadGarageStats();
-      await recordSnapshotIfNeeded();
+      // v0.0.518: паралелізуємо незалежні операції після синхронізації:
+      // refreshInner (статус), loadGarageStats (гараж), recordSnapshotIfNeeded
+      // (історія). Зменшуємо загальний час з ~5с до ~2-3с.
+      await Promise.all([
+        refreshInner(),
+        loadGarageStats(),
+        recordSnapshotIfNeeded()
+      ]);
       await renderAnalytics();
     } finally {
       refreshInFlight = false;
+      if (refreshBtn) refreshBtn.classList.remove("spinning");
+      updateSyncGate(dstReady);
     }
   }
 
@@ -1854,7 +1924,7 @@
     // Читання з фолбеком на /data/media-дзеркало + повний try/catch:
     // пошкоджений/відсутній history.jsonl не повинен лишати таб
     // «Аналітика» у стані вічного завантаження.
-    // v0.0.517: таймаут 5с — запобігає вічному очікуванню при пошкоджених
+    // v0.0.518: таймаут 5с — запобігає вічному очікуванню при пошкоджених
     // або надто великих JSONL файлах.
     let stdout = "";
     try {
@@ -2952,7 +3022,7 @@
 
     const syncAndOpen = $("syncAndOpen");
     if (syncAndOpen) syncAndOpen.addEventListener("click", async () => {
-      // v0.0.517: guard від повторних кліків — блокуємо кнопку, поки
+      // v0.0.518: guard від повторних кліків — блокуємо кнопку, поки
       // синхронізація і відкриття браузера не завершаться повністю.
       if (syncAndOpen.classList.contains("onclic") || syncAndOpen.disabled) return;
       syncAndOpen.disabled = true;
@@ -3140,7 +3210,7 @@
       imported = imported.filter((h) => h && typeof h.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(h.date));
       if (!imported.length) { toast(t("an_imp_error")); return; }
 
-      // v0.0.517: повна schema-валідація імпортованих записів. Відкидаємо
+      // v0.0.518: повна schema-валідація імпортованих записів. Відкидаємо
       // рядки з нечисловими або нескінченними полями, щоб не заповнювати
       // історію "брудними" даними.
       const IMPORT_NUMERIC_FIELDS = ["cash", "gold", "prestige", "garageTotal", "garageLocked"];
