@@ -151,7 +151,7 @@
     return `'${String(str).replace(/'/g, `'\\''`)}'`;
   }
 
-  // v0.0.525: єдиний 3-tier парсер для user.dat — уніфікує loadResources,
+  // v0.0.526: єдиний 3-tier парсер для user.dat — уніфікує loadResources,
   // getResourceSnapshot і будь-які майбутні споживачі.
   function parseUserResource(key, data) {
     if (!key || !data) return null;
@@ -817,7 +817,7 @@
     return null;
   }
 
-  // v0.0.525: перевірка «серцебиття» фонового демона service.sh через
+  // v0.0.526: перевірка «серцебиття» фонового демона service.sh через
   // мітку життєдіяльності $MODDIR/service.alive. Якщо мітка не оновлювалася
   // >15 хв — демон, швидше за все, впав або вбитий OOM-кілером.
   async function checkDaemonAlive() {
@@ -831,7 +831,7 @@
     return true;
   }
 
-  // v0.0.525: об'єднаний stats-запит — один ksu.exec замість 3+,
+  // v0.0.526: об'єднаний stats-запит — один ksu.exec замість 3+,
   // зменшує latency на повільних пристроях/ROM.
   async function getCombinedStats() {
     const srcQ = shellQuote(SRC);
@@ -868,7 +868,7 @@
     };
   }
 
-  // v0.0.525: UI-таймаут для статус-перевірок. Якщо shell не відповів за
+  // v0.0.526: UI-таймаут для статус-перевірок. Якщо shell не відповів за
   // maxMs — повертаємо fallback, щоб не залишати користувача в стані
   // вічного очікування.
   async function withUiTimeout(promise, maxMs, fallback) {
@@ -1266,7 +1266,7 @@
       return;
     }
 
-    // v0.0.525: об'єднаний stats-запит (один ksu.exec замість 3+)
+    // v0.0.526: об'єднаний stats-запит (один ksu.exec замість 3+)
     // з 3с UI-таймаутом. Якщо shell завис — fallback на null, UI не блокується.
     const combined = await withUiTimeout(getCombinedStats(), 3000, null);
     const src = combined ? combined.src : null;
@@ -1340,7 +1340,7 @@
       $("lastSync").textContent = "—";
     }
 
-    // v0.0.525: моніторинг життєдіяльності фонового демона service.sh.
+    // v0.0.526: моніторинг життєдіяльності фонового демона service.sh.
     let daemonAlive = null;
     if (aliveMtime != null) {
       const now = Math.floor(Date.now() / 1000);
@@ -1464,7 +1464,7 @@
       $("statusMeta").textContent = t("sm_step_sync");
       await syncFile();
       $("statusMeta").textContent = t("sm_step_check");
-      // v0.0.525: паралелізуємо незалежні операції після синхронізації:
+      // v0.0.526: паралелізуємо незалежні операції після синхронізації:
       // refreshInner (статус), loadGarageStats (гараж), recordSnapshotIfNeeded
       // (історія). Зменшуємо загальний час з ~5с до ~2-3с.
       await Promise.all([
@@ -1944,7 +1944,7 @@
     // Читання з фолбеком на /data/media-дзеркало + повний try/catch:
     // пошкоджений/відсутній history.jsonl не повинен лишати таб
     // «Аналітика» у стані вічного завантаження.
-    // v0.0.525: таймаут 5с — запобігає вічному очікуванню при пошкоджених
+    // v0.0.526: таймаут 5с — запобігає вічному очікуванню при пошкоджених
     // або надто великих JSONL файлах.
     let stdout = "";
     try {
@@ -2743,7 +2743,7 @@
 
   // Локальний fallback: якщо changelog.md відсутній у білді/недоступний,
   // «Історія версій» все одно показує останні зміни замість помилки.
-  const CHANGELOG_FALLBACK = `# v0.0.525 — Automatic Update Fix & Full Changelog
+  const CHANGELOG_FALLBACK = `# v0.0.526 — Automatic Update Fix & Full Changelog
 - Автоматичне оновлення модуля: виправлено блокування інсталяції у фоновому режимі через інтерактивний дисклеймер (Volume Keys). Додано неінтерактивний режим SKIP_DISCLAIMER=1 та UNATTENDED=1.
 - Повне логування інсталятора: виправлено обрізання stderr/stdout та шляху до архіву. Повний лог зберігається у /data/local/tmp/td2tdr_install.log із кнопкою швидкого копіювання в UI.
 - Non-blocking launch: браузер відкривається за ~300мс при натисканні «Синхронізація та відкрити», не чекаючи завершення важких фонових операцій.
@@ -2914,7 +2914,7 @@
         //   apd module install <zip>    (APatch)
         const ZIP = "/data/local/tmp/td2tdr_update.zip";
         const ZIP_Q = shellQuote(ZIP);
-        // v0.0.525: pre-flight перевірка — файл має існувати і бути non-empty
+        // v0.0.526: pre-flight перевірка — файл має існувати і бути non-empty
         // перед запуском інсталятора. Це запобігає помилкам типу
         // «Archive: /data/lo...» через відсутній/порожній файл.
         const zipCheck = await exec(`[ -f ${ZIP_Q} ] && [ -s ${ZIP_Q} ] && echo OK || echo MISSING`);
@@ -2945,7 +2945,7 @@
           setBar(100);
           throw new Error("Unknown root manager: none of {magisk, ksud, apd} found in $PATH");
         }
-        // v0.0.525: повний лог інсталяції зберігається в /data/local/tmp/...
+        // v0.0.526: повний лог інсталяції зберігається в /data/local/tmp/...
         // без обрізання. ksu.exec повертає stdout/stderr, але щоб не втратити
         // нічого — запускаємо інсталятор через wrapper, що записує все в файл.
         // Також передаємо SKIP_DISCLAIMER=1 UNATTENDED=1, щоб customize.sh
@@ -2953,7 +2953,7 @@
         // автооновленні з WebUI фоновий процес не може натискати Volume+,
         // тому inst кінцевого таймауту за замовчуванням вибирає «Ні» і
         // скасовує встановлення).
-        // v0.0.525: додано </dev/null, щоб уникнути зависання на stdin,
+        // v0.0.526: додано </dev/null, щоб уникнути зависання на stdin,
         // і 20с UI-таймаут, після якого читаємо лог і розблоковуємо UI.
         const INST_LOG = "/data/local/tmp/td2tdr_install.log";
         const innerCmd = installCmd.replace(/^su -c '/, "").replace(/' 2>&1$/, "");
@@ -2965,7 +2965,7 @@
         const instLogText = String(fullInstLog.stdout || "").trim();
         const instExit = String(inst.stdout || "").includes("TD2TDR_INSTALL_EXIT=0");
         if (!instExit || /failed|error/i.test(instLogText)) {
-          // v0.0.525: НЕ обрізаємо помилку — зберігаємо повний текст для діагностики.
+          // v0.0.526: НЕ обрізаємо помилку — зберігаємо повний текст для діагностики.
           const reason = instLogText || inst.stderr || inst.stdout || "install failed";
           throw new Error(reason);
         }
@@ -3094,7 +3094,7 @@
 
     const syncAndOpen = $("syncAndOpen");
     if (syncAndOpen) syncAndOpen.addEventListener("click", async () => {
-      // v0.0.525: guard від повторних кліків — блокуємо кнопку, поки
+      // v0.0.526: guard від повторних кліків — блокуємо кнопку, поки
       // синхронізація і відкриття браузера не завершаться повністю.
       if (syncAndOpen.classList.contains("onclic") || syncAndOpen.disabled) return;
       syncAndOpen.disabled = true;
@@ -3102,7 +3102,7 @@
       syncAndOpen.classList.add("onclic");
 
       if (hasKsu()) {
-        // v0.0.525: non-blocking launch — запускаємо sync у фоні,
+        // v0.0.526: non-blocking launch — запускаємо sync у фоні,
         // не чекаємо повного завершення wait_stable перед відкриттям браузера.
         // Це зменшує затримку з ~5с до <500мс.
         syncFile().then(() => refresh()).catch(() => {});
@@ -3288,7 +3288,7 @@
       imported = imported.filter((h) => h && typeof h.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(h.date));
       if (!imported.length) { toast(t("an_imp_error")); return; }
 
-      // v0.0.525: повна schema-валідація імпортованих записів. Відкидаємо
+      // v0.0.526: повна schema-валідація імпортованих записів. Відкидаємо
       // рядки з нечисловими або нескінченними полями, щоб не заповнювати
       // історію "брудними" даними.
       const IMPORT_NUMERIC_FIELDS = ["cash", "gold", "prestige", "garageTotal", "garageLocked"];
@@ -3387,6 +3387,7 @@
     // без фонових shell-викликів, що створювали відчуття «перезавантаження».
   });
 })();
+
 
 
 
