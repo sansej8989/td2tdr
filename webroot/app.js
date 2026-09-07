@@ -151,7 +151,7 @@
     return `'${String(str).replace(/'/g, `'\\''`)}'`;
   }
 
-  // v0.0.518: єдиний 3-tier парсер для user.dat — уніфікує loadResources,
+  // v0.0.519: єдиний 3-tier парсер для user.dat — уніфікує loadResources,
   // getResourceSnapshot і будь-які майбутні споживачі.
   function parseUserResource(key, data) {
     if (!key || !data) return null;
@@ -310,6 +310,12 @@
       tt_close: "Закрити",
       sm_step_check: "Перевіряю статус синхронізації",
       sm_step_check_done: "Статус перевірено",
+      sm_step_sync: "Синхронізація файлів...",
+      sm_step_sync_done: "Синхронізація завершена",
+      sm_step_garage: "Зчитування гаража...",
+      sm_step_history: "Оновлення історії...",
+      sm_step_analytics: "Побудова аналітики...",
+      sm_step_done: "Готово",
       sm_step_open: "Відкриваю topdrivesrecords.com",
       sm_step_open_done: "Сайт відкрито",
       sm_step_open_fail: "Не вдалося відкрити браузер",
@@ -357,6 +363,8 @@
       upd_done: "Готово!",
       upd_done_reboot: "Оновлення встановлено — перезавантажте пристрій",
       upd_done_short: "Встановлено ✓",
+      upd_error_copy: "Скопіювати лог помилки",
+      upd_error_copied: "Лог скопійовано",
       an_accuracy: "Точність прогнозу: {pct}%",
       an_per_day: " / день",
       an_range_title: "Прогнозований період",
@@ -533,6 +541,12 @@
       tt_close: "Close",
       sm_step_check: "Checking sync status",
       sm_step_check_done: "Status checked",
+      sm_step_sync: "Syncing files...",
+      sm_step_sync_done: "Sync complete",
+      sm_step_garage: "Reading garage...",
+      sm_step_history: "Updating history...",
+      sm_step_analytics: "Building analytics...",
+      sm_step_done: "Done",
       sm_step_open: "Opening topdrivesrecords.com",
       sm_step_open_done: "Site opened",
       sm_step_open_fail: "Couldn't open the browser",
@@ -580,6 +594,8 @@
       upd_done: "Done!",
       upd_done_reboot: "Update installed — reboot your device",
       upd_done_short: "Installed ✓",
+      upd_error_copy: "Copy error log",
+      upd_error_copied: "Log copied",
       an_accuracy: "Forecast accuracy: {pct}%",
       an_per_day: " / day",
       an_range_title: "Forecast period",
@@ -801,7 +817,7 @@
     return null;
   }
 
-  // v0.0.518: перевірка «серцебиття» фонового демона service.sh через
+  // v0.0.519: перевірка «серцебиття» фонового демона service.sh через
   // мітку життєдіяльності $MODDIR/service.alive. Якщо мітка не оновлювалася
   // >15 хв — демон, швидше за все, впав або вбитий OOM-кілером.
   async function checkDaemonAlive() {
@@ -815,7 +831,7 @@
     return true;
   }
 
-  // v0.0.518: об'єднаний stats-запит — один ksu.exec замість 3+,
+  // v0.0.519: об'єднаний stats-запит — один ksu.exec замість 3+,
   // зменшує latency на повільних пристроях/ROM.
   async function getCombinedStats() {
     const srcQ = shellQuote(SRC);
@@ -852,7 +868,7 @@
     };
   }
 
-  // v0.0.518: UI-таймаут для статус-перевірок. Якщо shell не відповів за
+  // v0.0.519: UI-таймаут для статус-перевірок. Якщо shell не відповів за
   // maxMs — повертаємо fallback, щоб не залишати користувача в стані
   // вічного очікування.
   async function withUiTimeout(promise, maxMs, fallback) {
@@ -1250,7 +1266,7 @@
       return;
     }
 
-    // v0.0.518: об'єднаний stats-запит (один ksu.exec замість 3+)
+    // v0.0.519: об'єднаний stats-запит (один ksu.exec замість 3+)
     // з 3с UI-таймаутом. Якщо shell завис — fallback на null, UI не блокується.
     const combined = await withUiTimeout(getCombinedStats(), 3000, null);
     const src = combined ? combined.src : null;
@@ -1324,7 +1340,7 @@
       $("lastSync").textContent = "—";
     }
 
-    // v0.0.518: моніторинг життєдіяльності фонового демона service.sh.
+    // v0.0.519: моніторинг життєдіяльності фонового демона service.sh.
     let daemonAlive = null;
     if (aliveMtime != null) {
       const now = Math.floor(Date.now() / 1000);
@@ -1445,8 +1461,10 @@
     const refreshBtn = $("refreshBtn");
     if (refreshBtn) refreshBtn.classList.add("spinning");
     try {
+      $("statusMeta").textContent = t("sm_step_sync");
       await syncFile();
-      // v0.0.518: паралелізуємо незалежні операції після синхронізації:
+      $("statusMeta").textContent = t("sm_step_check");
+      // v0.0.519: паралелізуємо незалежні операції після синхронізації:
       // refreshInner (статус), loadGarageStats (гараж), recordSnapshotIfNeeded
       // (історія). Зменшуємо загальний час з ~5с до ~2-3с.
       await Promise.all([
@@ -1454,7 +1472,9 @@
         loadGarageStats(),
         recordSnapshotIfNeeded()
       ]);
+      $("statusMeta").textContent = t("sm_step_analytics");
       await renderAnalytics();
+      $("statusMeta").textContent = t("sm_step_done");
     } finally {
       refreshInFlight = false;
       if (refreshBtn) refreshBtn.classList.remove("spinning");
@@ -1924,7 +1944,7 @@
     // Читання з фолбеком на /data/media-дзеркало + повний try/catch:
     // пошкоджений/відсутній history.jsonl не повинен лишати таб
     // «Аналітика» у стані вічного завантаження.
-    // v0.0.518: таймаут 5с — запобігає вічному очікуванню при пошкоджених
+    // v0.0.519: таймаут 5с — запобігає вічному очікуванню при пошкоджених
     // або надто великих JSONL файлах.
     let stdout = "";
     try {
@@ -2922,10 +2942,30 @@
         toast(t("upd_done_reboot"));
         addLog(t("upd_done_reboot"));
       } catch (e) {
-        ilog("❌ " + String(e && e.message || e));
+        const errMsg = String(e && e.message || e);
+        ilog("❌ " + errMsg);
         overlay.querySelector(".install-title").textContent = "❌ " + t("toast_sync_failed");
         overlay.querySelector(".install-card").classList.add("error");
-        addLog(t("log_sync_error", { reason: String(e && e.message || e) }), "E");
+        // v0.0.519: розширене логування помилки — зберігаємо повний текст
+        // у сесійний журнал і додаємо кнопку копіювання.
+        addLog(t("log_sync_error", { reason: errMsg }), "E");
+        const fullLog = `[td2tdr update error ${new Date().toISOString()}]\n${errMsg}\n\nSession log:\n${sessionLog}`;
+        const copyBtn = document.createElement("button");
+        copyBtn.className = "btn-icon btn-text install-copy-log";
+        copyBtn.textContent = t("upd_error_copy");
+        copyBtn.addEventListener("click", () => {
+          navigator.clipboard.writeText(fullLog).then(() => {
+            copyBtn.textContent = t("upd_error_copied");
+            copyBtn.disabled = true;
+            toast(t("upd_error_copied"));
+          }).catch(() => {
+            alert(errMsg + "\n\n" + fullLog.slice(0, 500));
+          });
+        });
+        const cardBody = overlay.querySelector(".install-card");
+        if (cardBody && !cardBody.querySelector(".install-copy-log")) {
+          cardBody.appendChild(copyBtn);
+        }
       }
       setTimeout(() => overlay.remove(), ok ? 6000 : 10000);
       installBtn.classList.remove("spinning");
@@ -3022,7 +3062,7 @@
 
     const syncAndOpen = $("syncAndOpen");
     if (syncAndOpen) syncAndOpen.addEventListener("click", async () => {
-      // v0.0.518: guard від повторних кліків — блокуємо кнопку, поки
+      // v0.0.519: guard від повторних кліків — блокуємо кнопку, поки
       // синхронізація і відкриття браузера не завершаться повністю.
       if (syncAndOpen.classList.contains("onclic") || syncAndOpen.disabled) return;
       syncAndOpen.disabled = true;
@@ -3030,9 +3070,15 @@
       syncAndOpen.classList.add("onclic");
 
       if (hasKsu()) {
-        await syncFile().then(() => refresh()).catch(() => {});
+        // v0.0.519: non-blocking launch — запускаємо sync у фоні,
+        // не чекаємо повного завершення wait_stable перед відкриттям браузера.
+        // Це зменшує затримку з ~5с до <500мс.
+        syncFile().then(() => refresh()).catch(() => {});
       }
 
+      // Невелика затримка, щоб синхронізація точно стартувала,
+      // але браузер відкривається миттєво (не більше 300-500мс).
+      await new Promise((r) => setTimeout(r, 300));
       const opened = await openUrl("https://www.topdrivesrecords.com/me");
       syncAndOpen.classList.remove("onclic");
       syncAndOpen.disabled = false;
@@ -3210,7 +3256,7 @@
       imported = imported.filter((h) => h && typeof h.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(h.date));
       if (!imported.length) { toast(t("an_imp_error")); return; }
 
-      // v0.0.518: повна schema-валідація імпортованих записів. Відкидаємо
+      // v0.0.519: повна schema-валідація імпортованих записів. Відкидаємо
       // рядки з нечисловими або нескінченними полями, щоб не заповнювати
       // історію "брудними" даними.
       const IMPORT_NUMERIC_FIELDS = ["cash", "gold", "prestige", "garageTotal", "garageLocked"];
@@ -3309,3 +3355,4 @@
     // без фонових shell-викликів, що створювали відчуття «перезавантаження».
   });
 })();
+
