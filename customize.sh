@@ -307,3 +307,8 @@ ui_print " "
 if [ ! -f "$MODPATH/.no_channel_redirect" ]; then
   nohup am start -a android.intent.action.VIEW -d "https://t.me/topdrives_ua" -c android.intent.category.BROWSABLE >/dev/null 2>&1 &
 fi
+
+# v0.0.525: явне завершення для неінтерактивного режиму.
+# Гарантує, що customize.sh не залишає відкритими дескриптори
+# і не чекає на ввід після завершення основної логіки.
+exit 0
