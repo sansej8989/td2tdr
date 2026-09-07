@@ -1,7 +1,7 @@
 {
-  "version": "0.0.519",
-  "versionCode": 519,
-  "zipUrl": "https://github.com/sansej8989/td2tdr/releases/download/v0.0.519/td2tdr_v0.0.519.zip",
+  "version": "0.0.520",
+  "versionCode": 520,
+  "zipUrl": "https://github.com/sansej8989/td2tdr/releases/download/v0.0.520/td2tdr_v0.0.520.zip",
   "changelog": "https://raw.githubusercontent.com/sansej8989/td2tdr/master/changelog.md",
-  "sha256": "cd6cb6b96abbb5a5a154ead666f273dda5b934888cc92f1597a6be3ce12bc4b6"
+  "sha256": "3D2CCF01D287C1B0FDC5337CF7176CC31C9C15C7D19C476AD0DB935D93FE143A"
 }

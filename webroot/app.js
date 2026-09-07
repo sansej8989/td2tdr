@@ -151,7 +151,7 @@
     return `'${String(str).replace(/'/g, `'\\''`)}'`;
   }
 
-  // v0.0.519: єдиний 3-tier парсер для user.dat — уніфікує loadResources,
+  // v0.0.520: єдиний 3-tier парсер для user.dat — уніфікує loadResources,
   // getResourceSnapshot і будь-які майбутні споживачі.
   function parseUserResource(key, data) {
     if (!key || !data) return null;
@@ -817,7 +817,7 @@
     return null;
   }
 
-  // v0.0.519: перевірка «серцебиття» фонового демона service.sh через
+  // v0.0.520: перевірка «серцебиття» фонового демона service.sh через
   // мітку життєдіяльності $MODDIR/service.alive. Якщо мітка не оновлювалася
   // >15 хв — демон, швидше за все, впав або вбитий OOM-кілером.
   async function checkDaemonAlive() {
@@ -831,7 +831,7 @@
     return true;
   }
 
-  // v0.0.519: об'єднаний stats-запит — один ksu.exec замість 3+,
+  // v0.0.520: об'єднаний stats-запит — один ksu.exec замість 3+,
   // зменшує latency на повільних пристроях/ROM.
   async function getCombinedStats() {
     const srcQ = shellQuote(SRC);
@@ -868,7 +868,7 @@
     };
   }
 
-  // v0.0.519: UI-таймаут для статус-перевірок. Якщо shell не відповів за
+  // v0.0.520: UI-таймаут для статус-перевірок. Якщо shell не відповів за
   // maxMs — повертаємо fallback, щоб не залишати користувача в стані
   // вічного очікування.
   async function withUiTimeout(promise, maxMs, fallback) {
@@ -1266,7 +1266,7 @@
       return;
     }
 
-    // v0.0.519: об'єднаний stats-запит (один ksu.exec замість 3+)
+    // v0.0.520: об'єднаний stats-запит (один ksu.exec замість 3+)
     // з 3с UI-таймаутом. Якщо shell завис — fallback на null, UI не блокується.
     const combined = await withUiTimeout(getCombinedStats(), 3000, null);
     const src = combined ? combined.src : null;
@@ -1340,7 +1340,7 @@
       $("lastSync").textContent = "—";
     }
 
-    // v0.0.519: моніторинг життєдіяльності фонового демона service.sh.
+    // v0.0.520: моніторинг життєдіяльності фонового демона service.sh.
     let daemonAlive = null;
     if (aliveMtime != null) {
       const now = Math.floor(Date.now() / 1000);
@@ -1464,7 +1464,7 @@
       $("statusMeta").textContent = t("sm_step_sync");
       await syncFile();
       $("statusMeta").textContent = t("sm_step_check");
-      // v0.0.519: паралелізуємо незалежні операції після синхронізації:
+      // v0.0.520: паралелізуємо незалежні операції після синхронізації:
       // refreshInner (статус), loadGarageStats (гараж), recordSnapshotIfNeeded
       // (історія). Зменшуємо загальний час з ~5с до ~2-3с.
       await Promise.all([
@@ -1944,7 +1944,7 @@
     // Читання з фолбеком на /data/media-дзеркало + повний try/catch:
     // пошкоджений/відсутній history.jsonl не повинен лишати таб
     // «Аналітика» у стані вічного завантаження.
-    // v0.0.519: таймаут 5с — запобігає вічному очікуванню при пошкоджених
+    // v0.0.520: таймаут 5с — запобігає вічному очікуванню при пошкоджених
     // або надто великих JSONL файлах.
     let stdout = "";
     try {
@@ -2885,13 +2885,13 @@
         ilog(t("upd_dl"));
         setBar(15);
         const dl = await exec(
-          `curl -L --fail -s -o /data/local/tmp/td2tdr_update.zip ${shellQuote(remote.zipUrl)} && stat -c %s /data/local/tmp/td2tdr_update.zip`
+          `curl -L --fail -s -o ${shellQuote("/data/local/tmp/td2tdr_update.zip")} ${shellQuote(remote.zipUrl)} && stat -c %s ${shellQuote("/data/local/tmp/td2tdr_update.zip")}`
         );
         if (dl.errno !== 0 || !Number(dl.stdout.trim())) throw new Error("download failed");
         ilog(t("upd_verify"));
         setBar(45);
         if (remote.sha256) {
-          const sh = await exec(`sha256sum /data/local/tmp/td2tdr_update.zip 2>/dev/null`);
+          const sh = await exec(`sha256sum ${shellQuote("/data/local/tmp/td2tdr_update.zip")} 2>/dev/null`);
           if (sh.errno === 0 && !sh.stdout.toLowerCase().startsWith(String(remote.sha256).toLowerCase())) {
             throw new Error("sha256 mismatch");
           }
@@ -2906,6 +2906,14 @@
         //   ksud module install <zip>   (KernelSU / KernelSU-Next)
         //   apd module install <zip>    (APatch)
         const ZIP = "/data/local/tmp/td2tdr_update.zip";
+        const ZIP_Q = shellQuote(ZIP);
+        // v0.0.520: pre-flight перевірка — файл має існувати і бути non-empty
+        // перед запуском інсталятора. Це запобігає помилкам типу
+        // «Archive: /data/lo...» через відсутній/порожній файл.
+        const zipCheck = await exec(`[ -f ${ZIP_Q} ] && [ -s ${ZIP_Q} ] && echo OK || echo MISSING`);
+        if (String(zipCheck.stdout || "").trim() !== "OK") {
+          throw new Error(`Update archive missing or empty: ${ZIP}`);
+        }
         // POSIX-сумісний probe через `[ -x PATH ]` — працює в мінімальних
         // shell-середовищах Magisk/KSU/APatch (де `command -v` може бути
         // недоступним). Перевіряємо і канонічні шляхи, і `which`.
@@ -2918,11 +2926,11 @@
         const which = String(probe.stdout || "").trim().toUpperCase();
         let installCmd;
         if (which === "MAGISK") {
-          installCmd = `su -c 'magisk --install-module ${shellQuote(ZIP)}' 2>&1`;
+          installCmd = `su -c 'magisk --install-module ${ZIP_Q}' 2>&1`;
         } else if (which === "KSUD") {
-          installCmd = `su -c 'ksud module install ${shellQuote(ZIP)}' 2>&1`;
+          installCmd = `su -c 'ksud module install ${ZIP_Q}' 2>&1`;
         } else if (which === "APDATCH") {
-          installCmd = `su -c 'apd module install ${shellQuote(ZIP)}' 2>&1`;
+          installCmd = `su -c 'apd module install ${ZIP_Q}' 2>&1`;
         } else {
           // Невідомий root-менеджер — явна помилка (НЕ викликаємо magisk
           // «на удачу», щоб не отримати «magisk: inaccessible or not found»
@@ -2930,10 +2938,21 @@
           setBar(100);
           throw new Error("Unknown root manager: none of {magisk, ksud, apd} found in $PATH");
         }
-        const inst = await exec(installCmd);
+        // v0.0.520: повний лог інсталяції зберігається в /data/local/tmp/...
+        // без обрізання. ksu.exec повертає stdout/stderr, але щоб не втратити
+        // нічого — запускаємо інсталятор через wrapper, що записує все в файл.
+        const INST_LOG = "/data/local/tmp/td2tdr_install.log";
+        const wrappedCmd = `su -c '${installCmd.replace(/^su -c '/, "").replace(/' 2>&1$/, "")} > ${shellQuote(INST_LOG)} 2>&1'; echo TD2TDR_INSTALL_EXIT=$?`;
+        const inst = await exec(wrappedCmd);
         setBar(100);
-        if (inst.errno !== 0 || /failed|error/i.test(inst.stdout + inst.stderr)) {
-          throw new Error((inst.stderr || inst.stdout || "install failed").trim().slice(0, 200));
+        // Зчитуємо повний лог інсталяції без обрізання.
+        const fullInstLog = await exec(`cat ${shellQuote(INST_LOG)} 2>/dev/null || echo ""`);
+        const instLogText = String(fullInstLog.stdout || "").trim();
+        const instExit = String(inst.stdout || "").includes("TD2TDR_INSTALL_EXIT=0");
+        if (!instExit || /failed|error/i.test(instLogText)) {
+          // v0.0.520: НЕ обрізаємо помилку — зберігаємо повний текст для діагностики.
+          const reason = instLogText || inst.stderr || inst.stdout || "install failed";
+          throw new Error(reason);
         }
         ok = true;
         ilog(t("upd_done"));
@@ -2946,8 +2965,6 @@
         ilog("❌ " + errMsg);
         overlay.querySelector(".install-title").textContent = "❌ " + t("toast_sync_failed");
         overlay.querySelector(".install-card").classList.add("error");
-        // v0.0.519: розширене логування помилки — зберігаємо повний текст
-        // у сесійний журнал і додаємо кнопку копіювання.
         addLog(t("log_sync_error", { reason: errMsg }), "E");
         const fullLog = `[td2tdr update error ${new Date().toISOString()}]\n${errMsg}\n\nSession log:\n${sessionLog}`;
         const copyBtn = document.createElement("button");
@@ -3062,7 +3079,7 @@
 
     const syncAndOpen = $("syncAndOpen");
     if (syncAndOpen) syncAndOpen.addEventListener("click", async () => {
-      // v0.0.519: guard від повторних кліків — блокуємо кнопку, поки
+      // v0.0.520: guard від повторних кліків — блокуємо кнопку, поки
       // синхронізація і відкриття браузера не завершаться повністю.
       if (syncAndOpen.classList.contains("onclic") || syncAndOpen.disabled) return;
       syncAndOpen.disabled = true;
@@ -3070,7 +3087,7 @@
       syncAndOpen.classList.add("onclic");
 
       if (hasKsu()) {
-        // v0.0.519: non-blocking launch — запускаємо sync у фоні,
+        // v0.0.520: non-blocking launch — запускаємо sync у фоні,
         // не чекаємо повного завершення wait_stable перед відкриттям браузера.
         // Це зменшує затримку з ~5с до <500мс.
         syncFile().then(() => refresh()).catch(() => {});
@@ -3256,7 +3273,7 @@
       imported = imported.filter((h) => h && typeof h.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(h.date));
       if (!imported.length) { toast(t("an_imp_error")); return; }
 
-      // v0.0.519: повна schema-валідація імпортованих записів. Відкидаємо
+      // v0.0.520: повна schema-валідація імпортованих записів. Відкидаємо
       // рядки з нечисловими або нескінченними полями, щоб не заповнювати
       // історію "брудними" даними.
       const IMPORT_NUMERIC_FIELDS = ["cash", "gold", "prestige", "garageTotal", "garageLocked"];
@@ -3355,4 +3372,5 @@
     // без фонових shell-викликів, що створювали відчуття «перезавантаження».
   });
 })();
+
 
