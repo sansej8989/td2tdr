@@ -299,6 +299,8 @@
         <div class="garage-note">
           Рідкість і назви авто в Garage.dat не зберігаються — це властивості карткового каталогу гри, якого немає в цьому файлі. Для розподілу по рідкості дивись розділ GARAGE на topdrivesrecords.com після синхронізації.
         </div>
+        <!-- v0.0.527: крос-навігація на Аналітику -->
+        <div class="tab-link-hint" onclick="window.switchTab('analytics')">📈 Історія балансу, графіки та прогноз →</div>
       </div>
     </section>
     </div>
@@ -342,6 +344,8 @@
         <button id="clearHistoryBtn" class="an-stat-sticker" title="Натисніть, щоб скинути історію аналітики"><span id="statDaysText">Статистика: 0 дн.</span></button>
       </div>
       <div id="analyticsNote" class="import-hint" data-i18n="an_hint">Знімок стану записується автоматично раз на добу — при відкритті WebUI, якщо дані вже синхронізовані</div>
+      <!-- v0.0.527: крос-навігація на Гараж -->
+      <div class="tab-link-hint" onclick="window.switchTab('garage')">🚗 Склад гаража, бої та прокачка →</div>
       <!-- Тулбар: експорт/імпорт бекапу -->
       <div class="an-toolbar">
         <button id="anExportBtn" class="an-mini-btn">📥 <span data-i18n="an_export">Експорт</span></button>

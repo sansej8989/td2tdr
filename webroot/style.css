@@ -621,9 +621,11 @@ body {
 .an-record b { color: var(--warn); font-weight: 800; }
 
 /* ---------- interactive chart: wrapper, hit targets, tooltip ---------- */
+/* v0.0.527: апаратне прискорення для SVG-графіків */
 .an-chart-wrap {
   position: relative;
   touch-action: pan-y;
+  will-change: transform;
 }
 
 .an-chart-hit {
@@ -3092,6 +3094,35 @@ body {
 .install-copy-log:disabled {
   opacity: 0.6;
   cursor: default;
+}
+
+/* v0.0.527: крос-навігаційні підказки між табами */
+.tab-link-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+  padding: 7px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--accent-1);
+  background: rgba(129, 140, 248, 0.08);
+  border: 1px solid rgba(129, 140, 248, 0.25);
+  border-radius: var(--radius-xs);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-decoration: none;
+  user-select: none;
+}
+.tab-link-hint:hover {
+  color: var(--text);
+  border-color: var(--accent-1);
+  background: rgba(129, 140, 248, 0.16);
+  transform: translateY(-1px);
+}
+.tab-link-hint:active {
+  transform: translateY(0);
 }
 
 /* ---------- LANDSCAPE ---------- */
