@@ -122,9 +122,17 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add update.json
           git commit -m "chore: bump update.json to v${{ steps.version.outputs.VERSION }}"
-          # Fetch to ensure remote refs are up to date (handles tag push race condition)
+          # Fetch and retry push (handles tag push race condition where master isn't yet visible)
           git fetch origin
-          git push origin HEAD:master
+          for i in {1..5}; do
+            if git push origin HEAD:master; then
+              echo "Push succeeded on attempt $i"
+              break
+            fi
+            echo "Push attempt $i failed, retrying in 3s..."
+            sleep 3
+            git fetch origin
+          done
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
