@@ -278,30 +278,10 @@
               <div id="upgradeStackTrack" class="upgrade-stack-track"></div>
               <div id="upgradeLegend" class="garage-donut-legend"></div>
               </div>
-            </div>
-          </div>
+</div>
+          
 
-          <!-- Бої: плитка шкали у стилі престижу -->
-          <div class="garage-battle-group accent-battles">
-            <div class="res-tile garage-battle-tile prestige-wrap" id="battleTile" role="img" aria-label="Бої">
-              <div id="battleBarBg" class="garage-battle-bar-bg"></div>
-              <div class="res-bg-icon">⚔️</div>
-              <div class="prestige-content">
-                <div class="res-tile-head">
-                  <span class="res-tile-lbl" data-i18n="garage_battles">Бої</span>
-                </div>
-                <div id="battleBarText" class="garage-tile-num">0</div>
-              </div>
-            </div>
-            <div id="battleStatsInline" class="garage-battle-inline-stats">
-              <span class="battle-stat-tag b-win"><b id="battleWins">0</b> W</span>
-              <span class="battle-stat-tag b-draw"><b id="battleDraws">0</b> D</span>
-              <span class="battle-stat-tag b-loss"><b id="battleLosses">0</b> L</span>
-            </div>
-          </div>
-        </div>
-
-        <div class="garage-note">
+          <div class="garage-note">
           Рідкість і назви авто в Garage.dat не зберігаються — це властивості карткового каталогу гри, якого немає в цьому файлі. Для розподілу по рідкості дивись розділ GARAGE на topdrivesrecords.com після синхронізації.
         </div>
       </div>
@@ -364,6 +344,25 @@
       </div>
       <div id="analyticsList" class="analytics-list">
         <div class="garage-empty" data-i18n="cl_loading">Завантаження…</div>
+      </div>
+
+      <!-- Бої: плитка шкали у стилі престижу (перенесено з Гаражу) -->
+      <div class="garage-battle-group accent-battles an-battles-card">
+        <div class="res-tile garage-battle-tile prestige-wrap" id="battleTile" role="img" aria-label="Бої">
+          <div id="battleBarBg" class="garage-battle-bar-bg"></div>
+          <div class="res-bg-icon">⚔️</div>
+          <div class="prestige-content">
+            <div class="res-tile-head">
+              <span class="res-tile-lbl" data-i18n="garage_battles">Бої</span>
+            </div>
+            <div id="battleBarText" class="garage-tile-num">0</div>
+          </div>
+        </div>
+        <div id="battleStatsInline" class="garage-battle-inline-stats">
+          <span class="battle-stat-tag b-win"><b id="battleWins">0</b> W</span>
+          <span class="battle-stat-tag b-draw"><b id="battleDraws">0</b> D</span>
+          <span class="battle-stat-tag b-loss"><b id="battleLosses">0</b> L</span>
+        </div>
       </div>
     </section>
     </div>

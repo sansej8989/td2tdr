@@ -338,6 +338,7 @@
       an_gold: "Gold",
       an_prestige: "Престиж",
       an_garage: "Гараж (слотів)",
+      an_battles: "Бої",
       an_delta_24h: "/ 24г",
       an_record_gain: "Піковий день: <b>+{value}</b> ({date})",
       an_record_loss: "Витрата: <b>-{value}</b> ({date})",
@@ -569,6 +570,7 @@
       an_gold: "Gold",
       an_prestige: "Prestige",
       an_garage: "Garage (slots)",
+      an_battles: "Battles",
       an_delta_24h: "/ 24h",
       an_record_gain: "Best day: <b>+{value}</b> ({date})",
       an_record_loss: "Last spend: <b>-{value}</b> ({date})",
@@ -2067,7 +2069,12 @@
       const cards = JSON.parse(m[1]);
       const total = cards.length;
       const locked = cards.filter((c) => c.locked).length;
-      return { garageTotal: total, garageLocked: locked };
+      // v0.0.602: also compute battle totals
+      let battleTotal = 0;
+      for (const c of cards) {
+        battleTotal += (c.cardWins || 0) + (c.cardLosses || 0) + (c.cardDraws || 0);
+      }
+      return { garageTotal: total, garageLocked: locked, battleTotal };
     } catch (e) {
       return null;
     }
@@ -2108,6 +2115,7 @@
       if (gar) {
         if (gar.garageTotal != null) entry.garageTotal = gar.garageTotal;
         if (gar.garageLocked != null) entry.garageLocked = gar.garageLocked;
+        if (gar.battleTotal != null) entry.battleTotal = gar.battleTotal;
       }
       history.sort((a, b) => a.date.localeCompare(b.date));
       await saveHistory(history);
@@ -2183,13 +2191,43 @@
     return worst < 0 ? { loss: -worst, date: worstDate } : null;
   }
 
-  // v0.0.512: KPI-дашборд (renderKpi / computeAvgRateFull / computeTrend7d)
-  // видалено — спрощення UI. Метрики ресурсів доступні окремо у графіках.
+// v0.0.512: KPI-дашборд (renderKpi / computeAvgRateFull / computeTrend7d)
+// видалено — спрощення UI. Метрики ресурсів доступні окремо у графіках.
 
-  // v0.0.511: сценарії (computeScenarios) видалено у v0.0.512 — блок
-  // прогнозу показує лише базовий баланс на вибрану дату.
+// v0.0.511: сценарії (computeScenarios) видалено у v0.0.512 — блок
+// прогнозу показує лише базовий баланс на вибрану дату.
 
-  function formatForecastDate(daysAhead) {
+// v0.0.602: розрахунок приросту за активні дні (ігнорує дні з нульовою/від'ємною дельтою)
+function computeActiveDailyGain(history, key, lookbackDays = 7) {
+  const pts = history.filter((h) => h[key] != null);
+  if (pts.length < 2) return null;
+  const cutoff = Date.now() - lookbackDays * 86400000;
+  const recent = pts.filter((p) => new Date(p.date + "T00:00:00").getTime() >= cutoff);
+  if (recent.length < 2) return null;
+
+  let posSum = 0, activeDays = 0;
+  for (let i = 1; i < recent.length; i++) {
+    const delta = recent[i][key] - recent[i - 1][key];
+    if (delta > 0) {
+      posSum += delta;
+      activeDays++;
+    }
+  }
+  if (activeDays === 0) return null;
+  return posSum / activeDays;
+}
+
+function forecastPrestigeDays(history, target = 1000) {
+  const pts = history.filter((h) => h.prestige != null);
+  if (!pts.length) return null;
+  const current = pts[pts.length - 1].prestige;
+  if (current >= target) return 0;
+  const dailyGain = computeActiveDailyGain(history, "prestige", 7);
+  if (!dailyGain || dailyGain <= 0) return null;
+  return Math.ceil((target - current) / dailyGain);
+}
+
+function formatForecastDate(daysAhead) {
     const d = new Date();
     d.setHours(0, 0, 0, 0);
     d.setDate(d.getDate() + Number(daysAhead || 0));
@@ -2473,21 +2511,29 @@
     for (const key of ["cash", "gold", "prestige", "garageSlots"]) {
       const pts = hist.filter((h) => h[key] != null);
       if (pts.length < 2) continue;
-      // Темп — як у v0.0.509: вікно 14 днів, тільки позитивні дельти.
-      const winCut = Date.now() - 14 * 86400000;
-      const winPts = pts.filter((p) => new Date(p.date + "T00:00:00").getTime() >= winCut);
-      const ratePts = winPts.length >= 2 ? winPts : pts.slice(-2);
-      let posSum = 0;
-      for (let i = 1; i < ratePts.length; i++) {
-        const d = ratePts[i][key] - ratePts[i - 1][key];
-        if (d > 0) posSum += d;
+      let incomeRate;
+      // v0.0.602: для престижу — розрахунок за активні дні (7-денне вікно),
+      // для інших ресурсів — старий метод (позитивні дельти за 14 днів).
+      if (key === "prestige") {
+        const dailyGain = computeActiveDailyGain(hist, "prestige", 7);
+        incomeRate = dailyGain || 0;
+      } else {
+        // Темп — як у v0.0.509: вікно 14 днів, тільки позитивні дельти.
+        const winCut = Date.now() - 14 * 86400000;
+        const winPts = pts.filter((p) => new Date(p.date + "T00:00:00").getTime() >= winCut);
+        const ratePts = winPts.length >= 2 ? winPts : pts.slice(-2);
+        let posSum = 0;
+        for (let i = 1; i < ratePts.length; i++) {
+          const d = ratePts[i][key] - ratePts[i - 1][key];
+          if (d > 0) posSum += d;
+        }
+        const rFirst = ratePts[0];
+        const lastPt = pts[pts.length - 1];
+        const spanDays = Math.max(1, (new Date(lastPt.date) - new Date(rFirst.date)) / 86400000);
+        incomeRate = posSum / spanDays;
       }
-      const rFirst = ratePts[0];
-      const lastPt = pts[pts.length - 1];
-      const spanDays = Math.max(1, (new Date(lastPt.date) - new Date(rFirst.date)) / 86400000);
-      const incomeRate = posSum / spanDays;
       if (!isFinite(incomeRate)) continue;
-      const current = lastPt[key];
+      const current = pts[pts.length - 1][key];
       const expectedDelta = Math.round(incomeRate * N);
       // v0.0.512: явна нижня межа 0 — баланс ресурсу не може бути від'ємним
       // навіть при від'ємному темпі (наприклад, якщо користувач витрачає).
@@ -2551,7 +2597,7 @@
   // Стиснений прогноз по престижу (старий блок an-forecast для prestige→1000)
   // лишаємо, але тепер він рендериться окремо і не залежить від слайдера.
   function renderPrestigeForecastHtml(hist) {
-    const forecastDays = linearForecastDays(hist, "prestige", 1000);
+    const forecastDays = forecastPrestigeDays(hist, 1000);
     const pts = hist.filter((h) => h.prestige != null);
     const last = pts.length ? pts[pts.length - 1] : null;
     if (last && last.prestige >= 1000) {
@@ -2634,6 +2680,8 @@
     html += renderMetric(hist, "gold", t("an_gold"), "#ffb545");
     html += renderMetric(hist, "prestige", t("an_prestige"), "#a06bff");
     html += renderMetric(hist, "garageSlots", t("an_garage"), "#4d7cff");
+    // v0.0.602: Бої — графік активності за останні дні (mode="daily").
+    html += renderMetric(hist, "battleTotal", t("an_battles") || "Бої", "#f87171");
     // Стиснений прогноз по престижу → 1000 — найнижче.
     const forecastHtml = renderPrestigeForecastHtml(history);
 
@@ -2678,7 +2726,7 @@
         const key = metricEl.dataset.key;
         if (!key) return;
         const color = ({
-          cash: "#3ddc84", gold: "#ffb545", prestige: "#a06bff", garageSlots: "#4d7cff"
+          cash: "#3ddc84", gold: "#ffb545", prestige: "#a06bff", garageSlots: "#4d7cff", battleTotal: "#f87171"
         })[key] || "var(--accent)";
         const wrap = metricEl.querySelector(".an-chart-wrap");
         if (!wrap) return;
