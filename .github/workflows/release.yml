@@ -120,21 +120,11 @@ jobs:
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          # Commit on current HEAD (detached or branch), then cherry-pick to master
           git add update.json
           git commit -m "chore: bump update.json to v${{ steps.version.outputs.VERSION }}"
-          echo "=== Committed on $(git rev-parse --abbrev-ref HEAD) at $(git rev-parse HEAD) ==="
-          COMMIT_SHA=$(git rev-parse HEAD)
-          # Fetch and checkout master
-          echo "=== Fetching origin ==="
+          # Fetch to ensure remote refs are up to date (handles tag push race condition)
           git fetch origin
-          echo "=== Checking out master ==="
-          git checkout master
-          echo "=== On $(git rev-parse --abbrev-ref HEAD) at $(git rev-parse HEAD) ==="
-          echo "=== Cherry-picking $COMMIT_SHA ==="
-          git cherry-pick $COMMIT_SHA
-          echo "=== After cherry-pick: $(git rev-parse HEAD) ==="
-          git push origin master
+          git push origin HEAD:master
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
