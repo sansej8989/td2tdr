@@ -120,11 +120,14 @@ jobs:
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          # Checkout master branch explicitly (works on both detached HEAD and branch)
-          git fetch origin master:master
-          git checkout master
+          # Commit on current HEAD (detached or branch), then cherry-pick to master
           git add update.json
           git commit -m "chore: bump update.json to v${{ steps.version.outputs.VERSION }}"
+          COMMIT_SHA=$(git rev-parse HEAD)
+          # Switch to master and cherry-pick the commit
+          git fetch origin master:master
+          git checkout master
+          git cherry-pick $COMMIT_SHA
           git push origin master
 
       - name: Create Release
