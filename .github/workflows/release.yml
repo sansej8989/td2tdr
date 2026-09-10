@@ -111,8 +111,9 @@ jobs:
           cp update.json dist/update.json
           echo "${{ steps.sha.outputs.SHA256 }}  td2tdr_v${{ steps.version.outputs.VERSION }}.zip" > "dist/td2tdr_v${{ steps.version.outputs.VERSION }}.zip.sha256"
 
-      - name: Commit update.json
+- name: Commit update.json
         run: |
+          set -x
           if git diff --quiet update.json; then
             echo "update.json не змінився — коміт пропущено"
             exit 0
@@ -121,8 +122,14 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add update.json
           git commit -m "chore: bump update.json to v${{ steps.version.outputs.VERSION }}"
-          # Ensure we have latest origin/master and rebase if needed (handles detached HEAD on tag push)
+          # Fetch latest master and rebase onto it (handles detached HEAD on tag push)
           git fetch origin master:master
+          echo "=== git status ==="
+          git status
+          echo "=== git log --oneline -3 ==="
+          git log --oneline -3
+          echo "=== git branch -a ==="
+          git branch -a
           git rebase master
           git push origin HEAD:master
 
