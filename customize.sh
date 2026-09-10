@@ -13,6 +13,14 @@ done
 OUTFD=${OUTFD:-1}
 VER=$(grep -o 'version=.*' "$MODPATH/module.prop" 2>/dev/null | cut -d= -f2)
 
+# ── Non-interactive mode (WebUI / Magisk Manager / KernelSU) ─────────────
+# У WebUI немає TTY та stdin для читання клавіш. Пропускаємо всі паузи,
+# інтерактивне читання з $OUTFD та очікування введення.
+NONINTERACTIVE=0
+if [ "${UNATTENDED:-0}" = "1" ] || [ "${SKIP_DISCLAIMER:-0}" = "1" ] || [ ! -t 0 ]; then
+  NONINTERACTIVE=1
+fi
+
 # ── Персистентна тека даних користувача ────────────────────
 # Створюємо ЗАВЖДИ (не лише під час міграції): історія аналітики,
 # мова/тема та логи живуть тут і не стираються при оновленні модуля.
@@ -59,6 +67,11 @@ fi
 keycheck() {
   local LINE
   local count=0
+
+  # Non-interactive mode: немає клавіатурного вводу
+  if [ "$NONINTERACTIVE" = "1" ]; then
+    return 100
+  fi
 
   if command -v logcat >/dev/null 2>&1; then
     # 1) Рані натискання (зроблені поки друкувався текст) — вже в буфері
@@ -107,8 +120,14 @@ keycheck() {
 #  [ Volume+ ] = перемикає Так / Ні
 #  [ Volume- ] = підтвердити поточний вибір
 #  Повертає 0 = Так, 1 = Ні
+#  У неінтерактивному режимі автоматично вибираємо "Так" для продовження.
 choose_yn() {
   local choice=no
+
+  # Non-interactive mode: автоматично підтверджуємо "Так"
+  if [ "$NONINTERACTIVE" = "1" ]; then
+    return 0
+  fi
 
   # Одразу показуємо поточний вибір (за замовчуванням: Ні)
   ui_print " "
