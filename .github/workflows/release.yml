@@ -120,12 +120,12 @@ jobs:
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          # Checkout master branch explicitly (works on both detached HEAD and branch)
+          git fetch origin master:master
+          git checkout master
           git add update.json
           git commit -m "chore: bump update.json to v${{ steps.version.outputs.VERSION }}"
-          # Push via temporary branch (works on both detached HEAD and branch)
-          git fetch origin master
-          git checkout -b release-update-${{ steps.version.outputs.VERSION }}
-          git push origin release-update-${{ steps.version.outputs.VERSION }}:master
+          git push origin master
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
