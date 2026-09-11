@@ -228,7 +228,6 @@
       garage_fill: "Гараж",
       garage_upgrade: "Прокачка",
       garage_total_cars: "авто в гаражі",
-      garage_battles: "Бої",
       garage_held: "Held: {held} — для прокачки або продажу",
       garage_held_short: "Held: {held}",
       upg_custom: "Інше",
@@ -381,6 +380,35 @@
       an_tooltip_date: "Дата",
       an_tooltip_delta: "Зміна за день",
       an_tooltip_balance: "Баланс на день",
+      an_prestige_alert_title: "⚠️ Увага: наближення до ліміту Престижу",
+      an_prestige_alert_overflow: "⚠️ Увага! Завтра очікується переповнення Престижу ({projected} / 1000). Ви ризикуєте втратити ~{overflow} очок. Витратьте очки вже сьогодні!",
+      an_prestige_alert_near: "🔔 Наближення до ліміту: Наразі {current} / 1000 Престижу. При поточному прирості (+{gain} /день) ліміт буде досягнуто завтра або найближчими днями.",
+      an_prestige_alert_max_line: "Максимум (1000)",
+      an_prestige_alert_safe: "✅ Ліміт не загрожує — є запас.",
+      an_battles_title: "⚔️ Аналітика та Статистика Боїв",
+      an_battles_filter_today: "Сьогодні",
+      an_battles_filter_3d: "3 дні",
+      an_battles_filter_7d: "7 днів",
+      an_battles_filter_all: "Усе",
+      an_battles_kpi_total: "Всього боїв",
+      an_battles_kpi_winrate: "Перемоги / Поразки",
+      an_battles_kpi_net: "Чистий профіт",
+      an_battles_kpi_avg: "Середній результат",
+      an_battles_timeline: "Динаміка боїв у часі",
+      an_battles_breakdown: "Розподіл за результатами",
+      an_battles_no_data: "Ще немає даних про бої — синхронізуйте гру",
+      an_battles_win: "Перемоги",
+      an_battles_draw: "Нічиї",
+      an_battles_loss: "Поразки",
+      an_battles_win_short: "W",
+      an_battles_draw_short: "D",
+      an_battles_loss_short: "L",
+      an_battles_winrate: "{pct}% перемог",
+      an_battles_chart_unit: "боїв / знімок",
+      an_battles_net_unavailable: "Немає даних про нагороди",
+      an_battles_avg_unavailable: "Немає даних про очки за бій",
+      an_battles_breakdown_note: "Garage.dat зберігає лише W/D/L. Типи боїв, суперники та прибуток недоступні.",
+      an_battles_period_activity: "Зафіксовано за період",
       settings_title: "Налаштування",
       settings_theme: "Тема",
       theme_auto: "Авто",
@@ -460,7 +488,6 @@
       garage_fill: "Garage",
       garage_upgrade: "Upgrades",
       garage_total_cars: "cars in garage",
-      garage_battles: "Battles",
       garage_held: "Held: {held} — for upgrading or selling",
       garage_held_short: "Held: {held}",
       upg_custom: "Other",
@@ -598,22 +625,54 @@
       upd_done_short: "Installed ✓",
       upd_error_copy: "Copy error log",
       upd_error_copied: "Log copied",
-      an_accuracy: "Forecast accuracy: {pct}%",
-      an_per_day: " / day",
-      an_range_title: "Forecast period",
-      an_forecast_conf_label_low: "confidence: low",
-      an_forecast_conf_label_med: "confidence: medium",
-      an_forecast_conf_label_high: "confidence: high",
-      an_forecast_max: "🏆 Prestige is already maxed (1000) — don't forget to spend it.",
-      an_forecast_days: "📈 At the current pace, reaching <b>1000 prestige</b> will take roughly <b>{days} days</b>. This is a rough estimate, not a guarantee.",
-      an_forecast_flat: "📉 Prestige isn't trending upward right now — couldn't build a forecast.",
-      an_mode_daily: "Daily Δ",
-      an_mode_cumulative: "Cumulative",
-      an_forecast_date: "Forecast date",
-      an_tooltip_date: "Date",
-      an_tooltip_delta: "Daily Δ",
-      an_tooltip_balance: "Balance",
-      settings_title: "Settings",
+an_accuracy: "Forecast accuracy: {pct}%",
+       an_per_day: " / day",
+       an_range_title: "Forecast period",
+       an_forecast_conf_label_low: "confidence: low",
+       an_forecast_conf_label_med: "confidence: medium",
+       an_forecast_conf_label_high: "confidence: high",
+       an_forecast_max: "🏆 Prestige is already maxed (1000) — don't forget to spend it.",
+       an_forecast_days: "📈 At the current pace, reaching <b>1000 prestige</b> will take roughly <b>{days} days</b>. This is a rough estimate, not a guarantee.",
+       an_forecast_flat: "📉 Prestige isn't trending upward right now — couldn't build a forecast.",
+       an_mode_daily: "Daily Δ",
+       an_mode_cumulative: "Cumulative",
+       an_forecast_date: "Forecast date",
+       an_tooltip_date: "Date",
+       an_tooltip_delta: "Daily Δ",
+       an_tooltip_balance: "Balance",
+       // v0.0.604: smart prestige cap alert (Callout above the chart)
+       an_prestige_alert_title: "⚠️ Warning: approaching the Prestige cap",
+       an_prestige_alert_overflow: "⚠️ Warning! Tomorrow a Prestige overflow is expected ({projected} / 1000). You risk losing ~{overflow} points. Spend them today!",
+       an_prestige_alert_near: "🔔 Approaching the cap: Currently {current} / 1000 Prestige. At the current pace (+{gain}/day) the cap will be reached in the coming days.",
+       an_prestige_alert_max_line: "Max (1000)",
+       an_prestige_alert_safe: "✅ No cap risk — plenty of headroom.",
+       // v0.0.604: unified battles dashboard
+       an_battles_title: "⚔️ Battles Analytics & Stats",
+       an_battles_filter_today: "Today",
+       an_battles_filter_3d: "3 d",
+       an_battles_filter_7d: "7 d",
+       an_battles_filter_all: "All",
+       an_battles_kpi_total: "Total battles",
+       an_battles_kpi_winrate: "Wins / Losses",
+       an_battles_kpi_net: "Net profit",
+       an_battles_kpi_avg: "Avg result",
+       an_battles_timeline: "Battle activity over time",
+       an_battles_breakdown: "Breakdown by battle type",
+an_battles_no_data: "No battle data yet — sync the game",
+        an_battles_win: "W",
+        an_battles_draw: "D",
+        an_battles_loss: "L",
+        an_battles_win_short: "W",
+        an_battles_draw_short: "D",
+        an_battles_loss_short: "L",
+        an_battles_winrate: "{pct}% wins",
+        an_battles_chart_unit: "battles / snapshot",
+        an_battles_net_unavailable: "No reward data",
+        an_battles_avg_unavailable: "No per-battle score data",
+        an_battles_breakdown_note: "Garage.dat only stores W/D/L. Battle types, opponents and profit are unavailable.",
+        an_battles_period_activity: "Recorded over the period",
+        an_accuracy: "Forecast accuracy: {pct}%",
+       settings_title: "Settings",
       settings_theme: "Theme",
       theme_auto: "Auto",
       theme_light: "Light",
@@ -1548,12 +1607,19 @@
   const MOCK_HISTORY = Array.from({ length: 14 }, (_, i) => {
     const d = new Date();
     d.setDate(d.getDate() - (13 - i));
+    const battleWins = 80 + i * 11;
+    const battleDraws = 8 + i * 2;
+    const battleLosses = 35 + i * 5;
     return {
       date: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`,
       cash: 800000 + i * 50000 + (i % 2 ? 15000 : -5000),
       gold: 2000 + i * 140,
       prestige: Math.min(1000, 400 + i * 32),
-      garage: 60 + i * 2
+      garage: 60 + i * 2,
+      battleWins,
+      battleDraws,
+      battleLosses,
+      battleTotal: battleWins + battleDraws + battleLosses,
     };
   });
 
@@ -1738,40 +1804,6 @@
   }
   */
 
-  // Шкала боїв у стилі престижу з сегментним градієнтом
-  function renderBattleBar(battle, total) {
-    const winsEl = $("battleWins");
-    const drawsEl = $("battleDraws");
-    const lossesEl = $("battleLosses");
-    const barBg = $("battleBarBg");
-    const tile = $("battleTile");
-
-    if (winsEl) winsEl.textContent = (battle.w || 0).toLocaleString("uk-UA");
-    if (drawsEl) drawsEl.textContent = (battle.d || 0).toLocaleString("uk-UA");
-    if (lossesEl) lossesEl.textContent = (battle.l || 0).toLocaleString("uk-UA");
-    if (tile) {
-      tile.setAttribute(
-        "aria-label",
-        `${t("garage_battles")}: ${(battle.w || 0)} W, ${(battle.d || 0)} D, ${(battle.l || 0)} L`
-      );
-    }
-
-    if (barBg) {
-      if (!total) {
-        barBg.style.background = "transparent";
-      } else {
-        const winPct = (battle.w / total) * 100;
-        const drawPct = winPct + (battle.d / total) * 100;
-        barBg.style.background = `linear-gradient(90deg, 
-          rgba(61, 220, 132, 0.28) 0%, 
-          rgba(61, 220, 132, 0.28) ${winPct}%, 
-          rgba(255, 181, 69, 0.28) ${winPct}%, 
-          rgba(255, 181, 69, 0.28) ${drawPct}%, 
-          rgba(255, 92, 122, 0.28) ${drawPct}%, 
-          rgba(255, 92, 122, 0.28) 100%)`;
-      }
-    }
-  }
 
   async function loadGarageStats() {
     const loadBtn = $("loadGarage");
@@ -1851,10 +1883,6 @@
         { k: "233", label: UPGRADE_LABELS["233"], color: "#ff9f43" },
         { k: "custom", label: t("upg_custom"), color: "#6b7284" },
       ], counts, total);
-
-      // Бої — шкала боїв
-      $("battleBarText").textContent = battleTotal.toLocaleString("uk-UA");
-      renderBattleBar(battle, battleTotal);
 
       $("garageEmpty").style.display = "none";
       $("garageStats").style.display = "block";
@@ -1970,7 +1998,7 @@
     // можливих артефактів усіченого запису: відкидаємо рядки без валідної
     // ISO-дати або з не-скінченними числовими полями.
     const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
-    const NUMERIC_FIELDS = ["cash", "gold", "prestige", "garageTotal", "garageLocked"];
+    const NUMERIC_FIELDS = ["cash", "gold", "prestige", "garageTotal", "garageLocked", "battleTotal", "battleWins", "battleDraws", "battleLosses"];
     const isValidEntry = (h) => {
       if (!h || typeof h !== "object") return false;
       if (typeof h.date !== "string" || !DATE_RE.test(h.date)) return false;
@@ -2006,7 +2034,7 @@
     // імпортів — лишаємо лише один канонічний запис на кожну дату (останній
     // запис у масиві «перебиває» попередні).
     const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
-    const NUMERIC_FIELDS = ["cash", "gold", "prestige", "garageTotal", "garageLocked"];
+    const NUMERIC_FIELDS = ["cash", "gold", "prestige", "garageTotal", "garageLocked", "battleTotal", "battleWins", "battleDraws", "battleLosses"];
     const isValidEntry = (h) => {
       if (!h || typeof h !== "object") return false;
       if (typeof h.date !== "string" || !DATE_RE.test(h.date)) return false;
@@ -2069,12 +2097,11 @@
       const cards = JSON.parse(m[1]);
       const total = cards.length;
       const locked = cards.filter((c) => c.locked).length;
-      // v0.0.602: also compute battle totals
-      let battleTotal = 0;
-      for (const c of cards) {
-        battleTotal += (c.cardWins || 0) + (c.cardLosses || 0) + (c.cardDraws || 0);
-      }
-      return { garageTotal: total, garageLocked: locked, battleTotal };
+      const battleWins = cards.reduce((sum, c) => sum + (c.cardWins || 0), 0);
+      const battleDraws = cards.reduce((sum, c) => sum + (c.cardDraws || 0), 0);
+      const battleLosses = cards.reduce((sum, c) => sum + (c.cardLosses || 0), 0);
+      const battleTotal = battleWins + battleDraws + battleLosses;
+      return { garageTotal: total, garageLocked: locked, battleTotal, battleWins, battleDraws, battleLosses };
     } catch (e) {
       return null;
     }
@@ -2116,6 +2143,9 @@
         if (gar.garageTotal != null) entry.garageTotal = gar.garageTotal;
         if (gar.garageLocked != null) entry.garageLocked = gar.garageLocked;
         if (gar.battleTotal != null) entry.battleTotal = gar.battleTotal;
+        if (gar.battleWins != null) entry.battleWins = gar.battleWins;
+        if (gar.battleDraws != null) entry.battleDraws = gar.battleDraws;
+        if (gar.battleLosses != null) entry.battleLosses = gar.battleLosses;
       }
       history.sort((a, b) => a.date.localeCompare(b.date));
       await saveHistory(history);
@@ -2244,83 +2274,98 @@ function formatForecastDate(daysAhead) {
   }
 
 
-  // v0.0.511: графік тепер підтримує ДВА режими:
-  //   • "cumulative" — значення балансу на кінець кожного дня (як раніше).
-  //   • "daily"      — дельта за день (perDay) між сусідніми знімками.
-  // У data-points серіалізується трійка [date, value, perDay, balance]
-  // щоб tooltip міг показати і зміну, і баланс незалежно від режиму.
-  function buildChartSeries(history, key) {
-    const points = history.filter((h) => h[key] != null);
-    return points.map((p, i) => {
-      const prev = i > 0 ? points[i - 1][key] : null;
-      const delta = prev != null ? p[key] - prev : null;
-      return { date: p.date, value: p[key], delta, balance: p[key] };
-    });
-  }
+// v0.0.511: графік тепер підтримує ДВА режими:
+   //   • "cumulative" — значення балансу на кінець кожного дня (як раніше).
+   //   • "daily"      — дельта за день (perDay) між сусідніми знімками.
+   // У data-points серіалізується трійка [date, value, perDay, balance]
+   // щоб tooltip міг показати і зміну, і баланс незалежно від режиму.
+   // v0.0.604: optional maxLine param draws a dashed horizontal limit line
+   // (used for the Prestige 1000 cap on the prestige chart).
+   function buildChartSeries(history, key) {
+     const points = history.filter((h) => h[key] != null);
+     return points.map((p, i) => {
+       const prev = i > 0 ? points[i - 1][key] : null;
+       const delta = prev != null ? p[key] - prev : null;
+       return { date: p.date, value: p[key], delta, balance: p[key] };
+     });
+   }
 
-  function renderSparkline(history, key, color, mode) {
-    const series = buildChartSeries(history, key);
-    if (series.length < 2) {
-      const have = series.length;
-      const need = 2;
-      const dots = Array.from({ length: need }, (_, i) =>
-        `<span class="an-progress-dot${i < have ? " filled" : ""}"></span>`
-      ).join("");
-      const lastVal = have ? series[have - 1].value : null;
-      return `
-        <div class="an-empty an-empty-progress">
-          <div class="an-progress-row">
-            <div class="an-progress-dots">${dots}</div>
-            <span class="an-progress-text">${t("an_days_collected", { have, need })}</span>
-          </div>
-          ${lastVal != null ? `<div class="an-progress-current">${t("an_first_point", { value: fmtNum(lastVal) })}</div>` : ""}
-        </div>
-      `;
-    }
-    const isDaily = mode === "daily";
-    const plotValues = isDaily
-      ? series.map((s) => s.delta == null ? 0 : s.delta)
-      : series.map((s) => s.value);
-    const min = Math.min(...plotValues);
-    const max = Math.max(...plotValues);
-    const range = max - min || 1;
-    const W = 300, H = 60, PAD = 4;
-    const stepX = (W - PAD * 2) / (series.length - 1);
-    const coords = series.map((p, i) => {
-      const x = PAD + i * stepX;
-      const y = H - PAD - ((plotValues[i] - min) / range) * (H - PAD * 2);
-      return [x, y];
-    });
-    const path = coords.map((c, i) => (i === 0 ? "M" : "L") + c[0].toFixed(1) + "," + c[1].toFixed(1)).join(" ");
-    const last = coords[coords.length - 1];
-    const first = coords[0];
-    const areaPath = `${path} L${last[0].toFixed(1)},${H - PAD} L${first[0].toFixed(1)},${H - PAD} Z`;
-    // Серіалізуємо всі три поля (date / value / perDay) для tooltip'а —
-    // initChartInteraction дізнається режим із DOM-класу.
-    const dataPoints = escapeAttr(JSON.stringify(
-      series.map((s) => [s.date, s.value, s.delta == null ? null : s.delta, s.balance])
-    ));
-    const zeroY = isDaily && min < 0 && max > 0
-      ? H - PAD - ((0 - min) / range) * (H - PAD * 2)
-      : null;
-    const zeroLine = zeroY != null
-      ? `<line x1="${PAD.toFixed(1)}" y1="${zeroY.toFixed(1)}" x2="${(W - PAD).toFixed(1)}" y2="${zeroY.toFixed(1)}" stroke="var(--text-dimmer)" stroke-width="0.5" stroke-dasharray="2 2" opacity="0.6"></line>`
-      : "";
-    return `
-      <div class="an-chart-wrap an-chart-mode-${mode}" data-mode="${mode}" data-points="${dataPoints}">
-        <svg viewBox="0 0 ${W} ${H}" class="an-chart" preserveAspectRatio="none">
-          ${zeroLine}
-          <path d="${areaPath}" fill="${color}" opacity="0.14"></path>
-          <path d="${path}" fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"></path>
-          <circle cx="${last[0].toFixed(1)}" cy="${last[1].toFixed(1)}" r="3" fill="${color}"></circle>
-          <line class="an-chart-cursor-line" x1="0" y1="0" x2="0" y2="${H}"></line>
-          <circle class="an-chart-cursor-dot" r="4" fill="${color}" stroke="#0a0a12" stroke-width="1.5"></circle>
-          <rect class="an-chart-hit" x="0" y="0" width="${W}" height="${H}"></rect>
-        </svg>
-        <div class="an-tooltip"><b></b><span></span><em></em></div>
-      </div>
-    `;
-  }
+   function renderSparkline(history, key, color, mode, maxLine) {
+     const series = buildChartSeries(history, key);
+     if (series.length < 2) {
+       const have = series.length;
+       const need = 2;
+       const dots = Array.from({ length: need }, (_, i) =>
+         `<span class="an-progress-dot${i < have ? " filled" : ""}"></span>`
+       ).join("");
+       const lastVal = have ? series[have - 1].value : null;
+       return `
+         <div class="an-empty an-empty-progress">
+           <div class="an-progress-row">
+             <div class="an-progress-dots">${dots}</div>
+             <span class="an-progress-text">${t("an_days_collected", { have, need })}</span>
+           </div>
+           ${lastVal != null ? `<div class="an-progress-current">${t("an_first_point", { value: fmtNum(lastVal) })}</div>` : ""}
+         </div>
+       `;
+     }
+      const isDaily = mode === "daily";
+      const plotValues = isDaily
+        ? series.map((s) => s.delta == null ? 0 : s.delta)
+        : series.map((s) => s.value);
+      const min = Math.min(...plotValues);
+      const max = Math.max(...plotValues);
+      const rangeMin = !isDaily && Number.isFinite(maxLine) ? Math.min(min, maxLine) : min;
+      const rangeMax = !isDaily && Number.isFinite(maxLine) ? Math.max(max, maxLine) : max;
+      const range = rangeMax - rangeMin || 1;
+      const W = 300, H = 60, PAD = 4;
+      const stepX = (W - PAD * 2) / (series.length - 1);
+      const coords = series.map((p, i) => {
+        const x = PAD + i * stepX;
+        const y = H - PAD - ((plotValues[i] - rangeMin) / range) * (H - PAD * 2);
+        return [x, y];
+      });
+     const path = coords.map((c, i) => (i === 0 ? "M" : "L") + c[0].toFixed(1) + "," + c[1].toFixed(1)).join(" ");
+     const last = coords[coords.length - 1];
+     const first = coords[0];
+     const areaPath = `${path} L${last[0].toFixed(1)},${H - PAD} L${first[0].toFixed(1)},${H - PAD} Z`;
+     // Серіалізуємо всі три поля (date / value / perDay) для tooltip'а —
+     // initChartInteraction дізнається режим із DOM-класу.
+     const dataPoints = escapeAttr(JSON.stringify(
+       series.map((s) => [s.date, s.value, s.delta == null ? null : s.delta, s.balance])
+     ));
+      const zeroY = isDaily && min < 0 && max > 0
+        ? H - PAD - ((0 - rangeMin) / range) * (H - PAD * 2)
+        : null;
+     const zeroLine = zeroY != null
+       ? `<line x1="${PAD.toFixed(1)}" y1="${zeroY.toFixed(1)}" x2="${(W - PAD).toFixed(1)}" y2="${zeroY.toFixed(1)}" stroke="var(--text-dimmer)" stroke-width="0.5" stroke-dasharray="2 2" opacity="0.6"></line>`
+       : "";
+     // v0.0.604: optional horizontal limit line (e.g. Prestige cap at 1000).
+     // Only drawn when maxLine is a finite number AND the line falls inside
+     // the visible plot range (otherwise it would sit outside the chart).
+     let maxLineEl = "";
+      if (Number.isFinite(maxLine) && !isDaily) {
+        const y = H - PAD - ((maxLine - rangeMin) / range) * (H - PAD * 2);
+        if (y >= PAD && y <= H - PAD) {
+          maxLineEl = `<line class="an-chart-max-line" x1="${PAD.toFixed(1)}" y1="${y.toFixed(1)}" x2="${(W - PAD).toFixed(1)}" y2="${y.toFixed(1)}" stroke="var(--danger, #ff5c7a)" stroke-width="1" stroke-dasharray="4 3" opacity="0.85"></line>`;
+        }
+      }
+     return `
+       <div class="an-chart-wrap an-chart-mode-${mode}" data-mode="${mode}" data-points="${dataPoints}">
+         <svg viewBox="0 0 ${W} ${H}" class="an-chart" preserveAspectRatio="none">
+           ${zeroLine}
+           ${maxLineEl}
+           <path d="${areaPath}" fill="${color}" opacity="0.14"></path>
+           <path d="${path}" fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"></path>
+           <circle cx="${last[0].toFixed(1)}" cy="${last[1].toFixed(1)}" r="3" fill="${color}"></circle>
+           <line class="an-chart-cursor-line" x1="0" y1="0" x2="0" y2="${H}"></line>
+           <circle class="an-chart-cursor-dot" r="4" fill="${color}" stroke="#0a0a12" stroke-width="1.5"></circle>
+           <rect class="an-chart-hit" x="0" y="0" width="${W}" height="${H}"></rect>
+         </svg>
+         <div class="an-tooltip"><b></b><span></span><em></em></div>
+       </div>
+     `;
+   }
 
   function linearForecastDays(history, key, target) {
     const pts = history.filter((h) => h[key] != null).slice(-14);
@@ -2349,24 +2394,18 @@ function formatForecastDate(daysAhead) {
     return "low";
   }
 
-  function renderMetric(history, key, title, color) {
+  function renderMetric(history, key, title, color, maxLine, preChartHtml) {
     const points = history.filter((h) => h[key] != null);
     const last = points.length ? points[points.length - 1][key] : null;
     const delta = computeDelta(history, key);
     const deltaCls = delta == null ? "flat" : delta > 0 ? "up" : delta < 0 ? "down" : "flat";
     const deltaText = delta == null ? "—" : (delta > 0 ? "+" : "") + delta.toLocaleString("uk-UA");
 
-    // v0.0.511: чіпи «7д / 30д» видалені — усі агреговані значення тепер
-    // живуть у KPI-дашборді над графіками. Тут лишаємо тільки дельту за
-    // останню добу (як раніше) та два довідкових рекорди.
-
     const best = computeBestGain(history, key);
     const recordRow = best
       ? `<div class="an-record"><span class="an-record-badge">🏆</span>${t("an_record_gain", { value: best.gain.toLocaleString("uk-UA"), date: formatShortDate(best.date) })}</div>`
       : "";
 
-    // «Остання велика витрата» 🛍️ — довідково, останній факт списання
-    // (НЕ входить у прогноз: прогноз рахується тільки від прибутку)
     const withKeyHist = history.filter((h) => h[key] != null);
     let lastSpend = null;
     for (let i = withKeyHist.length - 1; i >= 1; i--) {
@@ -2377,7 +2416,6 @@ function formatForecastDate(daysAhead) {
       ? `<div class="an-record an-record-loss"><span class="an-record-badge">🛍️</span>${t("an_record_loss", { value: lastSpend.spend.toLocaleString("uk-UA"), date: formatShortDate(lastSpend.date) })}</div>`
       : "";
 
-    // v0.0.511: повний графік + перемикач режимів (Денні / Накопичувальний)
     const mode = analyticsChartMode;
     const isDaily = mode === "daily";
     return `
@@ -2391,7 +2429,8 @@ function formatForecastDate(daysAhead) {
           <button type="button" class="an-mode-btn${!isDaily ? " active" : ""}" data-mode="cumulative" role="tab" aria-selected="${!isDaily}">${t("an_mode_cumulative")}</button>
           <button type="button" class="an-mode-btn${isDaily ? " active" : ""}" data-mode="daily" role="tab" aria-selected="${isDaily}">${t("an_mode_daily")}</button>
         </div>
-        ${renderSparkline(history, key, color, mode)}
+        ${preChartHtml || ""}
+        ${renderSparkline(history, key, color, mode, maxLine)}
         ${recordRow}
         ${lossRow}
       </div>
@@ -2596,6 +2635,84 @@ function formatForecastDate(daysAhead) {
 
   // Стиснений прогноз по престижу (старий блок an-forecast для prestige→1000)
   // лишаємо, але тепер він рендериться окремо і не залежить від слайдера.
+  // v0.0.604: розумне сповіщення про ліміт престижу (Callout над графіком).
+  // Логіка:
+  //   • current >= 1000 → max line
+  //   • projectedTomorrow > 1000 → overflow alert (red)
+  //   • current >= 850 && projectedTomorrow <= 1000 → near-limit warning (amber)
+  //   • інакше → safe
+  function computePrestigeAlert(hist) {
+    const PRESTIGE_MAX = 1000;
+    const pts = hist.filter((h) => h.prestige != null);
+    if (!pts.length) return { kind: "none" };
+    const current = pts[pts.length - 1].prestige;
+    if (current >= PRESTIGE_MAX) return { kind: "max", current };
+    const dailyGain = computeActiveDailyGain(hist, "prestige", 7);
+    const projectedTomorrow = current + (dailyGain || 0);
+    if (projectedTomorrow > PRESTIGE_MAX) {
+      return {
+        kind: "overflow",
+        current,
+        gain: dailyGain || 0,
+        projected: Math.round(projectedTomorrow),
+        overflow: Math.round(projectedTomorrow - PRESTIGE_MAX),
+      };
+    }
+    if (current >= 850) {
+      return {
+        kind: "near",
+        current,
+        gain: dailyGain || 0,
+        projected: Math.round(projectedTomorrow),
+      };
+    }
+    return { kind: "safe", current, gain: dailyGain || 0 };
+  }
+
+  function renderPrestigeAlertHtml(alert) {
+    if (!alert || alert.kind === "none") return "";
+    if (alert.kind === "max") {
+      return `<div class="an-prestige-alert an-prestige-alert-max" data-prestige-alert>
+        <span class="an-prestige-alert-ico">🏆</span>
+        <span>${t("an_forecast_max")}</span>
+        <span class="an-prestige-alert-line">${t("an_prestige_alert_max_line")}</span>
+      </div>`;
+    }
+    if (alert.kind === "overflow") {
+      return `<div class="an-prestige-alert an-prestige-alert-overflow" data-prestige-alert>
+        <span class="an-prestige-alert-ico">⚠️</span>
+        <span class="an-prestige-alert-body">
+          <b>${t("an_prestige_alert_title")}</b><br>
+          ${t("an_prestige_alert_overflow", {
+            projected: alert.projected.toLocaleString("uk-UA"),
+            overflow: alert.overflow.toLocaleString("uk-UA"),
+          })}
+        </span>
+        <span class="an-prestige-alert-line">${t("an_prestige_alert_max_line")}</span>
+      </div>`;
+    }
+    if (alert.kind === "near") {
+      return `<div class="an-prestige-alert an-prestige-alert-near" data-prestige-alert>
+        <span class="an-prestige-alert-ico">🔔</span>
+        <span class="an-prestige-alert-body">
+          <b>${t("an_prestige_alert_title")}</b><br>
+          ${t("an_prestige_alert_near", {
+            current: alert.current.toLocaleString("uk-UA"),
+            gain: (alert.gain || 0).toLocaleString("uk-UA"),
+          })}
+        </span>
+        <span class="an-prestige-alert-line">${t("an_prestige_alert_max_line")}</span>
+      </div>`;
+    }
+    return `<div class="an-prestige-alert an-prestige-alert-safe" data-prestige-alert>
+      <span class="an-prestige-alert-ico">✅</span>
+      <span>${t("an_prestige_alert_safe")}</span>
+      <span class="an-prestige-alert-line">${t("an_prestige_alert_max_line")}</span>
+    </div>`;
+  }
+
+  // Стиснений прогноз по престижу (старий блок an-forecast для prestige→1000)
+  // лишаємо, але тепер він рендериться окремо і не залежить від слайдера.
   function renderPrestigeForecastHtml(hist) {
     const forecastDays = forecastPrestigeDays(hist, 1000);
     const pts = hist.filter((h) => h.prestige != null);
@@ -2613,6 +2730,187 @@ function formatForecastDate(daysAhead) {
       return `<div class="an-forecast">${t("an_forecast_flat")}</div>`;
     }
     return "";
+  }
+
+  let battlePeriod = "all";
+  try {
+    const savedBattlePeriod = localStorage.getItem("td2tdr_battle_period");
+    if (["today", "3d", "7d", "all"].includes(savedBattlePeriod)) battlePeriod = savedBattlePeriod;
+  } catch (e) {}
+
+  function parseHistoryDate(dateStr) {
+    return new Date(dateStr + "T00:00:00");
+  }
+
+  function shiftHistoryDate(dateStr, days) {
+    const d = parseHistoryDate(dateStr);
+    d.setDate(d.getDate() + days);
+    const pad = (n) => String(n).padStart(2, "0");
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  }
+
+  function getBattlePoints(hist) {
+    return hist
+      .filter((h) => h.battleTotal != null || h.battleWins != null || h.battleDraws != null || h.battleLosses != null)
+      .slice()
+      .sort((a, b) => a.date.localeCompare(b.date));
+  }
+
+  function getBattlePeriodSlice(hist, period) {
+    const points = getBattlePoints(hist);
+    if (!points.length) return { entries: [], baseline: null };
+    const latestDate = points[points.length - 1].date;
+    const daysBack = period === "today" ? 0 : period === "3d" ? 2 : period === "7d" ? 6 : null;
+    const cutoff = daysBack == null ? null : shiftHistoryDate(latestDate, -daysBack);
+    const startIndex = cutoff == null ? 0 : points.findIndex((p) => p.date >= cutoff);
+    const safeStartIndex = startIndex < 0 ? points.length : startIndex;
+    return {
+      entries: points.slice(safeStartIndex),
+      baseline: safeStartIndex > 0 ? points[safeStartIndex - 1] : null,
+    };
+  }
+
+  function getBattleFieldValue(entry, key) {
+    const value = entry && entry[key];
+    return typeof value === "number" && Number.isFinite(value) ? value : null;
+  }
+
+  function getBattlePeriodTotals(hist, period) {
+    const slice = getBattlePeriodSlice(hist, period);
+    const last = slice.entries.length ? slice.entries[slice.entries.length - 1] : null;
+    const delta = (key) => {
+      const current = getBattleFieldValue(last, key);
+      if (current == null) return null;
+      if (period === "all" || !slice.baseline) return current;
+      const previous = getBattleFieldValue(slice.baseline, key);
+      if (previous == null) return null;
+      return Math.max(0, current - previous);
+    };
+    return {
+      total: delta("battleTotal"),
+      wins: delta("battleWins"),
+      draws: delta("battleDraws"),
+      losses: delta("battleLosses"),
+    };
+  }
+
+  function getBattleTimeline(hist, period) {
+    const slice = getBattlePeriodSlice(hist, period);
+    return slice.entries
+      .map((entry, index) => {
+        const current = getBattleFieldValue(entry, "battleTotal");
+        if (current == null) return { date: entry.date, value: null };
+        const previous = index === 0 ? slice.baseline : slice.entries[index - 1];
+        const previousTotal = getBattleFieldValue(previous, "battleTotal");
+        if (previousTotal != null) return { date: entry.date, value: Math.max(0, current - previousTotal) };
+        if (period === "all") return { date: entry.date, value: current };
+        return { date: entry.date, value: null };
+      })
+      .filter((item) => item.value != null);
+  }
+
+  function renderBattlesDashboard(hist) {
+    const totals = getBattlePeriodTotals(hist, battlePeriod);
+    const timeline = getBattleTimeline(hist, battlePeriod);
+    const hasData = getBattlePoints(hist).length > 0;
+    const winrate = totals.wins != null && totals.losses != null && totals.wins + totals.losses > 0
+      ? Math.round((totals.wins / (totals.wins + totals.losses)) * 100)
+      : null;
+    const breakdownAvailable = [totals.wins, totals.draws, totals.losses].every((value) => value != null);
+    const breakdownTotal = breakdownAvailable ? totals.wins + totals.draws + totals.losses : 0;
+    const breakdownParts = [
+      { key: "wins", label: t("an_battles_win"), short: t("an_battles_win_short"), value: totals.wins, color: "#3ddc84" },
+      { key: "draws", label: t("an_battles_draw"), short: t("an_battles_draw_short"), value: totals.draws, color: "#ffb545" },
+      { key: "losses", label: t("an_battles_loss"), short: t("an_battles_loss_short"), value: totals.losses, color: "#ff5c7a" },
+    ];
+    const breakdownBar = breakdownAvailable && breakdownTotal > 0
+      ? breakdownParts.map((part) => {
+        const width = (part.value / breakdownTotal) * 100;
+        return width > 0 ? `<span class="an-battles-breakdown-seg" style="width:${width}%;background:${part.color}" title="${escapeAttr(part.label)}: ${fmtNum(part.value)}"></span>` : "";
+      }).join("")
+      : "";
+    const visibleTimeline = timeline.filter((item) => item.value != null);
+    const timelineMax = Math.max(1, ...visibleTimeline.map((item) => item.value));
+    const timelineBars = visibleTimeline.length
+      ? visibleTimeline.map((item) => {
+        const height = Math.max(4, (item.value / timelineMax) * 100);
+        return `<div class="an-battles-bar-col" title="${escapeAttr(formatShortDate(item.date))}: ${fmtNum(item.value)}">
+          <span class="an-battles-bar" style="height:${height}%"></span>
+          <span class="an-battles-bar-date">${escapeHtml(formatShortDate(item.date))}</span>
+        </div>`;
+      }).join("")
+      : `<div class="garage-empty">${t("an_battles_no_data")}</div>`;
+    const filters = [
+      { value: "today", label: t("an_battles_filter_today") },
+      { value: "3d", label: t("an_battles_filter_3d") },
+      { value: "7d", label: t("an_battles_filter_7d") },
+      { value: "all", label: t("an_battles_filter_all") },
+    ].map((filter) => `<button type="button" class="an-battles-filter${battlePeriod === filter.value ? " active" : ""}" data-battle-period="${filter.value}" aria-selected="${battlePeriod === filter.value}">${filter.label}</button>`).join("");
+
+    return `
+      <section class="an-battles-dashboard" data-battles-dashboard>
+        <header class="an-battles-header">
+          <div class="an-battles-title-wrap">
+            <h2 class="an-battles-title">${t("an_battles_title")}</h2>
+            <span class="an-battles-subtitle">${t("an_battles_period_activity")}</span>
+          </div>
+          <div class="an-battles-filters" role="tablist" aria-label="battle period">
+            ${filters}
+          </div>
+        </header>
+        <div class="an-battles-kpis">
+          <div class="an-battles-kpi">
+            <span class="an-battles-kpi-label">${t("an_battles_kpi_total")}</span>
+            <b class="an-battles-kpi-value">${hasData ? fmtNum(totals.total) : "—"}</b>
+            <small class="an-battles-kpi-note">${battlePeriod === "all" ? t("an_battles_filter_all") : t(`an_battles_filter_${battlePeriod}`)}</small>
+          </div>
+          <div class="an-battles-kpi">
+            <span class="an-battles-kpi-label">${t("an_battles_kpi_winrate")}</span>
+            <b class="an-battles-kpi-value">${totals.wins != null && totals.losses != null ? `${fmtNum(totals.wins)} / ${fmtNum(totals.losses)}` : "—"}</b>
+            <small class="an-battles-kpi-note ${winrate == null ? "" : winrate >= 50 ? "up" : "down"}">${winrate == null ? t("an_battles_avg_unavailable") : t("an_battles_winrate", { pct: winrate })}</small>
+          </div>
+          <div class="an-battles-kpi">
+            <span class="an-battles-kpi-label">${t("an_battles_kpi_net")}</span>
+            <b class="an-battles-kpi-value">—</b>
+            <small class="an-battles-kpi-note">${t("an_battles_net_unavailable")}</small>
+          </div>
+          <div class="an-battles-kpi">
+            <span class="an-battles-kpi-label">${t("an_battles_kpi_avg")}</span>
+            <b class="an-battles-kpi-value">—</b>
+            <small class="an-battles-kpi-note">${t("an_battles_avg_unavailable")}</small>
+          </div>
+        </div>
+        <div class="an-battles-body">
+          <div class="an-battles-panel">
+            <div class="an-battles-panel-title">${t("an_battles_timeline")}</div>
+            <div class="an-battles-chart" role="img" aria-label="${escapeAttr(t("an_battles_timeline"))}">${timelineBars}</div>
+          </div>
+          <div class="an-battles-panel">
+            <div class="an-battles-panel-title">${t("an_battles_breakdown")}</div>
+            ${breakdownAvailable
+              ? `<div class="an-battles-breakdown-bar">${breakdownBar}</div>
+                <div class="an-battles-breakdown-legend">${breakdownParts.map((part) => `<span><i style="background:${part.color}"></i>${part.label}: <b>${fmtNum(part.value)}</b></span>`).join("")}</div>`
+              : `<div class="an-battles-unavailable">${t("an_battles_net_unavailable")}</div>`}
+            <div class="an-battles-note">${t("an_battles_breakdown_note")}</div>
+          </div>
+        </div>
+      </section>
+    `;
+  }
+
+  function bindBattlesDashboard() {
+    const list = $("analyticsList");
+    if (!list || list.dataset.battlesBound) return;
+    list.dataset.battlesBound = "1";
+    list.addEventListener("click", (e) => {
+      const btn = e.target.closest && e.target.closest("[data-battle-period]");
+      if (!btn || btn.dataset.battlePeriod === battlePeriod) return;
+      battlePeriod = btn.dataset.battlePeriod;
+      try { localStorage.setItem("td2tdr_battle_period", battlePeriod); } catch (err) {}
+      const old = list.querySelector("[data-battles-dashboard]");
+      const fresh = renderBattlesDashboard(_analyticsLastHist || []);
+      if (old) old.outerHTML = fresh;
+    });
   }
 
   async function renderAnalytics() {
@@ -2675,28 +2973,33 @@ function formatForecastDate(daysAhead) {
     let html = "";
     // v0.0.512: KPI-дашборд видалено — блок прогнозу тепер найвищий.
     html += renderForecastBlockHtml(hist, analyticsPeriod);
-    // 4 ресурсні графіки з повною історією.
     html += renderMetric(hist, "cash", t("an_cash"), "#3ddc84");
     html += renderMetric(hist, "gold", t("an_gold"), "#ffb545");
-    html += renderMetric(hist, "prestige", t("an_prestige"), "#a06bff");
+    html += renderMetric(
+      hist,
+      "prestige",
+      t("an_prestige"),
+      "#a06bff",
+      1000,
+      renderPrestigeAlertHtml(computePrestigeAlert(hist))
+    );
     html += renderMetric(hist, "garageSlots", t("an_garage"), "#4d7cff");
-    // v0.0.602: Бої — графік активності за останні дні (mode="daily").
-    html += renderMetric(hist, "battleTotal", t("an_battles") || "Бої", "#f87171");
-    // Стиснений прогноз по престижу → 1000 — найнижче.
-    const forecastHtml = renderPrestigeForecastHtml(history);
+    html += renderBattlesDashboard(hist);
 
     // v0.0.527: обгортаємо важке оновлення DOM у requestAnimationFrame,
     // щоб не блокувати main thread під час перемикання табів.
     if (typeof window.requestAnimationFrame === "function") {
       window.requestAnimationFrame(() => {
-        container.innerHTML = html + forecastHtml;
+        container.innerHTML = html;
         initChartInteraction();
         bindChartModeToggles();
+        bindBattlesDashboard();
       });
     } else {
-      container.innerHTML = html + forecastHtml;
+      container.innerHTML = html;
       initChartInteraction();
       bindChartModeToggles();
+      bindBattlesDashboard();
     }
       } finally {
         renderAnalyticsInFlight = false;

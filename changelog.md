@@ -1,4 +1,18 @@
 
+# v0.0.605 — WebUI Analytics Refactor: Prestige Cap Alert + Unified Battles Dashboard
+- WebUI: видалено застарілі HTML-блоки `#battleTile` та `#battleStatsInline` з вкладки Гараж — вся статистика боїв тепер у єдиному дашборді на вкладці Аналітика.
+- WebUI: видалено застарілу функцію `renderBattleBar` та її виклик у `loadGarageStats` (DOM-елементи вже не існують).
+- WebUI: видалено невикористовуваний i18n-ключ `garage_battles` (UKR/ENG) — більше не використовується ніде.
+- WebUI: зачищено `webroot/index.html` — верстка Гаражу чиста, без "дірок" у сітці.
+- Аналітика: замінено застарілий текст «За поточним темпом до 1000 престижу залишилось...» на розумний Callout безпосередньо над графіком Престижу.
+- Аналітика: логіка `computePrestigeAlert` — ліміт 1000, прогноз на завтра = поточний + середньодобовий приріст (7-денне ковзне вікно); три стани: `max` (>=1000), `overflow` (завтра >1000, червона підсвітка + розрахунок `overflow`), `near` (>=850, помаранчева підсвітка), `safe`.
+- Аналітика: додано горизонтальну пунктирну лінію ліміту `y = 1000` на графік Престижу (`renderSparkline(..., maxLine)` → `.an-chart-max-line`).
+- Аналітика: об'єднано два блоки «Бої» в єдину картку `an-battles-dashboard` зі структурюю Header (заголовок + швидкий фільтр Today / 3 Days / 7 Days / All) → Quick KPIs (Всього боїв / Перемоги-Поразки winrate / Чистий профіт / Середній результат) → Split body (Динаміка боїв у часі | Розподіл за результатами).
+- Аналітика: KPI «Чистий профіт» та «Середній результат» тепер відображаються як нерозраховані — Garage.dat містить лише W/D/L, нагороди та очки за бій недоступні.
+- UI: повністю адаптивна сітка дашборду (4-колонна KPI-сітка → 2-колонна на ≤430px, split → одноколонна).
+- i18n: узгоджено ключі UKR/ENG — додано відсутні EN-переклади (`an_battles_win_short`, `an_battles_draw_short`, `an_battles_loss_short`, `an_battles_winrate`, `an_battles_net_unavailable`, `an_battles_avg_unavailable`, `an_battles_breakdown_note`, `an_battles_period_activity`, `an_battles_chart_unit`, `an_accuracy`).
+- CSS: додано стилі для `.an-prestige-alert*`, `.an-chart-max-line`, `.an-battles-*`, `.an-battles-breakdown-*`, `.an-battles-bar*`.
+
 # v0.0.604
 - Виправлено індентацію YAML у workflow release.yml (раним видаленні кроки "Update update.json" та "Create Release").
 - Введено non-interactive режим у customize.sh (прапорці UNATTENDED=1, SKIP_DISCLAIMER=1 або ! -t 0), щоб підтримувати WebUI / Magisk Manager.
