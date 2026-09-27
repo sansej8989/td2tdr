@@ -35,8 +35,13 @@ touch "$ALIVE_FILE" 2>/dev/null || true
 log() {
     echo "$(date '+%Y-%m-%d %H:%M:%S') $1" >> "$LOG"
     # Ротація логів: тримаємо лише останні LOG_MAX_LINES рядків
+    # Ротація логів: тримаємо лише останні LOG_MAX_LINES рядків.
+    # v0.0.616: тимчасовий файл із PID-суфіксом. Раніше шлях був статичним
+    # (${LOG}.tmp), тож паралельний log() з іншого процесу міг перезаписати
+    # файл у польоті, і mv переносив обрізаний вміст у sync.log.
+    # PID-суфікс робить файли неперетинними між процесами.
     if [ -f "$LOG" ] && [ "$(wc -l < "$LOG")" -gt "$LOG_MAX_LINES" ]; then
-        tail -n "$LOG_MAX_LINES" "$LOG" > "${LOG}.tmp" 2>/dev/null && mv -f "${LOG}.tmp" "$LOG"
+        tail -n "$LOG_MAX_LINES" "$LOG" > "${LOG}.tmp.$$" 2>/dev/null && mv -f "${LOG}.tmp.$$" "$LOG"
     fi
 }
 

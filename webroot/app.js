@@ -292,6 +292,10 @@
       // toast_sync_failed вже існував вище — переиспольстовуємо його.
       toast_refresh_failed: "Помилка оновлення",
       toast_sync_busy: "Синхронізація вже виконується",
+      // v0.0.616: відгук, коли ручне оновлення чекає на стартову перевірку.
+      toast_essential_in_progress: "Триває початкова перевірка — оновлення слідом…",
+      log_essential_wait: "Оновлення: чекаю завершення початкової перевірки",
+      log_essential_failed: "Початкова перевірка не вдалася — {message}",
       log_refresh_sync_failed: "Оновлення: синхронізація не вдалася — показую попередні дані",
       log_refresh_error: "Оновлення: помилка — {message}",
       log_sync_busy: "Синхронізація вже виконується у фоні — повторний запуск пропущено",
@@ -559,6 +563,10 @@ an_races_title: "⚔️ Статистика заїздів",
       // toast_sync_failed already existed above — reusing it.
       toast_refresh_failed: "Refresh error",
       toast_sync_busy: "Sync already in progress",
+      // v0.0.616: feedback when a manual refresh waits on the startup check.
+      toast_essential_in_progress: "Initial check in progress — refreshing next…",
+      log_essential_wait: "Refresh: waiting for the initial check to finish",
+      log_essential_failed: "Initial check failed — {message}",
       log_refresh_sync_failed: "Refresh: sync failed — showing previous data",
       log_refresh_error: "Refresh: error — {message}",
       log_sync_busy: "A sync is already running in the background — duplicate run skipped",
@@ -1500,17 +1508,29 @@ an_accuracy: "Forecast accuracy: {pct}%",
 
   // Just the part the default-active "Синхр." tab needs — used at startup
   // so the essential status shows up fast without waiting on Гараж/Аналітика.
+  //
+  // v0.0.616: startup check no longer shares `refreshInFlight` with the manual
+  // refresh, і зберігає свій проміс, до якого refreshAll() підв'язується.
+  //
+  // ВАЖЛИВО: `refreshEssential()` наразі НЕ викликається ніде — автооновлення
+  // було вимкнено свідомо (див. коментар у кінці DOMContentLoaded), тому
+  // `essentialInFlight` завжди null, а цей шлях — захисний (defensive): він
+  // прибере приховану спільність прапорців, якщо автоперевірку знову
+  // увімкнуть. Без розділення повторне ввімкнення відтворило б баг, за який
+  // клік «Оновити» під час старту глухо ігнорувався б.
+  let essentialInFlight = null;
+
   async function refreshEssential() {
-    if (refreshInFlight) return;
-    refreshInFlight = true;
-    try {
-      // Швидка попередня перевірка ДО синхронізації: якщо копія вже лежить
-      // у Download/td2tdr_sync (наприклад, service.sh відпрацював при boot),
-      // статус має стати зеленим НЕГАЙНО — без проміжного «Копії ще немає»,
-      // поки йде фонове оновлення файлів.
-      const pre = await checkGarageExists();
-      if (pre) {
-        dstReady = true;
+    if (essentialInFlight) return essentialInFlight;
+    essentialInFlight = (async () => {
+      try {
+        // Швидка попередня перевірка ДО синхронізації: якщо копія вже лежить
+        // у Download/td2tdr_sync (наприклад, service.sh відпрацював при boot),
+        // статус має стати зеленим НЕГАЙНО — без проміжного «Копії ще немає»,
+        // поки йде фонове оновлення файлів.
+        const pre = await checkGarageExists();
+        if (pre) {
+          dstReady = true;
         garageEverReady = true;
         saveStateCache(pre);
         updateSyncGate(true);
@@ -1527,12 +1547,31 @@ an_accuracy: "Forecast accuracy: {pct}%",
       }
       await syncFile();
       await refresh();
-    } finally {
-      refreshInFlight = false;
-    }
+      } finally {
+        // Звільняємо гвард startup. Проміс лишається доступним як
+        // essentialInFlight до завершення, щоб refreshAll() міг на нього
+        // підчекати (див. початок функції).
+        essentialInFlight = null;
+      }
+    })();
+    return essentialInFlight;
   }
 
   async function refreshAll() {
+    if (refreshInFlight) return;
+    // v0.0.616: стартова перевірка йде паралельно — не ігноруємо натискання,
+    // а спершу дочекаємося її завершення, щоб два записи history.jsonl
+    // не намагалися пройти одночасно.
+    if (essentialInFlight) {
+      toast(t("toast_essential_in_progress"));
+      addLog(t("log_essential_wait"), "I");
+      try {
+        await essentialInFlight;
+      } catch (e) {
+        // Стартова перевірка впала — все одно йдемо далі за ручним запитом.
+        addLog(t("log_essential_failed", { message: e && e.message ? e.message : String(e) }), "W");
+      }
+    }
     if (refreshInFlight) return;
     refreshInFlight = true;
     const refreshBtn = $("refreshBtn");
