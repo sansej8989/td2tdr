@@ -80,6 +80,29 @@ not yet packaged; move them under a tagged version once a release is cut.
 
 ---
 
+## [0.0.610] – 2026-09-27
+Release focus: **Analytics tab polish & data integrity** — dynamic forecast countdown, garage slots monotonic constraints, 3-row battles header layout, prestige alert cleanup, sync_now.sh regex fix.
+
+### Added
+- WebUI: **Dynamic forecast period slider countdown** — selecting a period now persists a target end-date timestamp; on each load the remaining days are recomputed so the slider counts down daily (e.g. 11 → 10 tomorrow).
+- WebUI: **Enforced non-negative (≥ 0) and monotonic non-decreasing constraints** for garage slots in `getGarageSnapshot()` — prevents visual regression when cached data fluctuates.
+- Shell: `sync_now.sh` garage count regex fixed (3901 → 3911) and date deduplication pattern hardened.
+
+### Changed
+- WebUI: **Removed obsolete KPI metrics** "Net Profit" and "Average Result" from the Battles dashboard — simplified to Total battles + Winrate only.
+- WebUI: **Restructured Analytics battles header** into 3 vertically stacked rows:
+  - Row 1: Block title (left-aligned)
+  - Row 2: Time period filter buttons (right-aligned)
+  - Row 3: Period summary counter "Зафіксовано за період" (left-aligned)
+- WebUI: **Prestige alert safe state** — duplicate checkmark removed; text shortened to single-line "Ліміт безпечний (є запас)" / "Cap safe (plenty of headroom)".
+
+### Fixed
+- WebUI: Garage slots monotonic floor now uses previous day's locked count as minimum, preventing false drops.
+- WebUI: Prestige alert "safe" state no longer renders redundant checkmark; fits on one line without wrapping.
+- Shell: `sync_now.sh` garage slot parsing regex corrected (3911 vs 3901) and deduplication logic stabilized.
+
+---
+
 ## [0.0.605] – 2026-09-11
 Release focus: **WebUI Analytics Refactor** — Prestige Cap Alert + unified Battles dashboard + dead-code cleanup.
 

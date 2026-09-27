@@ -384,7 +384,7 @@
       an_prestige_alert_overflow: "⚠️ Увага! Завтра очікується переповнення Престижу ({projected} / 1000). Ви ризикуєте втратити ~{overflow} очок. Витратьте очки вже сьогодні!",
       an_prestige_alert_near: "🔔 Наближення до ліміту: Наразі {current} / 1000 Престижу. При поточному прирості (+{gain} /день) ліміт буде досягнуто завтра або найближчими днями.",
       an_prestige_alert_max_line: "Максимум (1000)",
-      an_prestige_alert_safe: "✅ Ліміт не загрожує — є запас.",
+      an_prestige_alert_safe: "Ліміт безпечний (є запас)",
       an_battles_title: "⚔️ Аналітика та Статистика Боїв",
       an_battles_filter_today: "Сьогодні",
       an_battles_filter_3d: "3 дні",
@@ -392,8 +392,6 @@
       an_battles_filter_all: "Усе",
       an_battles_kpi_total: "Всього боїв",
       an_battles_kpi_winrate: "Перемоги / Поразки",
-      an_battles_kpi_net: "Чистий профіт",
-      an_battles_kpi_avg: "Середній результат",
       an_battles_timeline: "Динаміка боїв у часі",
       an_battles_breakdown: "Розподіл за результатами",
       an_battles_no_data: "Ще немає даних про бої — синхронізуйте гру",
@@ -405,8 +403,6 @@
       an_battles_loss_short: "L",
       an_battles_winrate: "{pct}% перемог",
       an_battles_chart_unit: "боїв / знімок",
-      an_battles_net_unavailable: "Немає даних про нагороди",
-      an_battles_avg_unavailable: "Немає даних про очки за бій",
       an_battles_breakdown_note: "Garage.dat зберігає лише W/D/L. Типи боїв, суперники та прибуток недоступні.",
       an_battles_period_activity: "Зафіксовано за період",
       settings_title: "Налаштування",
@@ -645,7 +641,7 @@ an_accuracy: "Forecast accuracy: {pct}%",
        an_prestige_alert_overflow: "⚠️ Warning! Tomorrow a Prestige overflow is expected ({projected} / 1000). You risk losing ~{overflow} points. Spend them today!",
        an_prestige_alert_near: "🔔 Approaching the cap: Currently {current} / 1000 Prestige. At the current pace (+{gain}/day) the cap will be reached in the coming days.",
        an_prestige_alert_max_line: "Max (1000)",
-       an_prestige_alert_safe: "✅ No cap risk — plenty of headroom.",
+       an_prestige_alert_safe: "Cap safe (plenty of headroom)",
        // v0.0.604: unified battles dashboard
        an_battles_title: "⚔️ Battles Analytics & Stats",
        an_battles_filter_today: "Today",
@@ -653,10 +649,8 @@ an_accuracy: "Forecast accuracy: {pct}%",
        an_battles_filter_7d: "7 d",
        an_battles_filter_all: "All",
        an_battles_kpi_total: "Total battles",
-       an_battles_kpi_winrate: "Wins / Losses",
-       an_battles_kpi_net: "Net profit",
-       an_battles_kpi_avg: "Avg result",
-       an_battles_timeline: "Battle activity over time",
+        an_battles_kpi_winrate: "Wins / Losses",
+        an_battles_timeline: "Battle activity over time",
        an_battles_breakdown: "Breakdown by battle type",
 an_battles_no_data: "No battle data yet — sync the game",
         an_battles_win: "W",
@@ -667,8 +661,6 @@ an_battles_no_data: "No battle data yet — sync the game",
         an_battles_loss_short: "L",
         an_battles_winrate: "{pct}% wins",
         an_battles_chart_unit: "battles / snapshot",
-        an_battles_net_unavailable: "No reward data",
-        an_battles_avg_unavailable: "No per-battle score data",
         an_battles_breakdown_note: "Garage.dat only stores W/D/L. Battle types, opponents and profit are unavailable.",
         an_battles_period_activity: "Recorded over the period",
         an_accuracy: "Forecast accuracy: {pct}%",
@@ -2096,7 +2088,7 @@ an_battles_no_data: "No battle data yet — sync the game",
     try {
       const cards = JSON.parse(m[1]);
       const total = cards.length;
-      const locked = cards.filter((c) => c.locked).length;
+      const locked = Math.max(0, cards.filter((c) => c.locked).length);
       const battleWins = cards.reduce((sum, c) => sum + (c.cardWins || 0), 0);
       const battleDraws = cards.reduce((sum, c) => sum + (c.cardDraws || 0), 0);
       const battleLosses = cards.reduce((sum, c) => sum + (c.cardLosses || 0), 0);
@@ -2141,7 +2133,15 @@ an_battles_no_data: "No battle data yet — sync the game",
       }
       if (gar) {
         if (gar.garageTotal != null) entry.garageTotal = gar.garageTotal;
-        if (gar.garageLocked != null) entry.garageLocked = gar.garageLocked;
+        if (gar.garageLocked != null) {
+          const prevLocked = history
+            .filter((h) => h.garageLocked != null && h.date !== today)
+            .sort((a, b) => a.date.localeCompare(b.date))
+            .map((h) => h.garageLocked)
+            .pop();
+          const floorLocked = prevLocked != null ? Math.max(0, prevLocked) : 0;
+          entry.garageLocked = Math.max(0, gar.garageLocked < floorLocked ? floorLocked : gar.garageLocked);
+        }
         if (gar.battleTotal != null) entry.battleTotal = gar.battleTotal;
         if (gar.battleWins != null) entry.battleWins = gar.battleWins;
         if (gar.battleDraws != null) entry.battleDraws = gar.battleDraws;
@@ -2173,11 +2173,26 @@ an_battles_no_data: "No battle data yet — sync the game",
   }
 
   // ---- analytics: forecast range state (slider, days) -----------------
+  let analyticsTargetDate = null;
   let analyticsPeriod = 30;
+  // v0.0.606: dynamic countdown — selecting a period persists a target end-date
+  // timestamp; on every load the remaining days are recomputed from it so the
+  // slider counts down daily (e.g. 11 → 10 tomorrow).
   try {
-    const raw = localStorage.getItem("td2tdr_an_period");
-    const n = parseInt(raw, 10);
-    if (!isNaN(n)) analyticsPeriod = Math.min(90, Math.max(1, n));
+    const targetRaw = localStorage.getItem("td2tdr_an_target_date");
+    if (targetRaw) {
+      const target = Number(targetRaw);
+      if (Number.isFinite(target) && target > Date.now()) {
+        analyticsTargetDate = target;
+        const remaining = Math.ceil((target - Date.now()) / (1000 * 60 * 60 * 24));
+        analyticsPeriod = Math.max(1, Math.min(90, remaining));
+      }
+    }
+    if (!analyticsTargetDate) {
+      const raw = localStorage.getItem("td2tdr_an_period");
+      const n = parseInt(raw, 10);
+      if (!isNaN(n)) analyticsPeriod = Math.min(90, Math.max(1, n));
+    }
   } catch (e) {}
   // v0.0.511: повзунок прогнозу живе ОКРЕМО від графіків — input-handler
   // оновлює ТІЛЬКИ блок прогнозу (`updateForecastBlock`), не викликаючи
@@ -2706,7 +2721,7 @@ function formatForecastDate(daysAhead) {
     }
     return `<div class="an-prestige-alert an-prestige-alert-safe" data-prestige-alert>
       <span class="an-prestige-alert-ico">✅</span>
-      <span>${t("an_prestige_alert_safe")}</span>
+      <span class="an-prestige-alert-safe-text">${t("an_prestige_alert_safe")}</span>
       <span class="an-prestige-alert-line">${t("an_prestige_alert_max_line")}</span>
     </div>`;
   }
@@ -2850,12 +2865,14 @@ function formatForecastDate(daysAhead) {
     return `
       <section class="an-battles-dashboard" data-battles-dashboard>
         <header class="an-battles-header">
-          <div class="an-battles-title-wrap">
+          <div class="an-battles-header-row an-battles-header-title">
             <h2 class="an-battles-title">${t("an_battles_title")}</h2>
-            <span class="an-battles-subtitle">${t("an_battles_period_activity")}</span>
           </div>
-          <div class="an-battles-filters" role="tablist" aria-label="battle period">
+          <div class="an-battles-header-row an-battles-header-filters" role="tablist" aria-label="battle period">
             ${filters}
+          </div>
+          <div class="an-battles-header-row an-battles-header-subtitle">
+            <span class="an-battles-subtitle">${t("an_battles_period_activity")}</span>
           </div>
         </header>
         <div class="an-battles-kpis">
@@ -2867,19 +2884,9 @@ function formatForecastDate(daysAhead) {
           <div class="an-battles-kpi">
             <span class="an-battles-kpi-label">${t("an_battles_kpi_winrate")}</span>
             <b class="an-battles-kpi-value">${totals.wins != null && totals.losses != null ? `${fmtNum(totals.wins)} / ${fmtNum(totals.losses)}` : "—"}</b>
-            <small class="an-battles-kpi-note ${winrate == null ? "" : winrate >= 50 ? "up" : "down"}">${winrate == null ? t("an_battles_avg_unavailable") : t("an_battles_winrate", { pct: winrate })}</small>
-          </div>
-          <div class="an-battles-kpi">
-            <span class="an-battles-kpi-label">${t("an_battles_kpi_net")}</span>
-            <b class="an-battles-kpi-value">—</b>
-            <small class="an-battles-kpi-note">${t("an_battles_net_unavailable")}</small>
-          </div>
-          <div class="an-battles-kpi">
-            <span class="an-battles-kpi-label">${t("an_battles_kpi_avg")}</span>
-            <b class="an-battles-kpi-value">—</b>
-            <small class="an-battles-kpi-note">${t("an_battles_avg_unavailable")}</small>
-          </div>
-        </div>
+             <small class="an-battles-kpi-note ${winrate == null ? "" : winrate >= 50 ? "up" : "down"}">${winrate == null ? t("an_battles_no_data") : t("an_battles_winrate", { pct: winrate })}</small>
+           </div>
+         </div>
         <div class="an-battles-body">
           <div class="an-battles-panel">
             <div class="an-battles-panel-title">${t("an_battles_timeline")}</div>
@@ -2890,7 +2897,7 @@ function formatForecastDate(daysAhead) {
             ${breakdownAvailable
               ? `<div class="an-battles-breakdown-bar">${breakdownBar}</div>
                 <div class="an-battles-breakdown-legend">${breakdownParts.map((part) => `<span><i style="background:${part.color}"></i>${part.label}: <b>${fmtNum(part.value)}</b></span>`).join("")}</div>`
-              : `<div class="an-battles-unavailable">${t("an_battles_net_unavailable")}</div>`}
+              : `<div class="an-battles-unavailable">${t("an_battles_no_data")}</div>`}
             <div class="an-battles-note">${t("an_battles_breakdown_note")}</div>
           </div>
         </div>
@@ -2940,11 +2947,13 @@ function formatForecastDate(daysAhead) {
       range.min = "1";
       range.max = "90";
       range.value = String(analyticsPeriod);
-      range.addEventListener("input", () => {
+       range.addEventListener("input", () => {
         analyticsPeriod = Math.max(1, Math.min(90, Number(range.value) || 1));
+        analyticsTargetDate = Date.now() + analyticsPeriod * 86400000;
         const lbl = $("analyticsRangeVal");
         if (lbl) lbl.textContent = `${analyticsPeriod}д`;
         try { localStorage.setItem("td2tdr_an_period", String(analyticsPeriod)); } catch (e) {}
+        try { localStorage.setItem("td2tdr_an_target_date", String(analyticsTargetDate)); } catch (e) {}
         updateForecastBlock();
       });
     }

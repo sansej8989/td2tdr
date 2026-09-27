@@ -89,20 +89,34 @@ record_history_snapshot() {
         local DECK_JSON
         DECK_JSON=$(grep -oE '^PlayerDeck=[^,]+,s\[.*\]' "$GARAGE_FILE" 2>/dev/null | head -n1 | sed -E 's/^PlayerDeck=[^,]+,s//')
         if [ -n "$DECK_JSON" ]; then
-            # Валідація через sed: підраховуємо об'єкти `{...}` на верхньому рівні.
-            # Спрощений підрахунок: кількість "locked":true/false.
-            G_TOTAL=$(echo "$DECK_JSON" | grep -oE '\{[^{}]*\}' | wc -l | tr -d ' ')
-            G_LOCKED=$(echo "$DECK_JSON" | grep -oE '\{[^{}]*"locked":(true|false)[^{}]*\}' | grep -c '"locked":true' || true)
+            # v0.0.606: підрахунок без [^{}]-обмеження. Попередній regex
+            # \{[^{}]*\} пропускав картки з вкладеними об'єктами (наприклад,
+            # tuning), що давало 3901 замість 3911. Рахуємо входження
+            # ключа "locked" — усі картки мають це поле.
+            G_TOTAL=$(echo "$DECK_JSON" | grep -oE '"locked":[[:space:]]*(true|false)' | wc -l | tr -d ' ')
+            G_LOCKED=$(echo "$DECK_JSON" | grep -oE '"locked":[[:space:]]*true' | wc -l | tr -d ' ')
         fi
     fi
 
     # --- 2. Patch I в shell: захист від порожнього знімка ---
-    if [ -z "$CASH$GLD$PRESTIGE$G_TOTAL" ]; then
-        log "WARN: history snapshot — усі ресурси порожні (user.dat пошкоджений?), знімок пропущено"
-        return 0
-    fi
+     if [ -z "$CASH$GLD$PRESTIGE$G_TOTAL" ]; then
+         log "WARN: history snapshot — усі ресурси порожні (user.dat пошкоджений?), знімок пропущено"
+         return 0
+     fi
 
-    # --- 3. Побудувати JSON-рядок нового запису ---
+     # v0.0.606: монотонне обмеження для garageLocked — кількість заблокованих
+     # слотів може лише зростати. Якщо поточне значення менше попереднього,
+     # використовуємо попереднє (захист від тимчасових помилок парсингу).
+     if [ -n "$G_LOCKED" ] && [ -f "$HISTORY" ]; then
+         local PREV_LOCKED=""
+         PREV_LOCKED=$(grep -v "\"date\":\"${TODAY}\"" "$HISTORY" 2>/dev/null | tail -n1 | grep -oE '"garageLocked":[[:space:]]*[0-9]+' | head -1 | sed -E 's/"garageLocked":[[:space:]]*//' 2>/dev/null || true)
+         if [ -n "$PREV_LOCKED" ] && [ "$G_LOCKED" -lt "$PREV_LOCKED" ] 2>/dev/null; then
+             log "history snapshot: garageLocked ($G_LOCKED < $PREV_LOCKED) — monotonic constraint: keeping previous value"
+             G_LOCKED="$PREV_LOCKED"
+         fi
+     fi
+
+     # --- 3. Побудувати JSON-рядок нового запису ---
     # Уникаємо залежностей від jq: формуємо вручну через printf.
     local ENTRY
     ENTRY=$(printf '{"date":"%s","ts":%s' "$TODAY" "$NOW_TS")
@@ -118,7 +132,7 @@ record_history_snapshot() {
     # просто створюємо новий файл). ---
     local EXISTING=""
     if [ -f "$HISTORY" ]; then
-        EXISTING=$(grep -v "^${TODAY}," "$HISTORY" 2>/dev/null || true)
+        EXISTING=$(grep -v "\"date\":\"${TODAY}\"" "$HISTORY" 2>/dev/null || true)
     fi
     local NEW_CONTENT
     if [ -n "$EXISTING" ]; then
