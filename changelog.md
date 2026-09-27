@@ -224,6 +224,24 @@ Release focus: **прибирання залишків логів та UX** — 
 
 ---
 
+## [0.0.617] – 2026-09-27
+Release focus: **прибирання коду** — видалення мертвої стартової перевірки.
+
+### Removed
+- WebUI: видалено **неактивну функцію `refreshEssential()`** та її гвард
+  `essentialInFlight` разом із блоком підв'язування в `refreshAll()`
+  (введеними у 0.0.616). Автооновлення було вимкнено свідомо, тож функція
+  не мала жодного виклику й лишалась мертвим кодом. Це закриває
+  `Known limitation` із 0.0.616.
+- WebUI: видалено i18n-ключі, які стали невикористовуваними після
+  видалення функції: `toast_essential_in_progress`, `log_essential_wait`,
+  `log_essential_failed` (UKR + ENG).
+- Жодних інших мертвих символів не виникло: усі допоміжні функції, які
+  використовував `refreshEssential()` (`saveStateCache`, `checkGarageExists`,
+  `formatBytes`, `setTabIndicator`), мають інших викликів і лишилися в коді.
+
+---
+
 ## [Unreleased]
 
 ---
