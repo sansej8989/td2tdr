@@ -288,6 +288,13 @@
       log_js_error: "ПОМИЛКА: {message}",
       log_js_unhandled: "НЕОБРОБЛЕНА ПОМИЛКА: {reason}",
       toast_synced: "Синхронізовано",
+      // v0.0.614: явні повідомлення про провал оновлення та дублікат запуску.
+      // toast_sync_failed вже існував вище — переиспольстовуємо його.
+      toast_refresh_failed: "Помилка оновлення",
+      toast_sync_busy: "Синхронізація вже виконується",
+      log_refresh_sync_failed: "Оновлення: синхронізація не вдалася — показую попередні дані",
+      log_refresh_error: "Оновлення: помилка — {message}",
+      log_sync_busy: "Синхронізація вже виконується у фоні — повторний запуск пропущено",
       toast_log_saved: "Журнал збережено: {path}",
       log_log_saved: "Журнал збережено в {path}",
       prompt_log_endpoint: "Введіть URL серверу для відправки журналу:",
@@ -548,6 +555,13 @@ an_races_title: "⚔️ Статистика заїздів",
       log_js_error: "ERROR: {message}",
       log_js_unhandled: "UNHANDLED ERROR: {reason}",
       toast_synced: "Synced",
+      // v0.0.614: explicit failure feedback for refresh and duplicate-run guard.
+      // toast_sync_failed already existed above — reusing it.
+      toast_refresh_failed: "Refresh error",
+      toast_sync_busy: "Sync already in progress",
+      log_refresh_sync_failed: "Refresh: sync failed — showing previous data",
+      log_refresh_error: "Refresh: error — {message}",
+      log_sync_busy: "A sync is already running in the background — duplicate run skipped",
       toast_log_saved: "Log saved: {path}",
       log_log_saved: "Log saved to {path}",
       prompt_log_endpoint: "Enter the server URL to send the log to:",
@@ -671,7 +685,6 @@ an_accuracy: "Forecast accuracy: {pct}%",
         an_races_chart_unit: "races / snapshot",
         an_races_breakdown_note: "Garage.dat only stores W/D/L. Race types, opponents and profit are unavailable.",
         an_races_period_activity: "Recorded over the period",
-        an_accuracy: "Forecast accuracy: {pct}%",
        settings_title: "Settings",
       settings_theme: "Theme",
       theme_auto: "Auto",
@@ -1415,6 +1428,10 @@ an_accuracy: "Forecast accuracy: {pct}%",
 
   // ---- full refresh: sync file + status check + garage + analytics -------
   let refreshInFlight = false;
+  // v0.0.614: окремий гвард для фонової синхронізації. Раніше його не було:
+  // кнопка «Синхронізувати та відкрити» звільнялась через ~300мс, поки
+  // sync_now.sh ще працював, тому повторний клік піднімав паралельний запуск.
+  let syncInFlight = false;
   let renderAnalyticsInFlight = false;
   // Готовність копії Garage.dat: true лише коли файл фізично знайдено
   // (stat успішний хоча б по одному зі шляхів). Керує доступністю кнопки
@@ -1519,10 +1536,26 @@ an_accuracy: "Forecast accuracy: {pct}%",
     if (refreshInFlight) return;
     refreshInFlight = true;
     const refreshBtn = $("refreshBtn");
-    if (refreshBtn) refreshBtn.classList.add("spinning");
+    if (refreshBtn) {
+      refreshBtn.classList.add("spinning");
+      // v0.0.614: кнопка більше не лишається «живою» під час роботи — раніше
+      // вона лише отримувала клас .spinning, тож виглядала доступною, хоча
+      // кліки глухо відкидалися гвардом refreshInFlight.
+      refreshBtn.disabled = true;
+    }
     try {
       $("statusMeta").textContent = t("sm_step_sync");
-      await syncFile();
+      // v0.0.614: результат syncFile() РАНІШЕ загубувався. Якщо копіювання
+      // впало, ми мовчки йшли далі оновлювати аналітику зі старими даними —
+      // користувач бачив «Оновлено» без жодного повідомлення про помилку.
+      const synced = await syncFile();
+      if (!synced) {
+        $("statusMeta").textContent = t("sm_step_sync");
+        toast(t("toast_sync_failed"));
+        setTabIndicator("sync", "bad");
+        addLog(t("log_refresh_sync_failed"), "E");
+        return;
+      }
       $("statusMeta").textContent = t("sm_step_check");
       // v0.0.611: гараж-вікнок видалено, тому loadGarageStats більше не викликаємо.
       // Залишаємо лише refreshInner + recordSnapshotIfNeeded.
@@ -1533,9 +1566,18 @@ an_accuracy: "Forecast accuracy: {pct}%",
       $("statusMeta").textContent = t("sm_step_analytics");
       await renderAnalytics();
       $("statusMeta").textContent = t("sm_step_done");
+    } catch (e) {
+      // v0.0.614: ланцюжок мав лише finally, тому будь-який reject з
+      // refreshInner()/renderAnalytics() вилітав як unhandled rejection —
+      // без сповіщення. Тепер помилка видима користувачеві й у журналі.
+      addLog(t("log_refresh_error", { message: e && e.message ? e.message : String(e) }), "E");
+      toast(t("toast_refresh_failed"));
     } finally {
       refreshInFlight = false;
-      if (refreshBtn) refreshBtn.classList.remove("spinning");
+      if (refreshBtn) {
+        refreshBtn.classList.remove("spinning");
+        refreshBtn.disabled = false;
+      }
       updateSyncGate(dstReady);
     }
   }
@@ -1759,15 +1801,22 @@ an_accuracy: "Forecast accuracy: {pct}%",
     // v0.0.514 Patch A: атомарний запис через .tmp + mv. Якщо процес або
     // пристрій впаде під час base64 -d, лишиться старий файл цілим —
     // .tmp просто не буде перейменовано у фінальне ім'я.
-    const tmpMain = `${HISTORY_FILE}.tmp`;
-    const tmpAlt  = `${altPath(HISTORY_FILE)}.tmp`;
+    //
+    // v0.0.615: tmp-шляди більше не фіксовані. Раніше WebUI писав у
+    // `history.jsonl.tmp`, і sync_now.sh — у те саме ім'я; `rm -f` одного
+    // з процесів зносив файл, який інший уже записав, а `mv -f` переносив
+    // обрізаний вміст у history.jsonl → втрата знімків. Тепер кожен запис
+    // має власний унікальний суфікс, тому writers не перетинаються.
+    // `rm -f` більше не потрібен (шляху не існує), але лишаємо `mv -f`.
+    const uniq = `${Date.now()}_${Math.floor(Math.random() * 1e6)}`;
+    const tmpMain = `${HISTORY_FILE}.tmp.${uniq}`;
+    const tmpAlt  = `${altPath(HISTORY_FILE)}.tmp.${uniq}`;
     const writeAtomic = async (finalPath, tmpPath) => {
-      // `rm -f` на випадок, якщо .tmp лишився від попереднього збою
-      // (cleanup). Потім записуємо у .tmp і атомарно перейменовуємо.
+      // Записуємо у унікальний .tmp і атомарно перейменовуємо у фінальне ім'я.
       // `chmod 0644` + `chown media_rw` щоб файл лишався доступним для
       // наступного читання з WebUI/Chrome (аналог sync_now.sh fixup).
       const r1 = await exec(
-        `rm -f ${shellQuote(tmpPath)} && echo ${shellQuote(b64)} | base64 -d > ${shellQuote(tmpPath)} && chmod 0644 ${shellQuote(tmpPath)} 2>/dev/null; mv -f ${shellQuote(tmpPath)} ${shellQuote(finalPath)}`
+        `echo ${shellQuote(b64)} | base64 -d > ${shellQuote(tmpPath)} && chmod 0644 ${shellQuote(tmpPath)} 2>/dev/null; mv -f ${shellQuote(tmpPath)} ${shellQuote(finalPath)}`
       ).catch(() => null);
       return r1;
     };
@@ -3388,15 +3437,40 @@ const breakdownBar = breakdownAvailable && breakdownTotal > 0
       // v0.0.527: guard від повторних кліків — блокуємо кнопку, поки
       // синхронізація і відкриття браузера не завершаться повністю.
       if (syncAndOpen.classList.contains("onclic") || syncAndOpen.disabled) return;
+      // v0.0.614: syncFile() навмисно не-awaited (non-blocking launch), тому
+      // кнопка поверталася в стан ready вже через ~300мс, поки копіювання
+      // могло тривати ще кілька секунд. Другий клік у цому вікні піднімав
+      // паралельний запуск sync_now.sh, який конкурує з першим за ті самі
+      // файли (історію знімків зокрема). Один синхроннізатор на весь UI.
+      if (syncInFlight) {
+        addLog(t("log_sync_busy"), "W");
+        toast(t("toast_sync_busy"));
+        return;
+      }
+      syncInFlight = true;
       syncAndOpen.disabled = true;
       syncAndOpen.classList.remove("validate", "error");
       syncAndOpen.classList.add("onclic");
 
+      // Фонова синхронізація: помилки більше НЕ ковтаються порожнім
+      // .catch(() => {}) — їх пишемо в журнал і показуємо тост.
+      let syncPromise = null;
       if (hasKsu()) {
         // v0.0.527: non-blocking launch — запускаємо sync у фоні,
         // не чекаємо повного завершення wait_stable перед відкриттям браузера.
         // Це зменшує затримку з ~5с до <500мс.
-        syncFile().then(() => refresh()).catch(() => {});
+        syncPromise = syncFile()
+          .then((ok) => {
+            // syncFile() уже сам записує конкретну причину збою в журнал
+            // (log_sync_error / log_copy_fail), тому тут лише показуємо тост —
+            // інакше в журналі з'явилося б оманливе «duplicate run skipped».
+            if (!ok) toast(t("toast_sync_failed"));
+            return refresh();
+          })
+          .catch((e) => {
+            addLog(t("log_sync_error", { reason: e && e.message ? e.message : String(e) }), "E");
+            toast(t("toast_sync_failed"));
+          });
       }
 
       // Невелика затримка, щоб синхронізація точно стартувала,
@@ -3404,7 +3478,6 @@ const breakdownBar = breakdownAvailable && breakdownTotal > 0
       await new Promise((r) => setTimeout(r, 300));
       const opened = await openUrl("https://www.topdrivesrecords.com/me");
       syncAndOpen.classList.remove("onclic");
-      syncAndOpen.disabled = false;
       if (opened) {
         syncAndOpen.classList.add("validate");
         setTimeout(() => syncAndOpen.classList.remove("validate"), 1250);
@@ -3412,6 +3485,30 @@ const breakdownBar = breakdownAvailable && breakdownTotal > 0
       } else {
         syncAndOpen.classList.add("error");
         setTimeout(() => syncAndOpen.classList.remove("error"), 2500);
+      }
+
+      // Кнопку блокуємо до завершення ФОНОВОЇ синхронізації, а не лише до
+      // відкриття браузера — інакше гвард вище не захищає від другого запуску.
+      if (syncPromise) {
+        try {
+          await syncPromise;
+        } finally {
+          syncInFlight = false;
+          // v0.0.614: updateSyncGate() навмисно НІЧОГО не робить, поки на
+          // кнопці лишився клас .validate/.error (вони знімаються за таймером
+          // на 1250/2500мс). Якщо синхронізація встигла завершитися швидше,
+          // стан busy існував би — і кнопка назавжди лишилася б disabled.
+          // Тому знімаємо прапорці самі, а gate оновлюємо після цього.
+          syncAndOpen.classList.remove("onclic");
+          syncAndOpen.disabled = false;
+          updateSyncGate(dstReady);
+        }
+      } else {
+        // Демо-режим без ksu: фону немає, тож звільняємо одразу.
+        syncInFlight = false;
+        syncAndOpen.classList.remove("onclic");
+        syncAndOpen.disabled = false;
+        updateSyncGate(dstReady);
       }
     });
 

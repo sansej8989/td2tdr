@@ -30,6 +30,41 @@ pause() {
     sleep 0.3 2>/dev/null || sleep 1
 }
 
+# ----- v0.0.614: PID-lock проти паралельних запусків -----
+# WebUI «Синхронізувати та відкрити» запускає цей скрипт у фоні і не чекає
+# завершення, тому другий клік (або вже запущений service.sh) піднімав
+# паралельний процес, який змагався б за файли копій та запис історії.
+# `mkdir` атомарний і не потребує flock (якого на Android може не бути).
+LOCK_DIR="${TMPDIR:-/data/local/tmp}/td2tdr_sync.lock"
+
+acquire_lock() {
+    local attempt=0 owner=""
+    while [ "$attempt" -lt 2 ]; do
+        if mkdir "$LOCK_DIR" 2>/dev/null; then
+            echo "$$" > "$LOCK_DIR/pid" 2>/dev/null
+            # Знімаємо блокування на будь-який вихід, включно з exit/error.
+            trap 'rm -rf "$LOCK_DIR" 2>/dev/null' EXIT INT TERM
+            return 0
+        fi
+        # Протухле блокування (власник убитий/перезавантаження) — перехоплюємо.
+        owner=$(cat "$LOCK_DIR/pid" 2>/dev/null)
+        if [ -n "$owner" ] && ! kill -0 "$owner" 2>/dev/null; then
+            log "PID-lock: процес $owner більше не живий — перехоплюємо блокування"
+            rm -rf "$LOCK_DIR" 2>/dev/null
+            attempt=$((attempt + 1))
+            continue
+        fi
+        break
+    done
+    return 1
+}
+
+if ! acquire_lock; then
+    log "PID-lock: попередній sync_now.sh ще виконується — запуск пропущено"
+    echo "sync already in progress" >&2
+    exit 0
+fi
+
 # ----- v0.0.516: фоновий автозапис знімка в history.jsonl -----
 # Аргументи:
 #   $1 = DST_DIR (primary)         напр. /data/media/0/Download/td2tdr_sync
@@ -51,8 +86,13 @@ record_history_snapshot() {
     local GARAGE_FILE="$4"
     local HISTORY="$PRIMARY_DIR/history.jsonl"
     local HISTORY_ALT="$ALT_DIR/history.jsonl"
-    local HISTORY_TMP="$HISTORY.tmp"
-    local HISTORY_ALT_TMP="$HISTORY_ALT.tmp"
+    # v0.0.615: унікальний tmp на кожен запуск ($$ = PID). Раніше шлях був
+    # фіксованим (history.jsonl.tmp), тому WebUI saveHistory() і цей скрипт
+    # конкурували за той самий файл: `rm -f` одного з процесів зносив файл,
+    # який інший уже записав, а `mv -f` переносив обрізаний вміст у history.jsonl.
+    # PID-суфікс робить файли неперетинними між процесами.
+    local HISTORY_TMP="$HISTORY.tmp.$$"
+    local HISTORY_ALT_TMP="$HISTORY_ALT.tmp.$$"
     local TODAY
     TODAY=$(date +%Y-%m-%d)
     local NOW_TS
