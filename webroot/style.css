@@ -734,6 +734,32 @@ body {
   color: var(--text);
 }
 
+/* v0.0.613: підпис релізу (опис після номера версії, напр. «— Automatic
+   Update Fix») — менш помітний, ні сам номер. */
+.cl-version-note {
+  flex: 0 1 auto;
+  min-width: 0;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--text-dimmer);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* v0.0.613: заголовок підрозділу всередині релізу (### Fixed / ### Changed) */
+.cl-group-title {
+  padding: 10px 14px 4px;
+  font-size: 9.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-dimmer);
+}
+.cl-group-title + .cl-list {
+  padding-top: 0;
+}
+
 .cl-chevron {
   flex-shrink: 0;
   color: var(--text-dimmer);

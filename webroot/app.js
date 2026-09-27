@@ -241,6 +241,7 @@
       cl_loading: "Завантаження…",
       cl_current: "ПОТОЧНА",
       cl_archive: "АРХІВ",
+      cl_unreleased: "НЕ ВИПУЩЕНО",
       cl_load_error: "Не вдалося завантажити changelog.md",
       log_code: "код {code}",
       log_sync_error: "Помилка синхронізації: {reason}",
@@ -500,6 +501,7 @@ an_races_title: "⚔️ Статистика заїздів",
       cl_loading: "Loading…",
       cl_current: "CURRENT",
       cl_archive: "ARCHIVE",
+      cl_unreleased: "UNRELEASED",
       cl_load_error: "Couldn't load changelog.md",
       log_code: "code {code}",
       log_sync_error: "Sync error: {reason}",
@@ -2881,18 +2883,83 @@ const breakdownBar = breakdownAvailable && breakdownTotal > 0
     return escapeHtml(s).replace(/"/g, "&quot;").replace(/'/g, "&#39;");
   }
 
+  // v0.0.613: заголовки релізів у changelog.md мають кілька форм:
+  //   # v0.0.527 — опис            — старий формат (вбудований CHANGELOG_FALLBACK)
+  //   ## [0.0.612] – 2026-09-27    — Keep a Changelog
+  //   ## [Unreleased]
+  //   ### Fixed / ### Changed      — підрозділи ВНУТРИ релізу (H3), не версії
+  //   # Changelog                  — заголовок документа, не реліз
+  // Стара регулярка /^#\s+(.+)/ ловила лише H1 без номера версії, тому всі
+  // секції 0.0.60x+ залишалися невидимими у вікні «Історія версій».
+  const CL_VERSION_RE = /^\[?\s*v?([0-9]+(?:\.[0-9]+)+(?:[-.][0-9A-Za-z.]+)?)\s*\]?(?:\s*[–—-]\s*(.*))?$/;
+  const CL_UNRELEASED_RE = /^\[\s*unreleased\s*\]$/i;
+  const CL_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+  // Природне порівняння версій за зростанням: повертає <0, коли a < b.
+  // «0.0.505-beta» має бути меншим за «0.0.505» (реліз новіший за бету).
+  function compareVersionsAsc(a, b) {
+    const split = (v) => {
+      const s = String(v || "");
+      const dash = s.indexOf("-");
+      const nums = (dash === -1 ? s : s.slice(0, dash)).split(".").map((n) => parseInt(n, 10) || 0);
+      return { nums, pre: dash === -1 ? "" : s.slice(dash + 1) };
+    };
+    const pa = split(a);
+    const pb = split(b);
+    for (let i = 0; i < Math.max(pa.nums.length, pb.nums.length); i++) {
+      const d = (pa.nums[i] || 0) - (pb.nums[i] || 0);
+      if (d) return d;
+    }
+    if (!!pa.pre !== !!pb.pre) return pa.pre ? -1 : 1;
+    return String(pa.pre).localeCompare(String(pb.pre));
+  }
+
   function parseChangelog(md) {
-    const lines = md.replace(/\r/g, "").split("\n");
+    const lines = String(md || "").replace(/\r/g, "").split("\n");
     const versions = [];
     let current = null;
-    for (const line of lines) {
-      const verMatch = line.match(/^#\s+(.+)/);
-      if (verMatch) {
-        current = { title: verMatch[1].trim(), items: [] };
-        versions.push(current);
+    let section = "";
+    for (const raw of lines) {
+      const line = raw.replace(/\s+$/, "");
+
+      // H3+ — підрозділ усередині поточного релізу.
+      const sectionMatch = line.match(/^#{3,}\s+(.+)$/);
+      if (sectionMatch) {
+        section = sectionMatch[1].trim();
         continue;
       }
+
+      // H1/H2 — заголовок релізу.
+      const headMatch = line.match(/^#{1,2}\s+(.+)$/);
+      if (headMatch) {
+        const rest = headMatch[1].trim();
+        if (CL_UNRELEASED_RE.test(rest)) {
+          current = { version: "Unreleased", date: "", note: "", isUnreleased: true, items: [] };
+          current.title = current.version;
+          versions.push(current);
+          section = "";
+          continue;
+        }
+        const vm = rest.match(CL_VERSION_RE);
+        // Без номера версії це не реліз, а напр. «# Changelog» — пропускаємо.
+        if (!vm) continue;
+        const note = (vm[2] || "").trim();
+        const isDate = CL_DATE_RE.test(note);
+        current = {
+          version: vm[1],
+          date: isDate ? note : "",
+          note: isDate ? "" : note,
+          isUnreleased: false,
+          items: [],
+        };
+        current.title = current.date ? `${current.version} – ${current.date}` : current.version;
+        versions.push(current);
+        section = "";
+        continue;
+      }
+
       if (!current) continue;
+
       const subMatch = line.match(/^\s{2,}-\s+(.+)/);
       const topMatch = line.match(/^-\s+(.+)/);
       if (subMatch && current.items.length) {
@@ -2900,30 +2967,67 @@ const breakdownBar = breakdownAvailable && breakdownTotal > 0
         last.sub = last.sub || [];
         last.sub.push(subMatch[1].trim());
       } else if (topMatch) {
-        current.items.push({ text: topMatch[1].trim() });
+        current.items.push({ text: topMatch[1].trim(), section });
       }
     }
+
+    // changelog.md історично не відсортований newest-first (0.0.611 стоїть
+    // вище за 0.0.612). Сортуємо за спаданням версії, щоб «Поточна» не
+    // дісталася старішому релізу, а [Unreleased] не привласнював би бейдж.
+    versions.sort((a, b) => {
+      if (!!a.isUnreleased !== !!b.isUnreleased) return a.isUnreleased ? 1 : -1;
+      if (a.isUnreleased && b.isUnreleased) return 0;
+      return -compareVersionsAsc(a.version, b.version);
+    });
     return versions;
   }
 
-  function renderChangelog(versions) {
-    if (!versions.length) return `<div class="garage-empty">${t("cl_empty")}</div>`;
-    return versions.map((v, idx) => {
-      const isLatest = idx === 0;
-      const itemsHtml = v.items.map((it) => {
+  // v0.0.613: угруповання пунктів за підрозділами (### Fixed / ### Changed).
+  // Сумісно зі старими записами без підрозділів — тоді рендериться
+  // звичайний список, як раніше.
+  function renderChangelogItems(items) {
+    if (!items || !items.length) return "";
+    const groups = [];
+    for (const it of items) {
+      const sec = it.section || "";
+      const last = groups[groups.length - 1];
+      if (last && last.section === sec) last.items.push(it);
+      else groups.push({ section: sec, items: [it] });
+    }
+    return groups.map((g) => {
+      const itemsHtml = g.items.map((it) => {
         const subHtml = it.sub && it.sub.length
           ? `<ul class="cl-sub">${it.sub.map((s) => `<li>${escapeHtml(s)}</li>`).join("")}</ul>`
           : "";
         return `<li>${escapeHtml(it.text)}${subHtml}</li>`;
       }).join("");
+      const groupTitle = g.section
+        ? `<div class="cl-group-title">${escapeHtml(g.section)}</div>`
+        : "";
+      return `${groupTitle}<ul class="cl-list">${itemsHtml}</ul>`;
+    }).join("");
+  }
+
+  function renderChangelog(versions) {
+    if (!versions.length) return `<div class="garage-empty">${t("cl_empty")}</div>`;
+    return versions.map((v, idx) => {
+      // Бейдж «Поточна» — лише для найновішого випущеного релізу.
+      const isLatest = idx === 0 && !v.isUnreleased;
+      const badgeText = v.isUnreleased
+        ? t("cl_unreleased")
+        : (isLatest ? t("cl_current") : t("cl_archive"));
+      const noteHtml = v.note
+        ? `<span class="cl-version-note">${escapeHtml(v.note)}</span>`
+        : "";
       return `
         <div class="cl-entry${isLatest ? " cl-latest expanded" : ""}">
           <div class="cl-head">
-            <span class="cl-badge">${isLatest ? t("cl_current") : t("cl_archive")}</span>
+            <span class="cl-badge">${escapeHtml(badgeText)}</span>
             <span class="cl-version">${escapeHtml(v.title)}</span>
+            ${noteHtml}
             <svg class="cl-chevron" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
           </div>
-          <div class="cl-body"><ul class="cl-list">${itemsHtml}</ul></div>
+          <div class="cl-body">${renderChangelogItems(v.items)}</div>
         </div>
       `;
     }).join("");
