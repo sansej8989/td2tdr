@@ -20,10 +20,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v5
-        with:
-          # Повна історія потрібна, щоб без проблем запушити коміт
-          # оновленого update.json назад у master
-          fetch-depth: 0
 
       - name: Read version
         id: version
@@ -86,8 +82,12 @@ jobs:
             cp changelog.md release_body.md
           fi
 
-      - name: Update update.json
+      - name: Update update.json (release artifact only)
         run: |
+          # Формуємо update.json із підрахованим sha256. Файл НЕ комітиться
+          # в master — він лише прикріплюється до релізу (див. наступний крок).
+          # Значення version/versionCode/zipUrl у репозиторії виставляє
+          # автор релізу локально разом із version bump у module.prop.
           python3 <<'EOF'
           import json
           ver = "${{ steps.version.outputs.VERSION }}"
@@ -106,46 +106,11 @@ jobs:
 
       - name: Attach update.json + checksum to release artifacts
         run: |
-          # Копія оновленого update.json і файл хеша прикріплюються до релізу,
-          # щоб значення було доступне навіть до мержу коміту в master
+          # Оновлений update.json (із підрахованим sha256) і файл хеша
+          # прикріплюються до релізу. Це ЄДИНЕ місце, куди потрапляє
+          # значення sha256 — жодного коміту в master більше не робимо.
           cp update.json dist/update.json
           echo "${{ steps.sha.outputs.SHA256 }}  td2tdr_v${{ steps.version.outputs.VERSION }}.zip" > "dist/td2tdr_v${{ steps.version.outputs.VERSION }}.zip.sha256"
-
-      - name: Update update.json on master via API
-        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          set -x
-          if git diff --quiet update.json; then
-            echo "update.json не змінився — коміт пропущено"
-            exit 0
-          fi
-          # Get current file SHA from master
-          SHA=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
-            -H "Accept: application/vnd.github.v3+json" \
-            "https://api.github.com/repos/${{ github.repository }}/contents/update.json?ref=master" \
-            | jq -r '.sha')
-          echo "Current file SHA: $SHA"
-          
-          # Encode new content
-          CONTENT=$(base64 -w0 update.json)
-          
-          # Update file via API
-          RESPONSE=$(curl -s -X PUT -H "Authorization: token $GITHUB_TOKEN" \
-            -H "Accept: application/vnd.github.v3+json" \
-            "https://api.github.com/repos/${{ github.repository }}/contents/update.json" \
-            -d "{\"message\":\"chore: bump update.json to v${{ steps.version.outputs.VERSION }}\",\"content\":\"$CONTENT\",\"sha\":\"$SHA\",\"branch\":\"master\"}")
-          
-          echo "API Response: $RESPONSE"
-          
-          # Check for errors
-          if echo "$RESPONSE" | jq -e '.message' > /dev/null; then
-            echo "Error updating file: $(echo "$RESPONSE" | jq -r '.message')"
-            exit 1
-          fi
-          
-          echo "update.json updated successfully on master via API"
 
       - name: Create Release
         uses: softprops/action-gh-release@v2

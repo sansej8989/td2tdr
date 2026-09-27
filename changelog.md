@@ -118,73 +118,42 @@ not yet packaged; move them under a tagged version once a release is cut.
 
 ---
 
-## [Unreleased]
-
-### Added
-- CI/CD: GitHub Actions release workflow (`release.yml`) now uses `softprops/action-gh-release@v2`,
-  computes the real **SHA-256** checksum of the release archive and writes it back to
-  `update.json` via the GitHub API (no more placeholder hashes).
-- CI/CD: non-interactive installer mode in `customize.sh` (flags `UNATTENDED=1`,
-  `SKIP_DISCLAIMER=1`, or `! -t 0`) so installs launched from WebUI / Magisk Manager
-  no longer block on Volume-Key prompts.
-- WebUI: Prestige **cap alert** — a smart Callout rendered directly above the prestige
-  sparkline. `computePrestigeAlert()` evaluates `current >= 850` and
-  `projectedTomorrow = current + dailyGain` (7-day active-day window) and emits four
-  states: `max`, `overflow` (red, shows estimated lost points), `near` (amber),
-  `safe`.
-- WebUI: horizontal dashed limit line at `y = 1000` on the prestige chart
-  (`renderSparkline(..., maxLine)` → `.an-chart-max-line` CSS class).
-- WebUI: **unified Battles dashboard** (`an-battles-dashboard`) — a single card with
-  Header (title + Today / 3-Days / 7-Days / All quick filter) → Quick KPIs
-  (Total battles / Win-Loss with winrate color indicator / Net profit / Avg result) →
-  Split body (battle activity timeline | W/D/L breakdown stacked bar + legend).
-- WebUI: all new i18n keys for the prestige alert and battles dashboard (UKR + ENG).
-- WebUI: `will-change: transform` on sparkline containers for smoother mobile scroll.
+## [0.0.614] – 2026-09-27
+Release focus: **CI/CD** — release workflow більше не пише в `master`; **changelog** — прибирання накопичених записів.
 
 ### Changed
-- WebUI: replaced the stale "За поточним темпом до 1000 престижу залишилось…" forecast
-  text with the dynamic Prestige Cap Alert Callout above the chart.
-- WebUI: `renderSparkline()` gained an optional `maxLine` parameter; `renderMetric()`
-  gained optional `maxLine` + `preChartHtml` parameters so the alert renders inline
-  above any metric chart.
-- WebUI: Prestige forecast is now rendered by the alert system;
-  `renderPrestigeForecastHtml()` is kept as an isolated block independent of the
-  period slider (charts no longer repaint when the slider moves).
-- Analytics: Prestige forecast formula now uses **active daily gain** (7-day rolling
-  window over days with positive deltas only), ignoring rest/no-play days.
-- Analytics: chart modes toggle stays only next to its chart; cumulative is the
-  default when `localStorage` is empty.
-- Garage: Battles scale tile moved from the Garage tab to the Analytics tab with
-  dynamics (daily Δ mode, W/D/L counters).
+- CI/CD: release workflow **більше не комітить `update.json` у `master`**. Крок
+  «Update update.json on master via API» (PUT через Contents API) прибрано, разом
+  із `fetch-depth: 0` і коментарем про пуш у гілку. Причина: кожен реліз
+  породжував додатковий коміт від CI одразу після пушу тега, через що наступний
+  локальний реліз вимагав ручного `stash` → `rebase` → `stash pop`, щоб не
+  затерти згенерований SHA-256. `master` тепер лишається чистим, а наступні
+  релізи не створюють дрейфу гілки.
+- CI/CD: підрахований **SHA-256 публікується як асет релізу**
+  (`dist/update.json` + `td2tdr_v<ver>.zip.sha256`), а не як коміт у гілку.
+  Значення лишається доступним для користувачів і CI, але більше не змінює
+  історію `master`.
 
 ### Removed
-- WebUI: removed dead HTML blocks `#battleTile`, `#battleStatsInline` and their
-  children (`#battleBarBg`, `#battleBarText`, `#battleWins/Draws/Losses`) from the
-  Analytics card — superseded by the unified Battles dashboard.
-- WebUI: removed the dead `renderBattleBar()` function and its `loadGarageStats()`
-  call (DOM targets no longer exist).
-- WebUI: removed unused i18n key `garage_battles` (UKR + ENG).
-- WebUI: removed KPI dashboard (Net / Avg / Max / Trend) and the
-  "Песиміст / Оптиміст" forecast scenarios; removed unused keys
-  `an_period_*`, `an_kpi_*`, `an_forecast_scenarios/*`.
-- WebUI: removed the legacy Garage donut diagram — left only the clean upgrade
-  stack distribution.
+- Changelog: секція `[Unreleased]` очищено від ~25 накопичених пунктів, які
+  давно були реалізовані (Prestige Cap Alert, unified Battles dashboard,
+  `maxLine`/`preChartHtml` у `renderSparkline`/`renderMetric`, неінтерактивний
+  інсталятор `UNATTENDED`/`SKIP_DISCLAIMER`, атомарні записи `history.jsonl`,
+  W/D/L у `getGarageSnapshot()`, видалення мертвих блоків battles тощо). Усі
+  ці зміни вже описані у відповідних секціях випущених релізів (0.0.527,
+  0.0.605, 0.0.610), тому дублювати їх у черзі майбутньої роботи не було сенсу.
 
-### Fixed
-- CI/CD: repaired `release.yml` indentation so the "Update update.json" and
-  "Create Release" steps are no longer accidentally skipped (the non-fast-forward
-  push failure is now avoided via a `rebase` before push).
-- CI/CD: GitHub Actions now pushes the `update.json` commit explicitly to `master`
-  on tag push and uses `git fetch --tags` + retry loop to dodge replication lag.
-- CI/CD: SHA-256 is now computed by CI itself (`sha256sum`) instead of being
-  hard-coded, eliminating the mismatch seen in earlier releases.
-- Analytics: protected against negative projected balance via `Math.max(0, projected)`.
-- WebUI: `getGarageSnapshot()` now computes W/D/L as separate
-  `battleWins`/`battleDraws`/`battleLosses` totals (not just a sum).
-- WebUI: installer log truncation fixed; full stdout/stderr captured to
-  `/data/local/tmp/td2tdr_install.log` with a copy button in the UI.
-- Shell: atomic `history.jsonl` writes (`tmp` + `mv -f`) survive unexpected reboots;
-  daily dedup keeps one canonical row per date; dirty rows are silently skipped.
+### Known limitation
+- Оскільки CI більше не записує `sha256` у `update.json` у `master`, значення
+  у гілці лишається порожнім (`""`). Перевірка цілісності архіву в застосунку
+  guard-иться умовою `if (remote.sha256)`, тому оновлення **працюватиме без
+  неї** — але без перевірки хеша. Актуальний хеш публікується в асетах
+  релізу; за потреби його можна перевірити вручну. Повернення перевірки
+  можливе через вбудований маніфест у ZIP, підпис релізу або окрему гілку `ci/`.
+
+---
+
+## [Unreleased]
 
 ---
 
