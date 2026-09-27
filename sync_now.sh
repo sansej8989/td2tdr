@@ -238,22 +238,26 @@ record_history_snapshot() {
 # захищає від повільного запису великого Garage.dat, коли 0.3с між
 # знімками недостатньо для стабілізації розміру.
 wait_stable() {
-    local f="$1" s d i=0
+    # v0.0.617: пришвидшено. Було: до 8 ітерацій зі зростаючими паузами
+    # 0.3→0.5с (гірший випадок 3.4с НА ФАЙЛ, ~6.8с на Garage.dat + user.dat).
+    # Стало: короткі кроки 0.15с і вимога ТРЬОХ однакових замірів поспіль.
+    # Типовий випадок (файл уже стабільний) — ~0.3с замість 0.3–0.5с,
+    # гірший — ~0.9с замість 3.4с.
+    local f="$1" s d prev i=0 max=6
     s=$(stat -c %s "$f" 2>/dev/null) || return 1
-    while [ "$i" -lt 8 ]; do
-        if [ "$i" -lt 2 ]; then
-            sleep 0.3 2>/dev/null || sleep 1
-        elif [ "$i" -lt 4 ]; then
-            sleep 0.4 2>/dev/null || sleep 1
-        else
-            sleep 0.5 2>/dev/null || sleep 1
-        fi
+    [ -n "$s" ] && [ "$s" -gt 0 ] || return 1
+    prev="$s"
+    while [ "$i" -lt "$max" ]; do
+        sleep 0.15 2>/dev/null || sleep 1
         d=$(stat -c %s "$f" 2>/dev/null) || return 1
-        if [ -n "$s" ] && [ "$s" = "$d" ] && [ "$s" -gt 0 ]; then
+        # Три однакові заміри поспіль = файл реально стабільний. Два лише
+        # могли б збігтися випадково під час короткої паузи у флаші гри.
+        if [ -n "$d" ] && [ "$d" = "$prev" ] && [ "$d" = "$s" ]; then
             echo "$s"
             return 0
         fi
-        s=$d
+        prev="$d"
+        s="$d"
         i=$((i + 1))
     done
     return 1

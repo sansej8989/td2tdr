@@ -962,27 +962,37 @@ an_accuracy: "Forecast accuracy: {pct}%",
   // 2) якщо stat не спрацював ніде (транзієнт FUSE одразу після перезапису
   //    файла, відсутність stat-бінарії тощо) — резервний probe через
   //    test -s + wc -c, тобто інший код-шлях усередині shell.
-  async function checkGarageExists() {
-    const seen = new Set();
+  async function checkGarageExists(opts) {
+    // v0.0.617: опційні повторні спроби. Android FUSE/MediaProvider не завжди
+    // одразу показує щойно записаний файл у /storage/emulated/0 — саме через це
+    // сам sync_now.sh перевіряє копію з ретраями (verify_file, 3×0.5с), а JS
+    // нижче робив ОДИН stat без повтору. Через це вдале копіювання доповнювалося
+    // хибним «Копіювання у Download: ПОМИЛКА», доки кеш FUSE не «дозрів».
+    const retries = (opts && opts.retries) || 0;
+    const delayMs = (opts && opts.delayMs) || 400;
     const candidates = [];
+    const seen = new Set();
     for (const p of [garagePathHint, DST, DST_ALT]) {
       if (p && !seen.has(p)) { seen.add(p); candidates.push(p); }
     }
-    let st = await statFirst(candidates);
-    if (st) {
-      // Запам'ятовуємо конкретний вдалий шлях для пріоритету наступного разу
-      for (const p of candidates) {
-        const one = await statPath(p);
-        if (one) { garagePathHint = p; break; }
+    for (let attempt = 0; attempt <= retries; attempt++) {
+      if (attempt > 0) await new Promise((r) => setTimeout(r, delayMs));
+      const st = await statFirst(candidates);
+      if (st) {
+        // Запам'ятовуємо конкретний вдалий шлях для пріоритету наступного разу
+        for (const p of candidates) {
+          const one = await statPath(p);
+          if (one) { garagePathHint = p; break; }
+        }
+        return st;
       }
-      return st;
-    }
-    // Резервний probe (без stat-бінарії)
-    for (const p of candidates) {
-      const r = await exec(`test -s ${shellQuote(p)} && wc -c < ${shellQuote(p)}`);
-      if (r.errno === 0 && Number(r.stdout.trim()) > 0) {
-        garagePathHint = p;
-        return { size: Number(r.stdout.trim()), mtime: Math.floor(Date.now() / 1000) };
+      // Резервний probe (без stat-бінарії)
+      for (const p of candidates) {
+        const r = await exec(`test -s ${shellQuote(p)} && wc -c < ${shellQuote(p)}`);
+        if (r.errno === 0 && Number(r.stdout.trim()) > 0) {
+          garagePathHint = p;
+          return { size: Number(r.stdout.trim()), mtime: Math.floor(Date.now() / 1000) };
+        }
       }
     }
     return null;
@@ -1069,7 +1079,12 @@ an_accuracy: "Forecast accuracy: {pct}%",
       }
       // Верифікація результату копіювання: скрипт міг вийти з 0, не створивши
       // файл. Чітко фіксуємо в Журналі: УСПІХ (з розміром) або ПОМИЛКА.
-      const st = await checkGarageExists();
+      // v0.0.617: 3 спроби з паузою 400мс. Скрипт уже перевірив копію
+      // (verify_file з ретраями), але його перевірка йде через /data/media/0,
+      // тоді як браузер читає /storage/emulated/0 — FUSE-кеш другого шляху
+      // ще може бути не «дозрілим», і раніше це давало хибну помилку
+      // «Копіювання у Download: ПОМИЛКА» навіть після успішного копіювання.
+      const st = await checkGarageExists({ retries: 3, delayMs: 400 });
       if (st && st.size > 0) {
         garageEverReady = true;
         dstReady = true;
@@ -3458,28 +3473,28 @@ const breakdownBar = breakdownAvailable && breakdownTotal > 0
         setTimeout(() => syncAndOpen.classList.remove("error"), 2500);
       }
 
-      // Кнопку блокуємо до завершення ФОНОВОЇ синхронізації, а не лише до
-      // відкриття браузера — інакше гвард вище не захищає від другого запуску.
+      // Кнопку звільняємо одразу після відкриття браузера — НЕ чекаючи
+      // завершення фонового копіювання. Раніше (0.0.614) вона лишалася
+      // disabled на весь час sync, тож UI виглядав «завислим» на кілька секунд,
+      // хоча браузер уже відкрився.
+      // Гвард від паралельного запуску при цьому НЕ зникає: на початку
+      // обробника `if (syncInFlight) return` з тостом, тож повторний клік
+      // не підніме другу копію, а просто скаже «вже виконується».
+      // (клас onclic уже знято вище одразу після openUrl)
+      syncAndOpen.disabled = false;
+      updateSyncGate(dstReady);
+
+      // Демо-режим (без ksu) — фону немає, тож гвард звільняємо зразу.
+      if (!syncPromise) syncInFlight = false;
+
+      // Стан синхронізації оновлюємо у фоні: коли копіювання завершиться,
+      // оновляться статус, індикатори й аналітика — без перезавантаження.
+      // syncPromise уже має .catch(), тож не відхиляється і .finally() безпечний.
       if (syncPromise) {
-        try {
-          await syncPromise;
-        } finally {
+        syncPromise.finally(() => {
           syncInFlight = false;
-          // v0.0.614: updateSyncGate() навмисно НІЧОГО не робить, поки на
-          // кнопці лишився клас .validate/.error (вони знімаються за таймером
-          // на 1250/2500мс). Якщо синхронізація встигла завершитися швидше,
-          // стан busy існував би — і кнопка назавжди лишилася б disabled.
-          // Тому знімаємо прапорці самі, а gate оновлюємо після цього.
-          syncAndOpen.classList.remove("onclic");
-          syncAndOpen.disabled = false;
           updateSyncGate(dstReady);
-        }
-      } else {
-        // Демо-режим без ksu: фону немає, тож звільняємо одразу.
-        syncInFlight = false;
-        syncAndOpen.classList.remove("onclic");
-        syncAndOpen.disabled = false;
-        updateSyncGate(dstReady);
+        });
       }
     });
 
