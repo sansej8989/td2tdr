@@ -70,11 +70,6 @@
         <span data-i18n="tab_sync">Синхр.</span>
         <span class="tab-indicator" data-tab-indicator="sync"></span>
       </button>
-      <button class="tab-btn" data-tab="garage" type="button">
-        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M3 13h2l2-5h10l2 5h2"/><rect x="3" y="13" width="18" height="6" rx="1.5"/><circle cx="7.5" cy="19" r="1.2" fill="currentColor" stroke="none"/><circle cx="16.5" cy="19" r="1.2" fill="currentColor" stroke="none"/></svg>
-        <span data-i18n="tab_garage">Гараж</span>
-        <span class="tab-indicator" data-tab-indicator="garage"></span>
-      </button>
       <button class="tab-btn" data-tab="analytics" type="button">
         <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m7 14 4-4 3 3 5-6"/></svg>
         <span data-i18n="tab_analytics">Аналіт.</span>
@@ -184,109 +179,7 @@
       </div>
       <div class="import-hint" data-i18n="lang_hint">Оберіть мову зі списку та натисніть дискету — гра перезапуститься автоматично</div>
     </section>
-    </div>
-
-    <!-- Garage tab (resources + garage stats, loads automatically) -->
-    <div class="tab-panel" data-panel="garage">
-    <!-- Resources -->
-    <section class="card resources-card">
-      <div class="row-title">
-        <div class="title-left">
-          <span class="card-icon">
-            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="12" cy="12" r="10"/><path d="M12 6v12"/><path d="M16 8.5C15 7.5 13.6 7 12 7s-3 .5-4 1.5S7 10.6 7 12s.3 2.5 1 3.5 2.6 1.5 4 1.5 3-.5 4-1.5"/>
-            </svg>
-          </span>
-          <span data-i18n="res_title">Ресурси</span>
-        </div>
-      </div>
-
-      <div id="resourcesEmpty" class="garage-empty" data-i18n="res_empty">Синхронізуйте файли, щоб побачити ресурси</div>
-
-      <div id="resourcesGrid" class="resources-grid" style="display:none;">
-        <div class="res-tile res-tile-cash">
-          <div class="res-bg-icon">💵</div>
-          <div class="res-tile-head">
-            <span class="res-tile-lbl">Cash</span>
-          </div>
-          <div id="resCash" class="garage-tile-num">—</div>
-        </div>
-        <div class="res-tile res-tile-gold">
-          <div class="res-bg-icon">🪙</div>
-          <div class="res-tile-head">
-            <span class="res-tile-lbl">Gold</span>
-          </div>
-          <div id="resGold" class="garage-tile-num">—</div>
-        </div>
-        <div class="res-tile res-tile-prestige prestige-wrap" role="progressbar" aria-valuemin="0" aria-valuemax="1000" aria-valuenow="0" aria-label="Престиж">
-          <div id="prestigeFill" class="prestige-progress-fill"></div>
-          <div class="res-bg-icon">👑</div>
-          <div class="prestige-content">
-            <div class="res-tile-head">
-              <span class="res-tile-lbl" data-i18n="res_prestige">Престиж</span>
-            </div>
-            <div id="prestigeText" class="garage-tile-num">— / 1000</div>
-          </div>
-          <div id="prestigeWarn" class="bar-warn" style="display:none;"></div>
-        </div>
-      </div>
-    </section>
-
-    <!-- Garage stats -->
-    <section class="card garage-card">
-      <div class="row-title">
-        <div class="title-left">
-          <span class="card-icon">
-            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M3 13h2l2-5h10l2 5h2"/><rect x="3" y="13" width="18" height="6" rx="1.5"/>
-              <circle cx="7.5" cy="19" r="1.2" fill="currentColor" stroke="none"/><circle cx="16.5" cy="19" r="1.2" fill="currentColor" stroke="none"/>
-            </svg>
-          </span>
-          <span data-i18n="garage_title">Статистика</span>
-        </div>
-      </div>
-
-      <div id="garageEmpty" class="garage-empty" data-i18n="garage_empty">Синхронізуйте гру — гараж проаналізується автоматично</div>
-
-      <div id="garageStats" style="display:none;">
-        <div id="garageMeta" class="garage-meta" style="display:none;">
-          <!-- Заповнення слотів (прогрес-бар плитка у стилі престижу) -->
-          <div class="garage-fill-group">
-            <div class="res-tile garage-fill-tile prestige-wrap" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="Заповнення гаража">
-              <div id="garageFillProgress" class="garage-fill-bar"></div>
-              <div class="res-bg-icon">🚗</div>
-              <div class="prestige-content">
-                <div class="res-tile-head">
-                  <span class="res-tile-lbl" data-i18n="garage_fill">Гараж</span>
-                  <span id="garagePctText" class="garage-fill-pct">0%</span>
-                </div>
-                <div id="garageBarText" class="garage-tile-num">0 / 0</div>
-              </div>
-            </div>
-            <div id="garageHeldLine" class="garage-fill-held"></div>
-          </div>
-
-          <!-- Прокачка: міні-donut + стек-шкала з легендою -->
-          <div class="garage-section-card accent-upgrades">
-            <div class="garage-section-title" data-i18n="garage_upgrade">Прокачка</div>
-            <div class="upgrade-stack-wrap">
-              <div class="upgrade-stack-col">
-              <div class="upgrade-stack-head">
-                <span id="upgradeStackVal" class="upgrade-stack-val">0</span>
-                <span class="upgrade-stack-lbl" data-i18n="garage_total_cars">авто</span>
-              </div>
-              <div id="upgradeStackTrack" class="upgrade-stack-track"></div>
-              <div id="upgradeLegend" class="garage-donut-legend"></div>
-              </div>
 </div>
-          
-
-          <div class="garage-note">
-          Рідкість і назви авто в Garage.dat не зберігаються — це властивості карткового каталогу гри, якого немає в цьому файлі. Для розподілу по рідкості дивись розділ GARAGE на topdrivesrecords.com після синхронізації.
-        </div>
-      </div>
-    </section>
-    </div>
 
     <!-- Logs tab -->
     <div class="tab-panel" data-panel="log">

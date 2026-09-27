@@ -3564,52 +3564,52 @@ body {
 .an-proj-right { grid-area: right; text-align: right; }
 
 /* ---------- v0.0.604: unified battles dashboard (Header -> KPIs -> Split) ---------- */
-.an-battles-dashboard {
+.an-races-dashboard {
   margin: 12px 0 4px;
   border: 1px solid var(--card-border);
   border-radius: var(--radius-sm);
   background: rgba(255, 255, 255, 0.025);
   overflow: hidden;
 }
-.an-battles-header {
+.an-races-header {
   padding: 10px 14px 8px;
   border-bottom: 1px solid var(--card-border);
 }
-.an-battles-header-row {
+.an-races-header-row {
   width: 100%;
 }
-.an-battles-header-title {
+.an-races-header-title {
   margin-bottom: 6px;
 }
-.an-battles-title {
+.an-races-title {
   margin: 0;
   font-size: 15px;
   font-weight: 800;
   color: var(--text);
   letter-spacing: -0.01em;
 }
-.an-battles-header-filters {
+.an-races-header-filters {
   display: flex;
   justify-content: flex-end;
   gap: 4px;
   margin-bottom: 6px;
 }
-.an-battles-header-subtitle {
+.an-races-header-subtitle {
   margin-top: 2px;
 }
-.an-battles-subtitle {
+.an-races-subtitle {
   font-size: 10.5px;
   font-weight: 600;
   color: var(--text-dimmer);
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
-.an-battles-filters {
+.an-races-filters {
   display: flex;
   gap: 4px;
   flex-shrink: 0;
 }
-.an-battles-filter {
+.an-races-filter {
   padding: 6px 9px;
   border-radius: 8px;
   background: transparent;
@@ -3622,21 +3622,21 @@ body {
   transition: color 0.15s ease, background 0.15s ease, border-color 0.15s ease;
   -webkit-tap-highlight-color: transparent;
 }
-.an-battles-filter:hover { color: var(--text); }
-.an-battles-filter.active {
+.an-races-filter:hover { color: var(--text); }
+.an-races-filter.active {
   color: var(--text);
   background: rgba(129, 140, 248, 0.12);
   border-color: rgba(129, 140, 248, 0.35);
 }
 
-.an-battles-kpis {
+.an-races-kpis {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 1px;
   background: var(--card-border);
   border-bottom: 1px solid var(--card-border);
 }
-.an-battles-kpi {
+.an-races-kpi {
   background: rgba(255, 255, 255, 0.025);
   padding: 10px 10px 8px;
   display: flex;
@@ -3644,14 +3644,14 @@ body {
   gap: 3px;
   min-width: 0;
 }
-.an-battles-kpi-label {
+.an-races-kpi-label {
   font-size: 9.5px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: var(--text-dimmer);
 }
-.an-battles-kpi-value {
+.an-races-kpi-value {
   font-size: 15px;
   font-weight: 800;
   color: var(--text);
@@ -3660,22 +3660,22 @@ body {
   line-height: 1.15;
   word-break: break-word;
 }
-.an-battles-kpi-note {
+.an-races-kpi-note {
   font-size: 9.5px;
   font-weight: 600;
   color: var(--text-dimmer);
   font-variant-numeric: tabular-nums;
 }
-.an-battles-kpi-note.up { color: #3ddc84; }
-.an-battles-kpi-note.down { color: #ff5c7a; }
+.an-races-kpi-note.up { color: #3ddc84; }
+.an-races-kpi-note.down { color: #ff5c7a; }
 
-.an-battles-body {
+.an-races-body {
   display: grid;
   grid-template-columns: 1.4fr 1fr;
   gap: 1px;
   background: var(--card-border);
 }
-.an-battles-panel {
+.an-races-panel {
   background: rgba(255, 255, 255, 0.025);
   padding: 12px 14px 14px;
   display: flex;
@@ -3683,7 +3683,7 @@ body {
   gap: 8px;
   min-width: 0;
 }
-.an-battles-panel-title {
+.an-races-panel-title {
   font-size: 10.5px;
   font-weight: 700;
   text-transform: uppercase;
@@ -3691,8 +3691,8 @@ body {
   color: var(--text-dim);
 }
 
-/* Timeline: vertical bar chart of battles per day */
-.an-battles-chart {
+/* Timeline: vertical bar chart of races per day */
+.an-races-chart {
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
@@ -3700,7 +3700,7 @@ body {
   height: 92px;
   padding: 4px 0;
 }
-.an-battles-bar-col {
+.an-races-bar-col {
   flex: 1;
   display: flex;
   flex-direction: column;
@@ -3710,7 +3710,7 @@ body {
   height: 100%;
   justify-content: flex-end;
 }
-.an-battles-bar {
+.an-races-bar {
   width: 100%;
   max-width: 14px;
   border-radius: 4px 4px 0 0;
@@ -3718,7 +3718,7 @@ body {
   min-height: 4px;
   transition: height 0.3s var(--ease-out);
 }
-.an-battles-bar-date {
+.an-races-bar-date {
   font-size: 8.5px;
   font-weight: 700;
   color: var(--text-dimmer);
@@ -3729,19 +3729,19 @@ body {
 }
 
 /* Breakdown: segmented bar + legend */
-.an-battles-breakdown-bar {
+.an-races-breakdown-bar {
   display: flex;
   height: 10px;
   border-radius: 6px;
   overflow: hidden;
   background: rgba(255, 255, 255, 0.06);
 }
-.an-battles-breakdown-seg {
+.an-races-breakdown-seg {
   height: 100%;
   min-width: 2px;
   transition: width 0.35s var(--ease-out);
 }
-.an-battles-breakdown-legend {
+.an-races-breakdown-legend {
   display: flex;
   flex-wrap: wrap;
   gap: 6px 10px;
@@ -3749,12 +3749,12 @@ body {
   color: var(--text-dim);
   font-weight: 600;
 }
-.an-battles-breakdown-legend i {
+.an-races-breakdown-legend i {
   width: 8px; height: 8px;
   border-radius: 2px; display: inline-block; flex-shrink: 0;
 }
-.an-battles-breakdown-legend b { color: var(--text); font-weight: 800; }
-.an-battles-note {
+.an-races-breakdown-legend b { color: var(--text); font-weight: 800; }
+.an-races-note {
   margin-top: auto;
   font-size: 10px;
   line-height: 1.4;
@@ -3763,15 +3763,75 @@ body {
   border-top: 1px solid var(--card-border);
   padding-top: 8px;
 }
-.an-battles-unavailable {
+.an-races-unavailable {
   font-size: 11px;
   color: var(--text-dimmer);
   padding: 6px 0;
 }
 
 @media (max-width: 430px) {
-  .an-battles-kpis { grid-template-columns: repeat(2, 1fr); }
-  .an-battles-body { grid-template-columns: 1fr; }
-  .an-battles-chart { height: 70px; }
-  .an-battles-bar-date { font-size: 7.5px; }
+  .an-races-kpis { grid-template-columns: repeat(2, 1fr); }
+  .an-races-body { grid-template-columns: 1fr; }
+  .an-races-chart { height: 70px; }
+  .an-races-bar-date { font-size: 7.5px; }
+}
+
+/* v0.0.611: enlarged daily-rate number inside forecast per-day labels */
+.an-forecast-num {
+  font-size: 1.28em;
+  font-weight: 800;
+  color: var(--text);
+  letter-spacing: -0.02em;
+  vertical-align: baseline;
+}
+
+/* v0.0.611: four distinct garage metrics (total / locked / free / held) */
+.an-garage-metrics {
+  margin: 12px 0 4px;
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.025);
+  overflow: hidden;
+}
+.an-garage-title {
+  padding: 10px 14px 8px;
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-dim);
+  border-bottom: 1px solid var(--card-border);
+}
+.an-garage-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1px;
+  background: var(--card-border);
+}
+.an-garage-tile {
+  background: rgba(255, 255, 255, 0.025);
+  padding: 10px 10px 9px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.an-garage-tile-lbl {
+  font-size: 9.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-dimmer);
+}
+.an-garage-tile-val {
+  font-size: 15px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+  line-height: 1.15;
+  word-break: break-word;
+}
+
+@media (max-width: 430px) {
+  .an-garage-grid { grid-template-columns: repeat(2, 1fr); }
 }

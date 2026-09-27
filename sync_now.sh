@@ -82,21 +82,37 @@ record_history_snapshot() {
     GLD=$(parse_val "Gold" "$USER_FILE")
     PRESTIGE=$(parse_val "FestivalPasses" "$USER_FILE")
 
-    # Garage: PlayerDeck=<hex>,s<JSON-array>; cards мають поле `locked`.
-    # Витягуємо JSON-частину через sed і рахуємо масив.
-    local G_TOTAL G_LOCKED=""
-    if [ -f "$GARAGE_FILE" ]; then
-        local DECK_JSON
-        DECK_JSON=$(grep -oE '^PlayerDeck=[^,]+,s\[.*\]' "$GARAGE_FILE" 2>/dev/null | head -n1 | sed -E 's/^PlayerDeck=[^,]+,s//')
-        if [ -n "$DECK_JSON" ]; then
-            # v0.0.606: підрахунок без [^{}]-обмеження. Попередній regex
-            # \{[^{}]*\} пропускав картки з вкладеними об'єктами (наприклад,
-            # tuning), що давало 3901 замість 3911. Рахуємо входження
-            # ключа "locked" — усі картки мають це поле.
-            G_TOTAL=$(echo "$DECK_JSON" | grep -oE '"locked":[[:space:]]*(true|false)' | wc -l | tr -d ' ')
-            G_LOCKED=$(echo "$DECK_JSON" | grep -oE '"locked":[[:space:]]*true' | wc -l | tr -d ' ')
-        fi
-    fi
+# Garage: PlayerDeck=<hex>,s<JSON-array>; картки мають поля `locked` та `state`.
+     # Витягуємо JSON-частину через sed і рахуємо масив.
+     #   state:1 = в гаражі (slots), state:0 = в триманні (held/under garage)
+     #   locked:true = заблоковані/зберігаються, locked:false = розблоковані
+     # Метрики:
+     #   garageTotal  = state:1 + 1 (запасний слот) = загальна кімната
+     #   garageLocked = locked:true
+     #   garageFree   = garageTotal - garageLocked
+     #   garageHeld  = state:0
+     local G_TOTAL G_LOCKED G_STATE1 G_STATE0=""
+     if [ -f "$GARAGE_FILE" ]; then
+         local DECK_JSON
+         DECK_JSON=$(grep -oE '^PlayerDeck=[^,]+,s\[.*\]' "$GARAGE_FILE" 2>/dev/null | head -n1 | sed -E 's/^PlayerDeck=[^,]+,s//')
+         if [ -n "$DECK_JSON" ]; then
+             # v0.0.606: підрахунок без [^{}]-обмеження. Попередній regex
+             # \{[^{}]*\} пропускав картки з вкладеними об'єктами (наприклад,
+             # tuning), що давало 3901 замість 3911. Рахуємо входження
+             # ключа "locked" — усі картки мають це поле.
+             G_LOCKED=$(echo "$DECK_JSON" | grep -oE '"locked":[[:space:]]*true' | wc -l | tr -d ' ')
+             # state:1 — машини, що стоїть у гаражі (slots)
+             G_STATE1=$(echo "$DECK_JSON" | grep -oE '"state":[[:space:]]*1[,}]' | wc -l | tr -d ' ')
+             # state:0 — машини в триманні / "під гаражем" (held)
+             G_STATE0=$(echo "$DECK_JSON" | grep -oE '"state":[[:space:]]*0[,}]' | wc -l | tr -d ' ')
+             # Загальна кімната = state:1 + 1 (запасний слот, який завжди є)
+             if [ -n "$G_STATE1" ]; then
+                 G_TOTAL=$((G_STATE1 + 1))
+             else
+                 G_TOTAL=$(echo "$DECK_JSON" | grep -oE '"locked":[[:space:]]*(true|false)' | wc -l | tr -d ' ')
+             fi
+         fi
+     fi
 
     # --- 2. Patch I в shell: захист від порожнього знімка ---
      if [ -z "$CASH$GLD$PRESTIGE$G_TOTAL" ]; then
@@ -104,7 +120,7 @@ record_history_snapshot() {
          return 0
      fi
 
-     # v0.0.606: монотонне обмеження для garageLocked — кількість заблокованих
+# v0.0.606: монотонне обмеження для garageLocked — кількість заблокованих
      # слотів може лише зростати. Якщо поточне значення менше попереднього,
      # використовуємо попереднє (захист від тимчасових помилок парсингу).
      if [ -n "$G_LOCKED" ] && [ -f "$HISTORY" ]; then
@@ -115,17 +131,27 @@ record_history_snapshot() {
              G_LOCKED="$PREV_LOCKED"
          fi
      fi
+     # Монотонне обмеження для garageTotal — загальна кімната не може зменшуватися.
+     if [ -n "$G_TOTAL" ] && [ -f "$HISTORY" ]; then
+         local PREV_TOTAL=""
+         PREV_TOTAL=$(grep -v "\"date\":\"${TODAY}\"" "$HISTORY" 2>/dev/null | tail -n1 | grep -oE '"garageTotal":[[:space:]]*[0-9]+' | head -1 | sed -E 's/"garageTotal":[[:space:]]*//' 2>/dev/null || true)
+         if [ -n "$PREV_TOTAL" ] && [ "$G_TOTAL" -lt "$PREV_TOTAL" ] 2>/dev/null; then
+             log "history snapshot: garageTotal ($G_TOTAL < $PREV_TOTAL) — monotonic constraint: keeping previous value"
+             G_TOTAL="$PREV_TOTAL"
+         fi
+     fi
 
      # --- 3. Побудувати JSON-рядок нового запису ---
-    # Уникаємо залежностей від jq: формуємо вручну через printf.
-    local ENTRY
-    ENTRY=$(printf '{"date":"%s","ts":%s' "$TODAY" "$NOW_TS")
-    [ -n "$CASH" ]     && ENTRY=$(printf '%s,"cash":%s'     "$ENTRY" "$CASH")
-    [ -n "$GLD" ]      && ENTRY=$(printf '%s,"gold":%s'      "$ENTRY" "$GLD")
-    [ -n "$PRESTIGE" ] && ENTRY=$(printf '%s,"prestige":%s' "$ENTRY" "$PRESTIGE")
-    [ -n "$G_TOTAL" ]  && ENTRY=$(printf '%s,"garageTotal":%s'  "$ENTRY" "$G_TOTAL")
-    [ -n "$G_LOCKED" ] && ENTRY=$(printf '%s,"garageLocked":%s' "$ENTRY" "$G_LOCKED")
-    ENTRY="$ENTRY}"
+     # Уникаємо залежностей від jq: формуємо вручну через printf.
+     local ENTRY
+     ENTRY=$(printf '{"date":"%s","ts":%s' "$TODAY" "$NOW_TS")
+     [ -n "$CASH" ]     && ENTRY=$(printf '%s,"cash":%s'     "$ENTRY" "$CASH")
+     [ -n "$GLD" ]      && ENTRY=$(printf '%s,"gold":%s'      "$ENTRY" "$GLD")
+     [ -n "$PRESTIGE" ] && ENTRY=$(printf '%s,"prestige":%s' "$ENTRY" "$PRESTIGE")
+     [ -n "$G_TOTAL" ]  && ENTRY=$(printf '%s,"garageTotal":%s'  "$ENTRY" "$G_TOTAL")
+     [ -n "$G_LOCKED" ] && ENTRY=$(printf '%s,"garageLocked":%s' "$ENTRY" "$G_LOCKED")
+     [ -n "$G_STATE0" ] && ENTRY=$(printf '%s,"garageHeld":%s' "$ENTRY" "$G_STATE0")
+     ENTRY="$ENTRY}"
 
     # --- 4. Дедуплікація: прочитати існуючий history.jsonl, видалити рядки з
     # сьогоднішньою датою, додати новий рядок, посортувати (якщо немає —

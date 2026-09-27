@@ -205,7 +205,6 @@
       last_sync_label: "Остання синхронізація:",
       tab_sync: "Синхр.",
       tab_lang: "Мова",
-      tab_garage: "Гараж",
       tab_log: "Журнал",
       tab_changelog: "Реліз",
       tab_analytics: "Аналіт.",
@@ -336,9 +335,13 @@
       an_cash: "Cash",
       an_gold: "Gold",
       an_prestige: "Престиж",
-      an_garage: "Гараж (слотів)",
-      an_battles: "Бої",
-      an_delta_24h: "/ 24г",
+an_garage: "Гараж (слотів)",
+       an_garage_total: "Всього слотів",
+       an_garage_locked: "Заблоковано",
+       an_garage_free: "Вільно",
+       an_garage_held: "У триманні",
+       an_races: "Заїзди",
+       an_delta_24h: "/ 24г",
       an_record_gain: "Піковий день: <b>+{value}</b> ({date})",
       an_record_loss: "Витрата: <b>-{value}</b> ({date})",
       an_depletes_in: "вичерпається за {days} дн.",
@@ -385,26 +388,26 @@
       an_prestige_alert_near: "🔔 Наближення до ліміту: Наразі {current} / 1000 Престижу. При поточному прирості (+{gain} /день) ліміт буде досягнуто завтра або найближчими днями.",
       an_prestige_alert_max_line: "Максимум (1000)",
       an_prestige_alert_safe: "Ліміт безпечний (є запас)",
-      an_battles_title: "⚔️ Аналітика та Статистика Боїв",
-      an_battles_filter_today: "Сьогодні",
-      an_battles_filter_3d: "3 дні",
-      an_battles_filter_7d: "7 днів",
-      an_battles_filter_all: "Усе",
-      an_battles_kpi_total: "Всього боїв",
-      an_battles_kpi_winrate: "Перемоги / Поразки",
-      an_battles_timeline: "Динаміка боїв у часі",
-      an_battles_breakdown: "Розподіл за результатами",
-      an_battles_no_data: "Ще немає даних про бої — синхронізуйте гру",
-      an_battles_win: "Перемоги",
-      an_battles_draw: "Нічиї",
-      an_battles_loss: "Поразки",
-      an_battles_win_short: "W",
-      an_battles_draw_short: "D",
-      an_battles_loss_short: "L",
-      an_battles_winrate: "{pct}% перемог",
-      an_battles_chart_unit: "боїв / знімок",
-      an_battles_breakdown_note: "Garage.dat зберігає лише W/D/L. Типи боїв, суперники та прибуток недоступні.",
-      an_battles_period_activity: "Зафіксовано за період",
+an_races_title: "⚔️ Аналітика та Статистика Заїздів",
+       an_races_filter_today: "Сьогодні",
+       an_races_filter_3d: "3 дні",
+       an_races_filter_7d: "7 днів",
+       an_races_filter_all: "Усе",
+       an_races_kpi_total: "Всього заїздів",
+       an_races_kpi_winrate: "Перемоги / Поразки",
+       an_races_timeline: "Динаміка заїздів у часі",
+       an_races_breakdown: "Розподіл за результатами",
+       an_races_no_data: "Ще немає даних про заїзди — синхронізуйте гру",
+       an_races_win: "Перемоги",
+       an_races_draw: "Нічиї",
+       an_races_loss: "Поразки",
+       an_races_win_short: "W",
+       an_races_draw_short: "D",
+       an_races_loss_short: "L",
+       an_races_winrate: "{pct}% перемог",
+       an_races_chart_unit: "заїздів / знімок",
+       an_races_breakdown_note: "Garage.dat зберігає лише W/D/L. Типи заїздів, суперники та прибуток недоступні.",
+       an_races_period_activity: "Зафіксовано за період",
       settings_title: "Налаштування",
       settings_theme: "Тема",
       theme_auto: "Авто",
@@ -461,7 +464,6 @@
       last_sync_label: "Last sync:",
       tab_sync: "Sync",
       tab_lang: "Lang",
-      tab_garage: "Garage",
       tab_log: "Log",
       tab_changelog: "Release",
       tab_analytics: "Stats",
@@ -592,9 +594,13 @@
       an_cash: "Cash",
       an_gold: "Gold",
       an_prestige: "Prestige",
-      an_garage: "Garage (slots)",
-      an_battles: "Battles",
-      an_delta_24h: "/ 24h",
+an_garage: "Garage (slots)",
+       an_garage_total: "Total slots",
+       an_garage_locked: "Locked",
+       an_garage_free: "Free",
+       an_garage_held: "Held",
+       an_races: "Races",
+       an_delta_24h: "/ 24h",
       an_record_gain: "Best day: <b>+{value}</b> ({date})",
       an_record_loss: "Last spend: <b>-{value}</b> ({date})",
       an_depletes_in: "runs out in {days} days",
@@ -642,27 +648,27 @@ an_accuracy: "Forecast accuracy: {pct}%",
        an_prestige_alert_near: "🔔 Approaching the cap: Currently {current} / 1000 Prestige. At the current pace (+{gain}/day) the cap will be reached in the coming days.",
        an_prestige_alert_max_line: "Max (1000)",
        an_prestige_alert_safe: "Cap safe (plenty of headroom)",
-       // v0.0.604: unified battles dashboard
-       an_battles_title: "⚔️ Battles Analytics & Stats",
-       an_battles_filter_today: "Today",
-       an_battles_filter_3d: "3 d",
-       an_battles_filter_7d: "7 d",
-       an_battles_filter_all: "All",
-       an_battles_kpi_total: "Total battles",
-        an_battles_kpi_winrate: "Wins / Losses",
-        an_battles_timeline: "Battle activity over time",
-       an_battles_breakdown: "Breakdown by battle type",
-an_battles_no_data: "No battle data yet — sync the game",
-        an_battles_win: "W",
-        an_battles_draw: "D",
-        an_battles_loss: "L",
-        an_battles_win_short: "W",
-        an_battles_draw_short: "D",
-        an_battles_loss_short: "L",
-        an_battles_winrate: "{pct}% wins",
-        an_battles_chart_unit: "battles / snapshot",
-        an_battles_breakdown_note: "Garage.dat only stores W/D/L. Battle types, opponents and profit are unavailable.",
-        an_battles_period_activity: "Recorded over the period",
+// v0.0.611: unified races dashboard
+        an_races_title: "⚔️ Races Analytics & Stats",
+        an_races_filter_today: "Today",
+        an_races_filter_3d: "3 d",
+        an_races_filter_7d: "7 d",
+        an_races_filter_all: "All",
+        an_races_kpi_total: "Total races",
+        an_races_kpi_winrate: "Wins / Losses",
+        an_races_timeline: "Race activity over time",
+        an_races_breakdown: "Breakdown by race type",
+        an_races_no_data: "No race data yet — sync the game",
+        an_races_win: "W",
+        an_races_draw: "D",
+        an_races_loss: "L",
+        an_races_win_short: "W",
+        an_races_draw_short: "D",
+        an_races_loss_short: "L",
+        an_races_winrate: "{pct}% wins",
+        an_races_chart_unit: "races / snapshot",
+        an_races_breakdown_note: "Garage.dat only stores W/D/L. Race types, opponents and profit are unavailable.",
+        an_races_period_activity: "Recorded over the period",
         an_accuracy: "Forecast accuracy: {pct}%",
        settings_title: "Settings",
       settings_theme: "Theme",
@@ -1314,7 +1320,6 @@ an_battles_no_data: "No battle data yet — sync the game",
       if ($("dstFlowStatus")) $("dstFlowStatus").textContent = t("flow_demo_size", { size: "1.2 MB" });
       if ($("resultFlowStatus")) $("resultFlowStatus").textContent = t("flow_in_sync");
       setTabIndicator("sync", "ok");
-      await loadGarageStats();
       await renderAnalytics();
       return;
     }
@@ -1517,12 +1522,10 @@ an_battles_no_data: "No battle data yet — sync the game",
       $("statusMeta").textContent = t("sm_step_sync");
       await syncFile();
       $("statusMeta").textContent = t("sm_step_check");
-      // v0.0.527: паралелізуємо незалежні операції після синхронізації:
-      // refreshInner (статус), loadGarageStats (гараж), recordSnapshotIfNeeded
-      // (історія). Зменшуємо загальний час з ~5с до ~2-3с.
+      // v0.0.611: гараж-вікнок видалено, тому loadGarageStats більше не викликаємо.
+      // Залишаємо лише refreshInner + recordSnapshotIfNeeded.
       await Promise.all([
         refreshInner(),
-        loadGarageStats(),
         recordSnapshotIfNeeded()
       ]);
       $("statusMeta").textContent = t("sm_step_analytics");
@@ -1545,19 +1548,9 @@ an_battles_no_data: "No battle data yet — sync the game",
   }
 
   // ---- garage stats (parses the synced Garage.dat locally) --------------
-  function upgradeKey(card) {
-    const key = `${card.engineMajor}${card.weightMajor}${card.chassisMajor}`;
-    if (key === "111" || key === "332" || key === "323" || key === "233") return key;
-    return "custom";
-  }
-
-  const UPGRADE_LABELS = {
-    "111": "1-1-1",
-    "332": "3-3-2",
-    "323": "3-2-3",
-    "233": "2-3-3",
-    "custom": "Інше",
-  };
+  // v0.0.611: вкладка «Гараж» видалена, разом із парсером карток
+  // (upgradeKey / renderUpgradeBar / loadGarageStats). Залишено лише
+  // читання файлів (readFile / readSourceFile) і парсер user.dat.
 
   function readFile(path) {
     // .catch(() => "") matters: exec() REJECTS outright when there's no ksu
@@ -1584,18 +1577,6 @@ an_battles_no_data: "No battle data yet — sync the game",
   }
 
   // Mock-дані для перегляду в браузері на ПК (коли немає KernelSU / Magisk)
-  const MOCK_USER_DAT = "Cash=00000000,i1450200\nGold=00000000,i3850\nFestivalPasses=00000000,i820\n";
-  const MOCK_CARDS = Array.from({ length: 95 }, (_, i) => ({
-    locked: i < 38,
-    state: 1,
-    tuning0: i % 4 === 0 ? 3 : 1,
-    tuning1: i % 4 === 0 ? 3 : (i % 3 === 0 ? 2 : 1),
-    tuning2: i % 4 === 0 ? 2 : (i % 3 === 0 ? 3 : 1),
-    cardWins: 10 + (i * 3) % 40,
-    cardLosses: (i * 2) % 15,
-    cardDraws: i % 4
-  }));
-  const MOCK_GARAGE_DAT = `PlayerDeck=00000000,s${JSON.stringify(MOCK_CARDS)}\n`;
   const MOCK_HISTORY = Array.from({ length: 14 }, (_, i) => {
     const d = new Date();
     d.setDate(d.getDate() - (13 - i));
@@ -1615,280 +1596,9 @@ an_battles_no_data: "No battle data yet — sync the game",
     };
   });
 
-  async function loadResources() {
-    let data = await readSourceFile(SRC_USER, SRC_USER_ROOT, DST_USER);
-    if (!data && !hasKsu()) {
-      data = MOCK_USER_DAT;
-    }
-    if (!data) {
-      $("resourcesEmpty").style.display = "block";
-      $("resourcesGrid").style.display = "none";
-      return;
-    }
-    const val = (key) => parseUserResource(key, data);
-    $("resCash").textContent = val("Cash") != null ? val("Cash").toLocaleString("uk-UA") : "—";
-    $("resGold").textContent = val("Gold") != null ? val("Gold").toLocaleString("uk-UA") : "—";
-    const fest = val("FestivalPasses");
-    const PRESTIGE_MAX = 1000;
-    const prestigeTile = document.querySelector(".res-tile-prestige");
-    if (fest != null) {
-      const pct = Math.min(100, (fest / PRESTIGE_MAX) * 100);
-      const fill = $("prestigeFill");
-      fill.style.width = pct + "%";
-      fill.className = "prestige-progress-fill p-" + (pct >= 90 ? "red" : pct >= 75 ? "orange" : pct >= 50 ? "yellow" : "green");
-      $("prestigeText").textContent = `${fest.toLocaleString("uk-UA")} / ${PRESTIGE_MAX.toLocaleString("uk-UA")}`;
-      if (prestigeTile) prestigeTile.setAttribute("aria-valuenow", String(Math.round(pct)));
-      const warn = $("prestigeWarn");
-      if (fest >= 900) {
-        warn.textContent = t("res_prestige_overflow_warn");
-        warn.style.display = "block";
-      } else {
-        warn.style.display = "none";
-      }
-    } else {
-      $("prestigeText").textContent = `— / ${PRESTIGE_MAX.toLocaleString("uk-UA")}`;
-      $("prestigeFill").style.width = "0%";
-      $("prestigeFill").className = "prestige-progress-fill";
-      if (prestigeTile) prestigeTile.setAttribute("aria-valuenow", "0");
-    }
-    $("resourcesEmpty").style.display = "none";
-    $("resourcesGrid").style.display = "flex";
-    addLog(t("log_resources_loaded"));
-  }
-
-  // Stacked-bar renderer for upgrades (sorted descending by count) —
-  // replaces the old donut chart, whose on-ring % labels overlapped when
-  // a segment was a small slice. Now counts/percentages live in the legend
-  // text instead of being crammed onto the shape itself.
-  //
-  // Segments are updated IN PLACE (not torn down and rebuilt) so the
-  // flex-basis CSS transition can actually animate between renders, and so
-  // repeated calls don't keep replacing the same DOM nodes for no reason.
-  function fmtPct(pct) {
-    // locale-aware, up to 1 decimal (uk-UA renders "12,5%", not "12.5%")
-    return pct.toLocaleString(currentUiLang === "en" ? "en-US" : "uk-UA", { maximumFractionDigits: 1 }) + "%";
-  }
-
-  function renderUpgradeBar(parts, counts, total) {
-    const trackEl = $("upgradeStackTrack");
-    const legendEl = $("upgradeLegend");
-    const totalEl = $("upgradeStackVal");
-    if (!trackEl || !legendEl) return;
-
-    if (totalEl) totalEl.textContent = total.toLocaleString("uk-UA");
-
-    const sortedParts = [...parts].sort((a, b) => (counts[b.k] || 0) - (counts[a.k] || 0));
-    const visibleParts = sortedParts.filter((p) => (counts[p.k] || 0) > 0);
-
-    trackEl.setAttribute("role", "img");
-    trackEl.setAttribute(
-      "aria-label",
-      visibleParts.map((p) => `${p.label}: ${fmtPct(total ? (counts[p.k] / total) * 100 : 0)}`).join(", ")
-    );
-
-    // ---- segments: update existing nodes in place, add/remove only what changed ----
-    const wantedIds = new Set(visibleParts.map((p) => `upgSeg_${p.k}`));
-    Array.from(trackEl.children).forEach((child) => {
-      if (!wantedIds.has(child.id)) child.remove(); // category disappeared (e.g. now 0 cars)
-    });
-
-    let prevNode = null;
-    visibleParts.forEach((p) => {
-      const cnt = counts[p.k] || 0;
-      const pct = total ? (cnt / total) * 100 : 0;
-      const id = `upgSeg_${p.k}`;
-      let seg = document.getElementById(id);
-      if (!seg) {
-        seg = document.createElement("div");
-        seg.className = "upgrade-stack-seg";
-        seg.id = id;
-        seg.dataset.key = p.k;
-        seg.style.background = p.color;
-        seg.addEventListener("mouseenter", () => highlight(p.k));
-        seg.addEventListener("mouseleave", reset);
-      }
-      seg.style.flexBasis = pct + "%";
-      seg.title = `${p.label}: ${cnt.toLocaleString("uk-UA")} (${fmtPct(pct)})`;
-      // keep DOM order matching sort order (cheap: at most 5 nodes)
-      if (prevNode ? prevNode.nextSibling !== seg : trackEl.firstChild !== seg) {
-        trackEl.insertBefore(seg, prevNode ? prevNode.nextSibling : trackEl.firstChild);
-      }
-      prevNode = seg;
-    });
-
-    // ---- legend: plain text content, cheap to fully re-render ----
-    let legendHtml = "";
-    sortedParts.forEach((p) => {
-      const cnt = counts[p.k] || 0;
-      const pct = total ? (cnt / total) * 100 : 0;
-      legendHtml += `
-        <div class="donut-legend-item" id="donutLeg_${p.k}" data-key="${p.k}">
-          <div class="donut-legend-left">
-            <span class="donut-legend-dot" style="background:${p.color}"></span>
-            <span>${escapeHtml(p.label)}</span>
-          </div>
-          <div class="donut-legend-right">
-            <span class="donut-legend-pct">${total ? fmtPct(pct) : ""}</span>
-            <span class="donut-legend-val">${cnt.toLocaleString("uk-UA")}</span>
-          </div>
-        </div>
-      `;
-    });
-    legendEl.innerHTML = legendHtml;
-
-    // ---- міні-donut поруч із відсотками (преміальний акцент блоку) ----
-    const donutEl = $("upgradeDonut");
-    if (donutEl) {
-      const R = 26, C = 2 * Math.PI * R;
-      let offset = 0;
-      let segs = "";
-      sortedParts.forEach((p) => {
-        const cnt = counts[p.k] || 0;
-        if (!cnt || !total) return;
-        const frac = cnt / total;
-        segs += `<circle cx="32" cy="32" r="${R}" fill="none" stroke="${p.color}" stroke-width="9" stroke-dasharray="${(frac * C).toFixed(2)} ${(C - frac * C).toFixed(2)}" stroke-dashoffset="${(-offset * C).toFixed(2)}" transform="rotate(-90 32 32)"></circle>`;
-        offset += frac;
-      });
-      donutEl.innerHTML = `
-        <svg viewBox="0 0 64 64" class="upgrade-donut-svg">
-          <circle cx="32" cy="32" r="${R}" fill="none" stroke="rgba(127,127,127,0.15)" stroke-width="9"></circle>
-          ${segs}
-          <text x="32" y="30" text-anchor="middle" class="upgrade-donut-num">${total.toLocaleString("uk-UA")}</text>
-          <text x="32" y="42" text-anchor="middle" class="upgrade-donut-lbl">${escapeHtml(t("garage_total_cars"))}</text>
-        </svg>`;
-    }
-
-    function highlight(key) {
-      sortedParts.forEach((p) => {
-        const seg = document.getElementById(`upgSeg_${p.k}`);
-        const leg = $(`donutLeg_${p.k}`);
-        if (seg) seg.classList.toggle("dim", p.k !== key);
-        if (leg) leg.classList.toggle("active", p.k === key);
-      });
-    }
-    function reset() {
-      sortedParts.forEach((p) => {
-        const seg = document.getElementById(`upgSeg_${p.k}`);
-        const leg = $(`donutLeg_${p.k}`);
-        if (seg) seg.classList.remove("dim");
-        if (leg) leg.classList.remove("active");
-      });
-    }
-
-    sortedParts.forEach((p) => {
-      const leg = $(`donutLeg_${p.k}`);
-      if (leg) {
-        leg.addEventListener("mouseenter", () => highlight(p.k));
-        leg.addEventListener("mouseleave", reset);
-      }
-    });
-  }
-
-  // ---- LEGACY donut renderer — kept only as a safety-net rollback path.
-  // Not called anywhere; the donut's on-ring % labels are what caused the
-  // overlap bug that renderUpgradeBar() above was written to fix. To roll
-  // back: restore the .garage-donut-wrap markup (see project history /
-  // earlier changelog entry) in index.html and call renderUpgradeDonutLegacy
-  // instead of renderUpgradeBar in loadGarageStats().
-  /*
-  function renderUpgradeDonutLegacy(parts, counts, total) {
-    // ... original donut implementation preserved in git history ...
-  }
-  */
-
-
-  async function loadGarageStats() {
-    const loadBtn = $("loadGarage");
-    if (loadBtn) { loadBtn.disabled = true; loadBtn.textContent = t("garage_analyzing"); }
-    try {
-      let data = await readSourceFile(SRC, SRC_ROOT, DST);
-      if (!data && !hasKsu()) {
-        data = MOCK_GARAGE_DAT;
-      }
-      if (!data) {
-        addLog(t("log_garage_not_found", { path: SRC }), "W");
-        toast(t("toast_garage_not_found"));
-        setTabIndicator("garage", "warn");
-        return;
-      }
-      const line = data.split(/\r?\n/).find((l) => l.startsWith("PlayerDeck="));
-      if (!line) { addLog(t("log_garage_no_playerdeck"), "E"); setTabIndicator("garage", "bad"); return; }
-      const m = line.match(/^PlayerDeck=[^,]+,s(.+)$/);
-      if (!m) { addLog(t("log_garage_parse_failed"), "E"); setTabIndicator("garage", "bad"); return; }
-      // Захист від пошкодженого Garage.dat: невалідний JSON не повинен
-      // кидати необроблений виняток і ламати решту сторінки.
-      let cards;
-      try {
-        cards = JSON.parse(m[1]);
-      } catch (e) {
-        addLog(t("log_garage_parse_failed"), "E");
-        setTabIndicator("garage", "bad");
-        return;
-      }
-      if (!Array.isArray(cards)) { addLog(t("log_garage_parse_failed"), "E"); setTabIndicator("garage", "bad"); return; }
-      // WebUI реально зчитав і розпарсив гараж — статус «готово» відтепер
-      // липкий: жодні подальші stat-перевірки не скинуть його назад.
-      garageEverReady = true;
-      dstReady = true;
-
-      const total = cards.length;
-      const locked = cards.filter((c) => c.locked).length;
-      const myCars = cards.filter((c) => c.state === 1).length;
-      const battle = { w: 0, l: 0, d: 0 };
-      for (const c of cards) {
-        battle.w += c.cardWins || 0;
-        battle.l += c.cardLosses || 0;
-        battle.d += c.cardDraws || 0;
-      }
-
-      const held = total - locked;
-      const battleTotal = battle.w + battle.d + battle.l;
-
-      // Заповнення слотів (плитка з фоновим прогресом)
-      const fillPct = myCars ? Math.min(100, (locked / myCars) * 100) : 0;
-      // Слот-індикатор: при >95% зайнятості — жовто-помаранчеве світлодіодне
-      // світіння-попередження, що слоти закінчуються.
-      const garageFillProgress = $("garageFillProgress");
-      const garageFillTile = document.querySelector(".garage-fill-tile");
-      if (garageFillProgress) {
-        garageFillProgress.style.width = fillPct + "%";
-        garageFillProgress.className = "garage-fill-bar p-" + (fillPct >= 90 ? "red" : fillPct >= 75 ? "orange" : fillPct >= 50 ? "yellow" : "green");
-      }
-      if (garageFillTile) {
-        garageFillTile.setAttribute("aria-valuenow", String(Math.round(fillPct)));
-        garageFillTile.classList.toggle("slots-warn", fillPct > 95);
-      }
-      $("garageBarText").textContent = `${locked.toLocaleString("uk-UA")} / ${myCars.toLocaleString("uk-UA")}`;
-      $("garagePctText").textContent = fmtPct(fillPct);
-
-      // Held — яскравий тег, що одразу впадає в око (деталі — в title)
-      $("garageHeldLine").innerHTML =
-        `<span class="pill-held" title="${t("garage_held", { held: held.toLocaleString("uk-UA") }).replace(/"/g, "&quot;")}">🏷️ ${t("garage_held_short", { held: held.toLocaleString("uk-UA") })}</span>`;
-
-      // Прокачка — стек-шкала (renderUpgradeBar)
-      const counts = { "111": 0, "332": 0, "323": 0, "233": 0, "custom": 0 };
-      for (const c of cards) counts[upgradeKey(c)]++;
-      renderUpgradeBar([
-        { k: "111", label: UPGRADE_LABELS["111"], color: "#3ddc84" },
-        { k: "332", label: UPGRADE_LABELS["332"], color: "#4d7cff" },
-        { k: "323", label: UPGRADE_LABELS["323"], color: "#a06bff" },
-        { k: "233", label: UPGRADE_LABELS["233"], color: "#ff9f43" },
-        { k: "custom", label: t("upg_custom"), color: "#6b7284" },
-      ], counts, total);
-
-      $("garageEmpty").style.display = "none";
-      $("garageStats").style.display = "block";
-      $("garageMeta").style.display = "block";
-      addLog(t("log_garage_analyzed", { total, locked, held: total - locked }));
-      await loadResources();
-      setTabIndicator("garage", "ok");
-    } catch (e) {
-      addLog(t("log_garage_analyze_error", { message: e.message }), "E");
-      setTabIndicator("garage", "bad");
-    } finally {
-      if (loadBtn) { loadBtn.disabled = false; loadBtn.textContent = t("garage_calc_btn"); }
-    }
-  }
+  // v0.0.611: парсер карток (renderUpgradeBar / loadGarageStats) видалено
+  // разом із вкладкою «Гараж». Метрики гаражу тепер рахує sync_now.sh
+  // і показує renderGarageMetricsHtml() у вкладці «Аналітика».
 
   // ---- wire up ----------------------------------------------------------
   // ---- theme (auto / light / dark) ---------------------------------------
@@ -1990,7 +1700,7 @@ an_battles_no_data: "No battle data yet — sync the game",
     // можливих артефактів усіченого запису: відкидаємо рядки без валідної
     // ISO-дати або з не-скінченними числовими полями.
     const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
-    const NUMERIC_FIELDS = ["cash", "gold", "prestige", "garageTotal", "garageLocked", "battleTotal", "battleWins", "battleDraws", "battleLosses"];
+    const NUMERIC_FIELDS = ["cash", "gold", "prestige", "garageTotal", "garageLocked", "garageFree", "garageHeld", "battleTotal", "battleWins", "battleDraws", "battleLosses"];
     const isValidEntry = (h) => {
       if (!h || typeof h !== "object") return false;
       if (typeof h.date !== "string" || !DATE_RE.test(h.date)) return false;
@@ -2026,7 +1736,7 @@ an_battles_no_data: "No battle data yet — sync the game",
     // імпортів — лишаємо лише один канонічний запис на кожну дату (останній
     // запис у масиві «перебиває» попередні).
     const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
-    const NUMERIC_FIELDS = ["cash", "gold", "prestige", "garageTotal", "garageLocked", "battleTotal", "battleWins", "battleDraws", "battleLosses"];
+    const NUMERIC_FIELDS = ["cash", "gold", "prestige", "garageTotal", "garageLocked", "garageFree", "garageHeld", "battleTotal", "battleWins", "battleDraws", "battleLosses"];
     const isValidEntry = (h) => {
       if (!h || typeof h !== "object") return false;
       if (typeof h.date !== "string" || !DATE_RE.test(h.date)) return false;
@@ -2087,13 +1797,22 @@ an_battles_no_data: "No battle data yet — sync the game",
     if (!m) return null;
     try {
       const cards = JSON.parse(m[1]);
-      const total = cards.length;
+      // v0.0.611: чотири окремі метрики замість колишнього змішування
+      // «всього карток» і «заблоковані»:
+      //   garageTotal  — місткість гаража (state:1 + 1 резервний слот)
+      //   garageLocked — збережені/заблоковані машини (locked:true)
+      //   garageFree   — вільні слоти = garageTotal - garageLocked
+      //   garageHeld   — «під гаражем» / не забрані машини (state:0)
+      const inGarage = cards.filter((c) => c.state === 1).length;
+      const held = cards.filter((c) => c.state === 0).length;
       const locked = Math.max(0, cards.filter((c) => c.locked).length);
+      const total = inGarage + 1;
+      const free = Math.max(0, total - locked);
       const battleWins = cards.reduce((sum, c) => sum + (c.cardWins || 0), 0);
       const battleDraws = cards.reduce((sum, c) => sum + (c.cardDraws || 0), 0);
       const battleLosses = cards.reduce((sum, c) => sum + (c.cardLosses || 0), 0);
       const battleTotal = battleWins + battleDraws + battleLosses;
-      return { garageTotal: total, garageLocked: locked, battleTotal, battleWins, battleDraws, battleLosses };
+      return { garageTotal: total, garageLocked: locked, garageFree: free, garageHeld: held, battleTotal, battleWins, battleDraws, battleLosses };
     } catch (e) {
       return null;
     }
@@ -2142,6 +1861,8 @@ an_battles_no_data: "No battle data yet — sync the game",
           const floorLocked = prevLocked != null ? Math.max(0, prevLocked) : 0;
           entry.garageLocked = Math.max(0, gar.garageLocked < floorLocked ? floorLocked : gar.garageLocked);
         }
+        if (gar.garageFree != null) entry.garageFree = gar.garageFree;
+        if (gar.garageHeld != null) entry.garageHeld = gar.garageHeld;
         if (gar.battleTotal != null) entry.battleTotal = gar.battleTotal;
         if (gar.battleWins != null) entry.battleWins = gar.battleWins;
         if (gar.battleDraws != null) entry.battleDraws = gar.battleDraws;
@@ -2597,11 +2318,11 @@ function formatForecastDate(daysAhead) {
       const accent = PROJ_COLORS[key] || "var(--text)";
       let rateBadge;
       if (perDay > 0) {
-        rateBadge = `<small class="an-proj-net up">🟢 +${perDay.toLocaleString("uk-UA")}${t("an_per_day")}</small>`;
+        rateBadge = `<small class="an-proj-net up">🟢 <span class="an-forecast-num">+${perDay.toLocaleString("uk-UA")}</span>${t("an_per_day")}</small>`;
       } else if (perDay < 0) {
-        rateBadge = `<small class="an-proj-net down">🔴 ${perDay.toLocaleString("uk-UA")}${t("an_per_day")}</small>`;
+        rateBadge = `<small class="an-proj-net down">🔴 <span class="an-forecast-num">${perDay.toLocaleString("uk-UA")}</span>${t("an_per_day")}</small>`;
       } else {
-        rateBadge = `<small class="an-proj-net flat">—${t("an_per_day")}</small>`;
+        rateBadge = `<small class="an-proj-net flat">—<span class="an-forecast-num">0</span>${t("an_per_day")}</small>`;
       }
       rows.push(`
         <div class="an-proj-row" data-key="${escapeAttr(key)}">
@@ -2747,10 +2468,13 @@ function formatForecastDate(daysAhead) {
     return "";
   }
 
-  let battlePeriod = "all";
+  let racePeriod = "all";
   try {
-    const savedBattlePeriod = localStorage.getItem("td2tdr_battle_period");
-    if (["today", "3d", "7d", "all"].includes(savedBattlePeriod)) battlePeriod = savedBattlePeriod;
+    // v0.0.611: перейменовано на td2tdr_race_period; старий ключ читаємо
+    // один раз для сумісності з попередніми збереженими налаштуваннями.
+    const savedRacePeriod = localStorage.getItem("td2tdr_race_period")
+      || localStorage.getItem("td2tdr_battle_period");
+    if (["today", "3d", "7d", "all"].includes(savedRacePeriod)) racePeriod = savedRacePeriod;
   } catch (e) {}
 
   function parseHistoryDate(dateStr) {
@@ -2764,15 +2488,15 @@ function formatForecastDate(daysAhead) {
     return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
   }
 
-  function getBattlePoints(hist) {
+  function getRacePoints(hist) {
     return hist
       .filter((h) => h.battleTotal != null || h.battleWins != null || h.battleDraws != null || h.battleLosses != null)
       .slice()
       .sort((a, b) => a.date.localeCompare(b.date));
   }
 
-  function getBattlePeriodSlice(hist, period) {
-    const points = getBattlePoints(hist);
+  function getRacePeriodSlice(hist, period) {
+    const points = getRacePoints(hist);
     if (!points.length) return { entries: [], baseline: null };
     const latestDate = points[points.length - 1].date;
     const daysBack = period === "today" ? 0 : period === "3d" ? 2 : period === "7d" ? 6 : null;
@@ -2785,19 +2509,33 @@ function formatForecastDate(daysAhead) {
     };
   }
 
-  function getBattleFieldValue(entry, key) {
+  function getRaceFieldValue(entry, key) {
     const value = entry && entry[key];
     return typeof value === "number" && Number.isFinite(value) ? value : null;
   }
 
-  function getBattlePeriodTotals(hist, period) {
-    const slice = getBattlePeriodSlice(hist, period);
+  // v0.0.611: для періоду "all" перший запис (день встановлення гри,
+  // 10 вер.) містить гігантський кумулятивний підсумок усіх заїздів.
+  // Якщо ми його використовуємо як baseline, усі наступні денні дельти
+  // стають від'ємними або майже нульовими — динаміка вирівнюється.
+  // Тому для "all" рахуємо дельти строго між сусідніми снімками,
+  // ігноруючи перший кумулятивний відлік.
+  function getRacePeriodTotals(hist, period) {
+    const slice = getRacePeriodSlice(hist, period);
     const last = slice.entries.length ? slice.entries[slice.entries.length - 1] : null;
     const delta = (key) => {
-      const current = getBattleFieldValue(last, key);
+      const current = getRaceFieldValue(last, key);
       if (current == null) return null;
-      if (period === "all" || !slice.baseline) return current;
-      const previous = getBattleFieldValue(slice.baseline, key);
+      if (period === "all") {
+        // Для "all" беремо дельту між останнім і попереднім снімком.
+        // Якщо снімків лише 1 — повертаємо 0 (немає динаміки).
+        if (slice.entries.length < 2) return 0;
+        const previous = getRaceFieldValue(slice.entries[slice.entries.length - 2], key);
+        if (previous == null) return 0;
+        return Math.max(0, current - previous);
+      }
+      if (!slice.baseline) return current;
+      const previous = getRaceFieldValue(slice.baseline, key);
       if (previous == null) return null;
       return Math.max(0, current - previous);
     };
@@ -2809,14 +2547,52 @@ function formatForecastDate(daysAhead) {
     };
   }
 
-  function getBattleTimeline(hist, period) {
-    const slice = getBattlePeriodSlice(hist, period);
+  // v0.0.611: окрема картка з чотирма метриками гаражу. Раніше «всього
+  // слотів» і «заблоковано» були однаковим числом, що приховувало вільні
+  // слоти та «під гаражем» (незабрані машини).
+  function renderGarageMetricsHtml(hist) {
+    const last = hist.length ? hist[hist.length - 1] : null;
+    if (!last) return "";
+    const total = last.garageTotal != null ? last.garageTotal : null;
+    const locked = last.garageLocked != null ? last.garageLocked : null;
+    // garageFree може бути відсутній у старих знімках — тоді рахуємо з total.
+    const free = last.garageFree != null
+      ? last.garageFree
+      : (total != null && locked != null ? Math.max(0, total - locked) : null);
+    const held = last.garageHeld != null ? last.garageHeld : null;
+    if (total == null && locked == null && free == null && held == null) return "";
+
+    const tiles = [
+      { key: "total", label: t("an_garage_total"), value: total, color: "#4d7cff" },
+      { key: "locked", label: t("an_garage_locked"), value: locked, color: "#3ddc84" },
+      { key: "free", label: t("an_garage_free"), value: free, color: "#ffb545" },
+      { key: "held", label: t("an_garage_held"), value: held, color: "#a06bff" },
+    ];
+    const body = tiles.map((tile) => `
+        <div class="an-garage-tile">
+          <span class="an-garage-tile-lbl">${tile.label}</span>
+          <b class="an-garage-tile-val" style="color:${tile.color}">${fmtNum(tile.value)}</b>
+        </div>`).join("");
+
+    return `
+      <section class="an-garage-metrics" data-garage-metrics>
+        <div class="an-garage-title">${t("an_garage")}</div>
+        <div class="an-garage-grid">${body}</div>
+      </section>
+    `;
+  }
+
+  function getRaceTimeline(hist, period) {
+    const slice = getRacePeriodSlice(hist, period);
     return slice.entries
       .map((entry, index) => {
-        const current = getBattleFieldValue(entry, "battleTotal");
+        const current = getRaceFieldValue(entry, "battleTotal");
         if (current == null) return { date: entry.date, value: null };
+        // Для "all" перший запис (день встановлення) пропускаємо —
+        // він містить кумулятивний підсумок, а не денну дельту.
+        if (period === "all" && index === 0) return { date: entry.date, value: null };
         const previous = index === 0 ? slice.baseline : slice.entries[index - 1];
-        const previousTotal = getBattleFieldValue(previous, "battleTotal");
+        const previousTotal = getRaceFieldValue(previous, "battleTotal");
         if (previousTotal != null) return { date: entry.date, value: Math.max(0, current - previousTotal) };
         if (period === "all") return { date: entry.date, value: current };
         return { date: entry.date, value: null };
@@ -2824,24 +2600,24 @@ function formatForecastDate(daysAhead) {
       .filter((item) => item.value != null);
   }
 
-  function renderBattlesDashboard(hist) {
-    const totals = getBattlePeriodTotals(hist, battlePeriod);
-    const timeline = getBattleTimeline(hist, battlePeriod);
-    const hasData = getBattlePoints(hist).length > 0;
+  function renderRacesDashboard(hist) {
+    const totals = getRacePeriodTotals(hist, racePeriod);
+    const timeline = getRaceTimeline(hist, racePeriod);
+    const hasData = getRacePoints(hist).length > 0;
     const winrate = totals.wins != null && totals.losses != null && totals.wins + totals.losses > 0
       ? Math.round((totals.wins / (totals.wins + totals.losses)) * 100)
       : null;
     const breakdownAvailable = [totals.wins, totals.draws, totals.losses].every((value) => value != null);
     const breakdownTotal = breakdownAvailable ? totals.wins + totals.draws + totals.losses : 0;
     const breakdownParts = [
-      { key: "wins", label: t("an_battles_win"), short: t("an_battles_win_short"), value: totals.wins, color: "#3ddc84" },
-      { key: "draws", label: t("an_battles_draw"), short: t("an_battles_draw_short"), value: totals.draws, color: "#ffb545" },
-      { key: "losses", label: t("an_battles_loss"), short: t("an_battles_loss_short"), value: totals.losses, color: "#ff5c7a" },
+      { key: "wins", label: t("an_races_win"), short: t("an_races_win_short"), value: totals.wins, color: "#3ddc84" },
+      { key: "draws", label: t("an_races_draw"), short: t("an_races_draw_short"), value: totals.draws, color: "#ffb545" },
+      { key: "losses", label: t("an_races_loss"), short: t("an_races_loss_short"), value: totals.losses, color: "#ff5c7a" },
     ];
-    const breakdownBar = breakdownAvailable && breakdownTotal > 0
+const breakdownBar = breakdownAvailable && breakdownTotal > 0
       ? breakdownParts.map((part) => {
         const width = (part.value / breakdownTotal) * 100;
-        return width > 0 ? `<span class="an-battles-breakdown-seg" style="width:${width}%;background:${part.color}" title="${escapeAttr(part.label)}: ${fmtNum(part.value)}"></span>` : "";
+        return width > 0 ? `<span class="an-races-breakdown-seg" style="width:${width}%;background:${part.color}" title="${escapeAttr(part.label)}: ${fmtNum(part.value)}"></span>` : "";
       }).join("")
       : "";
     const visibleTimeline = timeline.filter((item) => item.value != null);
@@ -2849,73 +2625,73 @@ function formatForecastDate(daysAhead) {
     const timelineBars = visibleTimeline.length
       ? visibleTimeline.map((item) => {
         const height = Math.max(4, (item.value / timelineMax) * 100);
-        return `<div class="an-battles-bar-col" title="${escapeAttr(formatShortDate(item.date))}: ${fmtNum(item.value)}">
-          <span class="an-battles-bar" style="height:${height}%"></span>
-          <span class="an-battles-bar-date">${escapeHtml(formatShortDate(item.date))}</span>
+        return `<div class="an-races-bar-col" title="${escapeAttr(formatShortDate(item.date))}: ${fmtNum(item.value)}">
+          <span class="an-races-bar" style="height:${height}%"></span>
+          <span class="an-races-bar-date">${escapeHtml(formatShortDate(item.date))}</span>
         </div>`;
       }).join("")
-      : `<div class="garage-empty">${t("an_battles_no_data")}</div>`;
+      : `<div class="garage-empty">${t("an_races_no_data")}</div>`;
     const filters = [
-      { value: "today", label: t("an_battles_filter_today") },
-      { value: "3d", label: t("an_battles_filter_3d") },
-      { value: "7d", label: t("an_battles_filter_7d") },
-      { value: "all", label: t("an_battles_filter_all") },
-    ].map((filter) => `<button type="button" class="an-battles-filter${battlePeriod === filter.value ? " active" : ""}" data-battle-period="${filter.value}" aria-selected="${battlePeriod === filter.value}">${filter.label}</button>`).join("");
+      { value: "today", label: t("an_races_filter_today") },
+      { value: "3d", label: t("an_races_filter_3d") },
+      { value: "7d", label: t("an_races_filter_7d") },
+      { value: "all", label: t("an_races_filter_all") },
+    ].map((filter) => `<button type="button" class="an-races-filter${racePeriod === filter.value ? " active" : ""}" data-race-period="${filter.value}" aria-selected="${racePeriod === filter.value}">${filter.label}</button>`).join("");
 
     return `
-      <section class="an-battles-dashboard" data-battles-dashboard>
-        <header class="an-battles-header">
-          <div class="an-battles-header-row an-battles-header-title">
-            <h2 class="an-battles-title">${t("an_battles_title")}</h2>
+      <section class="an-races-dashboard" data-races-dashboard>
+        <header class="an-races-header">
+          <div class="an-races-header-row an-races-header-title">
+            <h2 class="an-races-title">${t("an_races_title")}</h2>
           </div>
-          <div class="an-battles-header-row an-battles-header-filters" role="tablist" aria-label="battle period">
+          <div class="an-races-header-row an-races-header-filters" role="tablist" aria-label="race period">
             ${filters}
           </div>
-          <div class="an-battles-header-row an-battles-header-subtitle">
-            <span class="an-battles-subtitle">${t("an_battles_period_activity")}</span>
+          <div class="an-races-header-row an-races-header-subtitle">
+            <span class="an-races-subtitle">${t("an_races_period_activity")}</span>
           </div>
         </header>
-        <div class="an-battles-kpis">
-          <div class="an-battles-kpi">
-            <span class="an-battles-kpi-label">${t("an_battles_kpi_total")}</span>
-            <b class="an-battles-kpi-value">${hasData ? fmtNum(totals.total) : "—"}</b>
-            <small class="an-battles-kpi-note">${battlePeriod === "all" ? t("an_battles_filter_all") : t(`an_battles_filter_${battlePeriod}`)}</small>
+        <div class="an-races-kpis">
+          <div class="an-races-kpi">
+            <span class="an-races-kpi-label">${t("an_races_kpi_total")}</span>
+            <b class="an-races-kpi-value">${hasData ? fmtNum(totals.total) : "—"}</b>
+            <small class="an-races-kpi-note">${racePeriod === "all" ? t("an_races_filter_all") : t(`an_races_filter_${racePeriod}`)}</small>
           </div>
-          <div class="an-battles-kpi">
-            <span class="an-battles-kpi-label">${t("an_battles_kpi_winrate")}</span>
-            <b class="an-battles-kpi-value">${totals.wins != null && totals.losses != null ? `${fmtNum(totals.wins)} / ${fmtNum(totals.losses)}` : "—"}</b>
-             <small class="an-battles-kpi-note ${winrate == null ? "" : winrate >= 50 ? "up" : "down"}">${winrate == null ? t("an_battles_no_data") : t("an_battles_winrate", { pct: winrate })}</small>
-           </div>
-         </div>
-        <div class="an-battles-body">
-          <div class="an-battles-panel">
-            <div class="an-battles-panel-title">${t("an_battles_timeline")}</div>
-            <div class="an-battles-chart" role="img" aria-label="${escapeAttr(t("an_battles_timeline"))}">${timelineBars}</div>
+          <div class="an-races-kpi">
+            <span class="an-races-kpi-label">${t("an_races_kpi_winrate")}</span>
+            <b class="an-races-kpi-value">${totals.wins != null && totals.losses != null ? `${fmtNum(totals.wins)} / ${fmtNum(totals.losses)}` : "—"}</b>
+             <small class="an-races-kpi-note ${winrate == null ? "" : winrate >= 50 ? "up" : "down"}">${winrate == null ? t("an_races_no_data") : t("an_races_winrate", { pct: winrate })}</small>
+            </div>
           </div>
-          <div class="an-battles-panel">
-            <div class="an-battles-panel-title">${t("an_battles_breakdown")}</div>
+          <div class="an-races-body">
+            <div class="an-races-panel">
+              <div class="an-races-panel-title">${t("an_races_timeline")}</div>
+              <div class="an-races-chart" role="img" aria-label="${escapeAttr(t("an_races_timeline"))}">${timelineBars}</div>
+            </div>
+          <div class="an-races-panel">
+            <div class="an-races-panel-title">${t("an_races_breakdown")}</div>
             ${breakdownAvailable
-              ? `<div class="an-battles-breakdown-bar">${breakdownBar}</div>
-                <div class="an-battles-breakdown-legend">${breakdownParts.map((part) => `<span><i style="background:${part.color}"></i>${part.label}: <b>${fmtNum(part.value)}</b></span>`).join("")}</div>`
-              : `<div class="an-battles-unavailable">${t("an_battles_no_data")}</div>`}
-            <div class="an-battles-note">${t("an_battles_breakdown_note")}</div>
+              ? `<div class="an-races-breakdown-bar">${breakdownBar}</div>
+                <div class="an-races-breakdown-legend">${breakdownParts.map((part) => `<span><i style="background:${part.color}"></i>${part.label}: <b>${fmtNum(part.value)}</b></span>`).join("")}</div>`
+              : `<div class="an-races-unavailable">${t("an_races_no_data")}</div>`}
+            <div class="an-races-note">${t("an_races_breakdown_note")}</div>
           </div>
         </div>
       </section>
     `;
   }
 
-  function bindBattlesDashboard() {
+  function bindRacesDashboard() {
     const list = $("analyticsList");
-    if (!list || list.dataset.battlesBound) return;
-    list.dataset.battlesBound = "1";
+    if (!list || list.dataset.racesBound) return;
+    list.dataset.racesBound = "1";
     list.addEventListener("click", (e) => {
-      const btn = e.target.closest && e.target.closest("[data-battle-period]");
-      if (!btn || btn.dataset.battlePeriod === battlePeriod) return;
-      battlePeriod = btn.dataset.battlePeriod;
-      try { localStorage.setItem("td2tdr_battle_period", battlePeriod); } catch (err) {}
-      const old = list.querySelector("[data-battles-dashboard]");
-      const fresh = renderBattlesDashboard(_analyticsLastHist || []);
+      const btn = e.target.closest && e.target.closest("[data-race-period]");
+      if (!btn || btn.dataset.racePeriod === racePeriod) return;
+      racePeriod = btn.dataset.racePeriod;
+      try { localStorage.setItem("td2tdr_race_period", racePeriod); } catch (err) {}
+      const old = list.querySelector("[data-races-dashboard]");
+      const fresh = renderRacesDashboard(_analyticsLastHist || []);
       if (old) old.outerHTML = fresh;
     });
   }
@@ -2972,9 +2748,12 @@ function formatForecastDate(daysAhead) {
       accEl.innerHTML = `<span class="pill ${cls}">${t("an_accuracy", { pct })}</span>`;
     }
 
+    // v0.0.611: garageSlots = місткість гаража (garageTotal), а не заблоковані.
+    // Раніше тут підставлявся garageLocked, через що «всього слотів»
+    // фактично показувало кількість збережених машин.
     const hist = history.map((h) => ({
       ...h,
-      garageSlots: h.garageLocked != null ? h.garageLocked : h.garageTotal,
+      garageSlots: h.garageTotal != null ? h.garageTotal : h.garageLocked,
     }));
     // Кешуємо для updateForecastBlock.
     _analyticsLastHist = hist;
@@ -2993,7 +2772,8 @@ function formatForecastDate(daysAhead) {
       renderPrestigeAlertHtml(computePrestigeAlert(hist))
     );
     html += renderMetric(hist, "garageSlots", t("an_garage"), "#4d7cff");
-    html += renderBattlesDashboard(hist);
+    html += renderGarageMetricsHtml(hist);
+    html += renderRacesDashboard(hist);
 
     // v0.0.527: обгортаємо важке оновлення DOM у requestAnimationFrame,
     // щоб не блокувати main thread під час перемикання табів.
@@ -3002,13 +2782,13 @@ function formatForecastDate(daysAhead) {
         container.innerHTML = html;
         initChartInteraction();
         bindChartModeToggles();
-        bindBattlesDashboard();
+        bindRacesDashboard();
       });
     } else {
       container.innerHTML = html;
       initChartInteraction();
       bindChartModeToggles();
-      bindBattlesDashboard();
+      bindRacesDashboard();
     }
       } finally {
         renderAnalyticsInFlight = false;
@@ -3461,9 +3241,6 @@ function formatForecastDate(daysAhead) {
       window.switchTab = activateTab;
     }
 
-    const loadGarage = $("loadGarage");
-    if (loadGarage) loadGarage.addEventListener("click", loadGarageStats);
-
     const syncAndOpen = $("syncAndOpen");
     if (syncAndOpen) syncAndOpen.addEventListener("click", async () => {
       // v0.0.527: guard від повторних кліків — блокуємо кнопку, поки
@@ -3586,9 +3363,8 @@ function formatForecastDate(daysAhead) {
       }
     }
 
-    // Гараж/Аналітика читають уже синхронізовану копію (read-only, без
-    // копіювання) і заповнюють свої таби асинхронно.
-    loadGarageStats();
+    // Аналітика читає вже синхронізовану копію (read-only, без
+    // копіювання) і заповнює свій таб асинхронно.
     recordSnapshotIfNeeded()
       .then(renderAnalytics)
       .catch((e) => {
@@ -3663,7 +3439,7 @@ function formatForecastDate(daysAhead) {
       // v0.0.527: повна schema-валідація імпортованих записів. Відкидаємо
       // рядки з нечисловими або нескінченними полями, щоб не заповнювати
       // історію "брудними" даними.
-      const IMPORT_NUMERIC_FIELDS = ["cash", "gold", "prestige", "garageTotal", "garageLocked"];
+      const IMPORT_NUMERIC_FIELDS = ["cash", "gold", "prestige", "garageTotal", "garageLocked", "garageFree", "garageHeld"];
       const isValidImportEntry = (h) => {
         if (!h || typeof h !== "object") return false;
         if (typeof h.date !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(h.date)) return false;
