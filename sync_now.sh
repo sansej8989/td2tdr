@@ -120,25 +120,24 @@ record_history_snapshot() {
          return 0
      fi
 
-# v0.0.606: монотонне обмеження для garageLocked — кількість заблокованих
-     # слотів може лише зростати. Якщо поточне значення менше попереднього,
-     # використовуємо попереднє (захист від тимчасових помилок парсингу).
-     if [ -n "$G_LOCKED" ] && [ -f "$HISTORY" ]; then
-         local PREV_LOCKED=""
-         PREV_LOCKED=$(grep -v "\"date\":\"${TODAY}\"" "$HISTORY" 2>/dev/null | tail -n1 | grep -oE '"garageLocked":[[:space:]]*[0-9]+' | head -1 | sed -E 's/"garageLocked":[[:space:]]*//' 2>/dev/null || true)
-         if [ -n "$PREV_LOCKED" ] && [ "$G_LOCKED" -lt "$PREV_LOCKED" ] 2>/dev/null; then
-             log "history snapshot: garageLocked ($G_LOCKED < $PREV_LOCKED) — monotonic constraint: keeping previous value"
-             G_LOCKED="$PREV_LOCKED"
-         fi
+     # v0.0.606/v0.0.612: монотонне обмеження для garageLocked/garageTotal.
+     # Кількість заблокованих слотів і місткість гаража можуть лише зростати.
+     # Беремо максимум по всіх попередніх знімках (не лише останній рядок),
+     # щоб обмеження працювало навіть якщо історія не відсортована за датою.
+     local PREV_LOCKED PREV_TOTAL=""
+     if [ -f "$HISTORY" ]; then
+         PREV_LOCKED=$(grep -oE '"garageLocked":[[:space:]]*[0-9]+' "$HISTORY" 2>/dev/null \
+             | sed -E 's/.*:[[:space:]]*//' | sort -n | tail -n1)
+         PREV_TOTAL=$(grep -oE '"garageTotal":[[:space:]]*[0-9]+' "$HISTORY" 2>/dev/null \
+             | sed -E 's/.*:[[:space:]]*//' | sort -n | tail -n1)
      fi
-     # Монотонне обмеження для garageTotal — загальна кімната не може зменшуватися.
-     if [ -n "$G_TOTAL" ] && [ -f "$HISTORY" ]; then
-         local PREV_TOTAL=""
-         PREV_TOTAL=$(grep -v "\"date\":\"${TODAY}\"" "$HISTORY" 2>/dev/null | tail -n1 | grep -oE '"garageTotal":[[:space:]]*[0-9]+' | head -1 | sed -E 's/"garageTotal":[[:space:]]*//' 2>/dev/null || true)
-         if [ -n "$PREV_TOTAL" ] && [ "$G_TOTAL" -lt "$PREV_TOTAL" ] 2>/dev/null; then
-             log "history snapshot: garageTotal ($G_TOTAL < $PREV_TOTAL) — monotonic constraint: keeping previous value"
-             G_TOTAL="$PREV_TOTAL"
-         fi
+     if [ -n "$G_LOCKED" ] && [ -n "$PREV_LOCKED" ] && [ "$G_LOCKED" -lt "$PREV_LOCKED" ] 2>/dev/null; then
+         log "history snapshot: garageLocked ($G_LOCKED < $PREV_LOCKED) — monotonic constraint: keeping previous value"
+         G_LOCKED="$PREV_LOCKED"
+     fi
+     if [ -n "$G_TOTAL" ] && [ -n "$PREV_TOTAL" ] && [ "$G_TOTAL" -lt "$PREV_TOTAL" ] 2>/dev/null; then
+         log "history snapshot: garageTotal ($G_TOTAL < $PREV_TOTAL) — monotonic constraint: keeping previous value"
+         G_TOTAL="$PREV_TOTAL"
      fi
 
      # --- 3. Побудувати JSON-рядок нового запису ---

@@ -335,7 +335,7 @@
       an_cash: "Cash",
       an_gold: "Gold",
       an_prestige: "Престиж",
-an_garage: "Гараж (слотів)",
+an_garage: "Гараж",
        an_garage_total: "Всього слотів",
        an_garage_locked: "Заблоковано",
        an_garage_free: "Вільно",
@@ -388,7 +388,7 @@ an_garage: "Гараж (слотів)",
       an_prestige_alert_near: "🔔 Наближення до ліміту: Наразі {current} / 1000 Престижу. При поточному прирості (+{gain} /день) ліміт буде досягнуто завтра або найближчими днями.",
       an_prestige_alert_max_line: "Максимум (1000)",
       an_prestige_alert_safe: "Ліміт безпечний (є запас)",
-an_races_title: "⚔️ Аналітика та Статистика Заїздів",
+an_races_title: "⚔️ Статистика заїздів",
        an_races_filter_today: "Сьогодні",
        an_races_filter_3d: "3 дні",
        an_races_filter_7d: "7 днів",
@@ -594,7 +594,7 @@ an_races_title: "⚔️ Аналітика та Статистика Заїзд�
       an_cash: "Cash",
       an_gold: "Gold",
       an_prestige: "Prestige",
-an_garage: "Garage (slots)",
+an_garage: "Garage",
        an_garage_total: "Total slots",
        an_garage_locked: "Locked",
        an_garage_free: "Free",
@@ -649,7 +649,7 @@ an_accuracy: "Forecast accuracy: {pct}%",
        an_prestige_alert_max_line: "Max (1000)",
        an_prestige_alert_safe: "Cap safe (plenty of headroom)",
 // v0.0.611: unified races dashboard
-        an_races_title: "⚔️ Races Analytics & Stats",
+        an_races_title: "⚔️ Race Statistics",
         an_races_filter_today: "Today",
         an_races_filter_3d: "3 d",
         an_races_filter_7d: "7 d",
@@ -1598,7 +1598,7 @@ an_accuracy: "Forecast accuracy: {pct}%",
 
   // v0.0.611: парсер карток (renderUpgradeBar / loadGarageStats) видалено
   // разом із вкладкою «Гараж». Метрики гаражу тепер рахує sync_now.sh
-  // і показує renderGarageMetricsHtml() у вкладці «Аналітика».
+  // і показує renderGarageTilesHtml() у вкладці «Аналітика».
 
   // ---- wire up ----------------------------------------------------------
   // ---- theme (auto / light / dark) ---------------------------------------
@@ -1851,7 +1851,18 @@ an_accuracy: "Forecast accuracy: {pct}%",
         if (res.prestige != null) entry.prestige = res.prestige;
       }
       if (gar) {
-        if (gar.garageTotal != null) entry.garageTotal = gar.garageTotal;
+        if (gar.garageTotal != null) {
+          // v0.0.612: місткість слотів неспадна. Продаж/злиття машин
+          // зменшує лічильник state:1, але це не «віднімання слотів» —
+          // тому не записуємо значення нижче попереднього максимуму.
+          const prevTotal = history
+            .filter((h) => h.garageTotal != null && h.date !== today)
+            .sort((a, b) => a.date.localeCompare(b.date))
+            .map((h) => h.garageTotal)
+            .pop();
+          const floorTotal = prevTotal != null ? Math.max(0, prevTotal) : 0;
+          entry.garageTotal = gar.garageTotal < floorTotal ? floorTotal : gar.garageTotal;
+        }
         if (gar.garageLocked != null) {
           const prevLocked = history
             .filter((h) => h.garageLocked != null && h.date !== today)
@@ -1891,6 +1902,24 @@ an_accuracy: "Forecast accuracy: {pct}%",
     }
     if (!prev) return null;
     return last[key] - prev[key];
+  }
+
+  // v0.0.612: місткість гаража — не витратний ресурс, а неспадний ліміт.
+  // Продаж/злиття/розблокування машин змінює кількість машин у гаражі,
+  // але не «віднімає слоти»: графіки мають показувати лише чисте
+  // розширення (+N слотів), а не спади на -53.
+  // Застосуємо «running max» до вже відсортованої серії: значення
+  // піднімаються до попереднього максимуму й далі тільки ростуть.
+  function applyMonotonicFloor(history, key) {
+    const withKey = history.filter((h) => h[key] != null);
+    if (!withKey.length) return;
+    let floor = -Infinity;
+    for (const h of withKey) {
+      const v = h[key];
+      if (typeof v !== "number" || !Number.isFinite(v)) continue;
+      if (v > floor) floor = v;
+      else h[key] = floor;
+    }
   }
 
   // ---- analytics: forecast range state (slider, days) -----------------
@@ -2007,6 +2036,15 @@ function formatForecastDate(daysAhead) {
       const d = new Date(dateStr + "T00:00:00");
       return d.toLocaleDateString(currentUiLang === "en" ? "en-US" : "uk-UA", { day: "numeric", month: "short" });
     } catch (e) { return dateStr; }
+  }
+
+  // v0.0.612: компактний формат міток осі — «27.09» замість «27 вер.».
+  // Обидві цифри коротші, тож підписи не накладаються один на одний
+  // і не потребують вертикального writing-mode.
+  function formatAxisDate(dateStr) {
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(dateStr || ""));
+    if (!m) return escapeHtml(dateStr || "");
+    return `${m[3]}.${m[2]}`;
   }
 
 
@@ -2547,10 +2585,12 @@ function formatForecastDate(daysAhead) {
     };
   }
 
-  // v0.0.611: окрема картка з чотирма метриками гаражу. Раніше «всього
-  // слотів» і «заблоковано» були однаковим числом, що приховувало вільні
-  // слоти та «під гаражем» (незабрані машини).
-  function renderGarageMetricsHtml(hist) {
+  // v0.0.611: чотири метрики гаражу як вбудована група плиток. Раніше
+  // «всього слотів» і «заблоковано» були однаковим числом, що приховувало
+  // вільні слоти та «під гаражем» (незабрані машини).
+  // Повертаємо лише сітку плиток — картка-обгортка й заголовок «Гараж»
+  // малює renderMetric(), тож окремого дубльованого блоку більше немає.
+  function renderGarageTilesHtml(hist) {
     const last = hist.length ? hist[hist.length - 1] : null;
     if (!last) return "";
     const total = last.garageTotal != null ? last.garageTotal : null;
@@ -2568,18 +2608,12 @@ function formatForecastDate(daysAhead) {
       { key: "free", label: t("an_garage_free"), value: free, color: "#ffb545" },
       { key: "held", label: t("an_garage_held"), value: held, color: "#a06bff" },
     ];
-    const body = tiles.map((tile) => `
+
+    return `<div class="an-garage-grid">${tiles.map((tile) => `
         <div class="an-garage-tile">
           <span class="an-garage-tile-lbl">${tile.label}</span>
           <b class="an-garage-tile-val" style="color:${tile.color}">${fmtNum(tile.value)}</b>
-        </div>`).join("");
-
-    return `
-      <section class="an-garage-metrics" data-garage-metrics>
-        <div class="an-garage-title">${t("an_garage")}</div>
-        <div class="an-garage-grid">${body}</div>
-      </section>
-    `;
+        </div>`).join("")}</div>`;
   }
 
   function getRaceTimeline(hist, period) {
@@ -2627,7 +2661,7 @@ const breakdownBar = breakdownAvailable && breakdownTotal > 0
         const height = Math.max(4, (item.value / timelineMax) * 100);
         return `<div class="an-races-bar-col" title="${escapeAttr(formatShortDate(item.date))}: ${fmtNum(item.value)}">
           <span class="an-races-bar" style="height:${height}%"></span>
-          <span class="an-races-bar-date">${escapeHtml(formatShortDate(item.date))}</span>
+          <span class="an-races-bar-date">${formatAxisDate(item.date)}</span>
         </div>`;
       }).join("")
       : `<div class="garage-empty">${t("an_races_no_data")}</div>`;
@@ -2755,6 +2789,9 @@ const breakdownBar = breakdownAvailable && breakdownTotal > 0
       ...h,
       garageSlots: h.garageTotal != null ? h.garageTotal : h.garageLocked,
     }));
+    // v0.0.612: місткість слотів неспадна — вирівнюємо серію, щоб продаж
+    // чи розблокування машин не показувалися як «витрата» (-N слотів).
+    applyMonotonicFloor(hist, "garageSlots");
     // Кешуємо для updateForecastBlock.
     _analyticsLastHist = hist;
 
@@ -2771,8 +2808,9 @@ const breakdownBar = breakdownAvailable && breakdownTotal > 0
       1000,
       renderPrestigeAlertHtml(computePrestigeAlert(hist))
     );
-    html += renderMetric(hist, "garageSlots", t("an_garage"), "#4d7cff");
-    html += renderGarageMetricsHtml(hist);
+    // v0.0.611: єдиний блок «Гараж» — картка метрики містить і графік
+    // місткості, і групу з чотирьох плиток (всього/заблоковано/вільно/у триманні).
+    html += renderMetric(hist, "garageSlots", t("an_garage"), "#4d7cff", null, renderGarageTilesHtml(hist));
     html += renderRacesDashboard(hist);
 
     // v0.0.527: обгортаємо важке оновлення DOM у requestAnimationFrame,

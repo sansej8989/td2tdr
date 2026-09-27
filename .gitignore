@@ -3,6 +3,7 @@ temp/
 dist/
 *.zip
 sync.log
+history.jsonl
 
 # IDE
 .vscode/

@@ -3691,21 +3691,25 @@ body {
   color: var(--text-dim);
 }
 
-/* Timeline: vertical bar chart of races per day */
+/* Timeline: vertical bar chart of races per day.
+   v0.0.612: мітки осі — горизонтальні «DD.MM» замість вертикальних
+   «27 вер.». Вертикальний writing-mode з'їдав висоту колонки й лишав
+   текст напівоберненим, а горизонтальні цифри дають чіткіше вирівнювання
+   завдяки tabular-nums. Нижче — фіксовані розміри та внутрішні відступи. */
 .an-races-chart {
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
-  gap: 3px;
-  height: 92px;
-  padding: 4px 0;
+  gap: 4px;
+  height: 104px;
+  padding: 6px 2px 0;
 }
 .an-races-bar-col {
   flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
+  gap: 5px;
   min-width: 0;
   height: 100%;
   justify-content: flex-end;
@@ -3721,11 +3725,16 @@ body {
 .an-races-bar-date {
   font-size: 8.5px;
   font-weight: 700;
+  line-height: 1.1;
   color: var(--text-dimmer);
   font-variant-numeric: tabular-nums;
-  writing-mode: vertical-rl;
-  text-orientation: mixed;
-  letter-spacing: 0.02em;
+  font-feature-settings: "tnum" 1;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  text-align: center;
+  /* підпис завжди під стовпцем, не піднімається навіть для низьких барів */
+  flex: 0 0 auto;
+  margin-top: 1px;
 }
 
 /* Breakdown: segmented bar + legend */
@@ -3772,40 +3781,30 @@ body {
 @media (max-width: 430px) {
   .an-races-kpis { grid-template-columns: repeat(2, 1fr); }
   .an-races-body { grid-template-columns: 1fr; }
-  .an-races-chart { height: 70px; }
+  /* v0.0.612: мітки горизонтальні, тож потрібно більше висоти під них,
+     інакше вони обрізаються. Прописано мінімальну висоту колонки. */
+  .an-races-chart { height: 88px; }
   .an-races-bar-date { font-size: 7.5px; }
+  .an-races-bar-col { min-height: 26px; }
 }
 
-/* v0.0.611: enlarged daily-rate number inside forecast per-day labels */
+/* v0.0.612: «N / день» повернуто до стандартного розміру підпису —
+   число більше не виділяється окремим великим шрифтом. */
 .an-forecast-num {
-  font-size: 1.28em;
-  font-weight: 800;
-  color: var(--text);
-  letter-spacing: -0.02em;
-  vertical-align: baseline;
+  font: inherit;
+  color: inherit;
+  letter-spacing: inherit;
 }
 
-/* v0.0.611: four distinct garage metrics (total / locked / free / held) */
-.an-garage-metrics {
-  margin: 12px 0 4px;
-  border: 1px solid var(--card-border);
-  border-radius: var(--radius-sm);
-  background: rgba(255, 255, 255, 0.025);
-  overflow: hidden;
-}
-.an-garage-title {
-  padding: 10px 14px 8px;
-  font-size: 10.5px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--text-dim);
-  border-bottom: 1px solid var(--card-border);
-}
+/* v0.0.611/612: чотири метрики гаражу (всього / заблоковано / вільно / held)
+   всередині єдиної картки «Гараж». */
 .an-garage-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 1px;
+  margin-bottom: 8px;
+  border-radius: var(--radius-xs);
+  overflow: hidden;
   background: var(--card-border);
 }
 .an-garage-tile {
