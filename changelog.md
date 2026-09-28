@@ -10,6 +10,31 @@ not yet packaged; move them under a tagged version once a release is cut.
 
 ---
 
+## [0.0.625] – 2026-09-28
+
+Release focus: **репозиторій — повний аудит та очищення** (i18n, CSS, Git гігієна).
+
+### i18n Optimization
+- **Вилучено 52 невикористовуваних i18n-ключів** з обох словників (`uk` + `en`) у `webroot/app.js`:
+  старі ключі вкладки «Гараж» (`garage_title`, `garage_calc_btn`, `garage_slots`, `garage_fill`, `garage_upgrade`, `garage_total_cars`, `garage_held`, `garage_held_short`, `upg_custom`, `battle_wins`, `battle_draws`, `battle_losses`), ресурсів (`res_title`, `res_empty`, `res_prestige`), статусів синхронізації (`sm_step_copy*`, `log_sync_verified*`, `sm_step_check_done`, `sm_step_sync_done`, `sm_step_garage`, `sm_step_history`, `sm_step_open*`), аналітики сценаріїв (`an_forecast_conf_label_*`, `an_proj_scenarios*`), та деякі лог-ключі (`log_synced_manual`, `toast_not_ready`, `log_auto_resync`, `log_garage_*`, `log_resources_loaded`, `res_prestige_overflow_warn`).
+- **Додано відсутній ключ `tt_donate`** (UKR + ENG) — використовується в `index.html` для кнопки «Підтримати розробку».
+
+### CSS Cleanup
+- **Видалено 338 рядків сирітських CSS** з `webroot/style.css`, що охоплювали повністю вилучені компоненти:
+  - Стара вкладка «Гараж» (285 рядків): `.garage-meta`, `.garage-fill-*`, `.garage-battle-*`, `.garage-section-*`, `.garage-donut-legend`, `.donut-legend-*`, `.garage-total-num`.
+  - Upgrade stack/donut (17+ рядків): `.upgrade-stack-*`, `.upgrade-donut`.
+  - Сценарії прогнозування (8 рядків): `.an-proj-scenarios`, `.an-proj-*`, `.an-forecast-scenarios-title`.
+  - Різні версійні оверрайди (compact, contrast, minimal, landscape) — залишкові правила для вилучених UI.
+
+### Git Hygiene
+- **Оптимізовано `.gitignore`**: видалено випадкові записи (`d`, `txt.txt`), додано загальні маски захисту від тимчасових файлів: `*.tmp`, `*.bak`, `history.jsonl.tmp*`, `*.log`.
+
+### Verification
+- Перевірено синтаксис JavaScript: `node --check webroot/app.js` — OK.
+- Перевірено чистоту робочого дерева: `git status` — clean.
+
+---
+
 ## [0.0.621] – 2026-09-28
 
 Hotfix: **надійність виявлення оновлень** — щоб щойно випущений реліз
