@@ -10,6 +10,21 @@ not yet packaged; move them under a tagged version once a release is cut.
 
 ---
 
+## [0.0.626] – 2026-09-28
+
+Release focus: **repository cleanup & release preparation** — removal of unused assets and scripts.
+
+### Removed
+- **`webroot/data/garage_normalized.json`** — unused sample/test data file (515 bytes, zero references).
+- **`scripts/_poll.ps1`** — development PowerShell script for CI polling (not used in production workflows).
+- **`package.json`** — orphaned Node.js manifest with `express` dependency (no Node.js runtime in project).
+
+### Verification
+- Validated JavaScript syntax: `node --check webroot/app.js` — OK.
+- Verified clean working tree: `git status` — only intended deletions.
+
+---
+
 ## [0.0.625] – 2026-09-28
 
 Release focus: **репозиторій — повний аудит та очищення** (i18n, CSS, Git гігієна).
