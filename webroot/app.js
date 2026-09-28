@@ -3122,6 +3122,14 @@ const breakdownBar = breakdownAvailable && breakdownTotal > 0
 
   // ---- update check (badge on the "!" button + card in the changelog modal) --
   const UPDATE_JSON_URL = "https://raw.githubusercontent.com/sansej8989/td2tdr/master/update.json";
+  // v0.0.621: cache-busting. `cache: "no-store"` — це лише рекомендація для
+  // HTTP-кеша: частина Android WebView-проксі та WebView-кешів перед
+  // raw.githubusercontent.com ігнорує її й віддає застарілий update.json
+  // (кеш CDN — 5–15 хв). Унікальний `?t=` у самому URL змушує CDN
+  // повернути свіжий документ без жодних залежностей від заголовків.
+  // Порівняння версій уже далі йшло виключно за числовим versionCode
+  // (`remoteCode > installedCode`), тож рядковий "version" не впливає.
+  const updateUrl = `${UPDATE_JSON_URL}?t=${Date.now()}`;
 
   async function checkForUpdate() {
     const badge = $("updateBadge");
@@ -3149,7 +3157,7 @@ const breakdownBar = breakdownAvailable && breakdownTotal > 0
 
     let remote;
     try {
-      const res = await fetch(UPDATE_JSON_URL, { cache: "no-store" });
+      const res = await fetch(updateUrl, { cache: "no-store" });
       if (!res.ok) throw new Error("HTTP " + res.status);
       remote = await res.json();
     } catch (e) {
