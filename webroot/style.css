@@ -3257,10 +3257,14 @@ body {
   min-width: 0;
   appearance: none;
   -webkit-appearance: none;
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 6px;
+  /* v0.0.631: two columns — the icon chip owns column 1 and spans the name and
+     value rows, the text block owns column 2, the badge spans both. */
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  grid-template-rows: auto auto auto;
+  align-items: start;
+  column-gap: 7px;
+  row-gap: 3px;
   padding: 12px 11px 10px;
   border: 1px solid var(--card-border);
   border-radius: var(--radius-xs);
@@ -3294,6 +3298,8 @@ body {
   outline-offset: 2px;
 }
 .an-forecast-metric-label {
+  grid-column: 2;
+  grid-row: 1;
   display: block;
   font-size: 10px;
   font-weight: 700;
@@ -3308,35 +3314,38 @@ body {
   overflow: hidden;
   text-overflow: ellipsis;
 }
-/* Icon + value row: vertically centred, value is the largest element on the
-   card. */
+/* v0.0.631: the wrapper only existed to hold icon + value side by side. As a
+   grid the card places them itself, so the wrapper stops generating a box and
+   its two children become grid items — no markup change needed. */
 .an-forecast-metric-main {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  min-width: 0;
+  display: contents;
 }
 /* v0.0.630: chip 22x22 -> 28x28 (+27%), glyph 13px -> 16px to match. It eats
    6px more of the row, so fitForecastValues shrinks the value a step further
    at narrow widths — that is the intended trade for a readable icon. */
 .an-forecast-metric-icon {
-  flex: 0 0 auto;
-  display: grid;
-  place-items: center;
+  grid-column: 1;
+  grid-row: 1 / span 2;
+  align-self: center;
+  justify-self: start;
   width: 28px;
   height: 28px;
   border-radius: 9px;
   background: var(--fc-tint, rgba(129, 140, 248, 0.14));
   font-size: 16px;
   line-height: 1;
+  display: grid;
+  place-items: center;
 }
 /* Both numbers share one grid cell, so the swap changes neither width nor
    height and the 2x2 grid never jumps.
-   `flex: 1 1 0` (not `auto`) on purpose: the box width must not depend on its
-   content, otherwise fitForecastValues would measure one width and get a
-   different one after the font size changed, leaving the number clipped. */
+   `minmax(0, 1fr)` on the card column (and `min-width: 0` here) is on
+   purpose: the box width must not depend on its content, otherwise
+   fitForecastValues would measure one width and get a different one after the
+   font size changed, leaving the number clipped. */
 .an-forecast-metric-figures {
-  flex: 1 1 0;
+  grid-column: 2;
+  grid-row: 2;
   min-width: 0;
   display: grid;
   align-items: center;
@@ -3352,7 +3361,8 @@ body {
   letter-spacing: -0.015em;
   line-height: 1.15;
   color: var(--text);
-  text-align: center;
+  /* v0.0.631: value shares the card's right edge with the name above it. */
+  text-align: right;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -3373,7 +3383,10 @@ body {
 /* Rate badge: solid fill, not translucent — that keeps its contrast
    independent of whatever ends up behind the card (background bubbles). */
 .an-forecast-metric-rate {
-  align-self: flex-start;
+  grid-column: 1 / -1;
+  grid-row: 3;
+  justify-self: center;
+  margin-top: 3px;
   max-width: 100%;
   padding: 1px 7px;
   border-radius: 999px;

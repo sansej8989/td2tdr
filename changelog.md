@@ -5,6 +5,15 @@
 
 
 
+
+
+# v0.0.631
+
+## [0.0.631] – 2026-09-28
+
+### Changed
+- **Analytics: forecast cards layout (icon centered between name and value, name and value right-aligned, rate badge centered)** — the metric card is now a two-column grid: the icon chip owns the left column and is centred across the name and value rows, the name and the value share the card's right edge, and the rate badge spans both columns centred underneath. The chip stays 28×28. The value column is exactly as wide as before, so large numbers still shrink to fit at 360px and 400px with no ellipsis, and the forecast/change toggle still causes no grid shift. CSS-only change — no markup, data-attribute, aria or calculation changes.
+
 # v0.0.630
 
 ## [0.0.630] – 2026-09-28
