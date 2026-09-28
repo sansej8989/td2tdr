@@ -4,6 +4,10 @@ dist/
 *.zip
 sync.log
 history.jsonl
+*.tmp
+*.bak
+history.jsonl.tmp*
+*.log
 
 # IDE
 .vscode/
@@ -12,5 +16,3 @@ history.jsonl
 # OS
 Thumbs.db
 .DS_Store
-d
-txt.txt

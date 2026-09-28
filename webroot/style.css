@@ -2219,291 +2219,6 @@ body {
   word-break: break-word;
 }
 
-.garage-meta {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  margin-bottom: 14px;
-}
-
-.garage-empty {
-  font-size: 12.5px;
-  color: var(--text-dimmer);
-  text-align: center;
-  padding: 18px 8px;
-  font-style: italic;
-}
-
-/* Garage Fill Tile (Prestige-style tile) */
-.garage-fill-tile {
-  position: relative;
-  overflow: hidden;
-  padding: 12px 14px;
-  min-height: 58px;
-}
-
-.garage-fill-bar {
-  position: absolute;
-  top: 0;
-  left: 0;
-  bottom: 0;
-  width: 0%;
-  background: linear-gradient(90deg, rgba(77, 124, 255, 0.12), rgba(77, 124, 255, 0.28));
-  border-right: 2px solid rgba(77, 124, 255, 0.65);
-  transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-  z-index: 1;
-}
-
-.garage-fill-bar.p-green {
-  background: linear-gradient(90deg, rgba(61, 220, 132, 0.12), rgba(61, 220, 132, 0.26));
-  border-right-color: rgba(61, 220, 132, 0.65);
-}
-
-.garage-fill-bar.p-yellow {
-  background: linear-gradient(90deg, rgba(251, 191, 36, 0.12), rgba(251, 191, 36, 0.26));
-  border-right-color: rgba(251, 191, 36, 0.65);
-}
-
-.garage-fill-bar.p-orange {
-  background: linear-gradient(90deg, rgba(251, 146, 60, 0.14), rgba(251, 146, 60, 0.28));
-  border-right-color: rgba(251, 146, 60, 0.7);
-}
-
-.garage-fill-bar.p-red {
-  background: linear-gradient(90deg, rgba(248, 113, 113, 0.16), rgba(248, 113, 113, 0.3));
-  border-right-color: rgba(248, 113, 113, 0.75);
-}
-
-.garage-fill-tile .res-bg-icon {
-  font-size: 66px;
-  right: -6px;
-  bottom: -10px;
-}
-
-.garage-fill-pct {
-  font-size: 11px;
-  font-weight: 800;
-  color: var(--accent-1);
-}
-
-.garage-fill-group,
-.garage-battle-group {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-}
-
-.garage-battle-group {
-  margin-top: 6px; /* keeps the Прокачка→Бої gap close to before, since the base .garage-meta gap dropped from 22px to 14px */
-}
-
-.garage-fill-held {
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--text-dimmer);
-  padding: 0 3px;
-}
-
-/* Garage Section Cards */
-.garage-section-card {
-  margin-top: 12px; /* extra separation on top of the base garage-meta gap — Прокачка reads as its own block */
-  background: rgba(255, 255, 255, 0.025);
-  border: 1px solid var(--card-border);
-  border-radius: var(--radius-sm);
-  padding: 12px 14px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.garage-section-title {
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--text-dim);
-}
-
-/* Upgrade breakdown: horizontal stacked bar (replaces the donut — no more
-   overlapping labels when a segment is a tiny percentage) */
-.upgrade-stack-wrap {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.upgrade-stack-head {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-}
-
-.upgrade-stack-val {
-  font-size: 22px;
-  font-weight: 900;
-  color: var(--text);
-  font-variant-numeric: tabular-nums;
-  line-height: 1.2;
-}
-
-.upgrade-stack-lbl {
-  font-size: 10px;
-  font-weight: 600;
-  color: var(--text-dimmer);
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-}
-
-.upgrade-stack-track {
-  display: flex;
-  width: 100%;
-  height: 14px;
-  border-radius: 999px;
-  overflow: hidden;
-  background: rgba(255, 255, 255, 0.06);
-}
-
-.upgrade-stack-seg {
-  height: 100%;
-  min-width: 3px;
-  transition: flex-basis 0.5s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.15s ease;
-  cursor: pointer;
-}
-
-.upgrade-stack-seg.dim { opacity: 0.35; }
-
-.garage-donut-legend {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-  flex-grow: 1;
-}
-
-.donut-legend-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 4px 6px;
-  border-radius: 6px;
-  background: transparent;
-  border: 1px solid transparent;
-  cursor: pointer;
-  transition: all 0.15s ease;
-  user-select: none;
-  min-width: 0;
-}
-
-.donut-legend-item:hover,
-.donut-legend-item.active {
-  background: rgba(255, 255, 255, 0.06);
-  border-color: var(--card-border-hi);
-}
-
-.donut-legend-left {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 11.5px;
-  font-weight: 600;
-  color: var(--text-dim);
-  min-width: 0;
-  overflow: hidden;
-}
-
-.donut-legend-left span:last-child {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.donut-legend-right {
-  display: flex;
-  align-items: baseline;
-  gap: 5px;
-  flex-shrink: 0;
-}
-
-.donut-legend-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-
-.donut-legend-val {
-  font-size: 12px;
-  font-weight: 800;
-  color: var(--text);
-  font-variant-numeric: tabular-nums;
-}
-
-.donut-legend-pct {
-  font-size: 10.5px;
-  font-weight: 600;
-  color: var(--text-dimmer);
-}
-
-/* Garage Battle Tile (Prestige-style) */
-.garage-battle-tile {
-  position: relative;
-  overflow: hidden;
-  padding: 12px 14px;
-  min-height: 58px;
-}
-
-.garage-battle-bar-bg {
-  position: absolute;
-  top: 0;
-  left: 0;
-  bottom: 0;
-  width: 100%;
-  pointer-events: none;
-  z-index: 1;
-  transition: background 0.4s ease;
-}
-
-.garage-battle-total {
-  font-size: 11.5px;
-  font-weight: 800;
-  color: var(--text-dim);
-  font-variant-numeric: tabular-nums;
-}
-
-.garage-battle-inline-stats {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  padding: 0 3px;
-}
-
-.battle-stat-tag {
-  font-size: 12px;
-  font-weight: 700;
-  display: inline-flex;
-  align-items: baseline;
-  gap: 3px;
-}
-
-.battle-stat-tag b {
-  font-size: 14px;
-  font-weight: 900;
-  font-variant-numeric: tabular-nums;
-}
-
-.battle-stat-tag.b-win  { color: #3ddc84; }
-.battle-stat-tag.b-draw { color: #ffb545; }
-.battle-stat-tag.b-loss { color: #ff5c7a; }
-
-.garage-note {
-  margin-top: 14px;
-  padding-top: 12px;
-  border-top: 1px solid var(--card-border);
-  font-size: 11px;
-  line-height: 1.5;
-  color: var(--text-dimmer);
-}
 
 /* ---------- bars ---------- */
 .prestige-wrap {
@@ -2811,23 +2526,6 @@ body {
   align-items: center;
   gap: 12px;
 }
-.upgrade-donut {
-  flex-shrink: 0;
-  width: 76px;
-  height: 76px;
-}
-.upgrade-donut-svg { width: 100%; height: 100%; display: block; }
-.upgrade-donut-num {
-  font-size: 13px;
-  font-weight: 900;
-  fill: var(--text);
-}
-.upgrade-donut-lbl {
-  font-size: 6px;
-  font-weight: 600;
-  fill: var(--text-dimmer);
-}
-.upgrade-stack-col { flex: 1; min-width: 0; }
 
 /* Слот-індикатор: світлодіодне попередження при >95% зайнятості */
 .garage-fill-tile.slots-warn {
@@ -2882,23 +2580,11 @@ body {
 
 /* Компактніший і цілісніший Гараж: менші шрифти/відступи, чітка межа
    між блоком ресурсоємності (Слоти/Held) і статистикою прокачки */
-.garage-meta { gap: 10px; }
-.garage-section-card { padding: 9px 11px; margin-top: 10px; }
-.garage-section-title { font-size: 10.5px; letter-spacing: 0.06em; margin-bottom: 7px; }
-.upgrade-stack-val { font-size: 18px; }
-.upgrade-stack-wrap { gap: 10px; }
-.upgrade-donut { width: 64px; height: 64px; }
-.donut-legend-item { padding: 2px 0; font-size: 11px; }
 .garage-fill-group {
   padding-bottom: 10px;
   border-bottom: 1px dashed var(--card-border);
 }
 
-/* ---------- v0.0.305 final: contrast garage, compact 2-col forecast ---------- */
-/* Прогноз: щільна сітка 2 колонки, дрібніші шрифти/відступи */
-.an-proj-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
   gap: 3px 14px;
 }
 .an-forecast { padding: 8px 10px; }
@@ -2925,8 +2611,6 @@ body {
 [data-theme="light"] .garage-battle-group.accent-battles {
   border-color: rgba(16, 140, 90, 0.45);
 }
-.garage-section-card { padding: 7px 10px; margin-top: 8px; }
-
 /* Held: ще помітніше — більший шрифт + сильніше світіння */
 .pill-held {
   font-size: 13px;
@@ -2985,12 +2669,6 @@ body {
 [data-theme="light"] .garage-battle-group.accent-battles {
   border-color: rgba(20, 22, 30, 0.16);
 }
-.garage-battle-tile,
-.garage-fill-tile {
-  box-shadow: none !important;
-}
-.garage-section-card .upgrade-stack-val { font-size: 17px; }
-.garage-donut-legend { font-size: 11px; }
 
 /* ---------- v0.0.503-beta: journal redesign, analytics guard, garage minimal ---------- */
 /* Журнал: більша корисна площа */
@@ -3023,7 +2701,6 @@ body {
 
 /* Гараж: donut видалено — стек-шкала знову в колонку, без зайвих акцентів */
 .upgrade-stack-wrap { flex-direction: column !important; align-items: stretch; gap: 6px; }
-.upgrade-donut { display: none !important; }
 .garage-section-card.accent-upgrades,
 .garage-battle-group.accent-battles {
   border-color: var(--card-border) !important;
@@ -3154,13 +2831,6 @@ body {
 /* ---------- LANDSCAPE ---------- */
 @media (orientation: landscape) and (min-width: 640px) {
   /* Контент: двоколонковий лейаут там, де це має сенс */
-  .garage-meta {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 12px;
-    align-items: start;
-  }
-  .garage-fill-group { border-bottom: none; padding-bottom: 0; }
   .garage-battle-group.accent-battles { margin-top: 0; }
 
   #analyticsList {
@@ -3565,14 +3235,6 @@ body {
   border-bottom-color: rgba(20, 22, 30, 0.08);
 }
 
-.an-proj-scenarios,
-.an-proj-sc,
-.an-proj-pess,
-.an-proj-opt,
-.an-forecast-scenarios-title {
-  /* v0.0.512: сценарії Песиміст/Оптиміст видалено — класи лишаються
-     невидимими на випадок залишкового HTML. */
-  display: none;
 }
 
 /* Розкладка прогнозних рядків: 2-колонкова (назва + баланс/темп) */
