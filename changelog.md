@@ -3,6 +3,16 @@
 
 
 
+
+
+# v0.0.630
+
+## [0.0.630] – 2026-09-28
+
+### Changed
+- **Analytics: forecast cards polish (metric labels right-aligned, larger icon chip)** — the metric name (Cash, Gold, Prestige, Garage) now sits on the right edge of its card, and the icon chip grew from 22×22 to 28×28 with a proportionally larger glyph. The value still shrinks to fit: at 360px and 400px a 10-digit value renders in full with no ellipsis. CSS-only change, no markup or data-attribute changes.
+- **Release: extract_changelog.py now extracts the full version section, so release notes are no longer empty** — the script stopped a section at the first line starting with `#`, which was the section's own `## [version]` heading, so it always returned an empty body (releases up to v0.0.629 shipped a 1-byte description). It now ends a section at the next heading of the same or higher level and prints nothing at all when a version has no section, so the workflow's empty-output fallback actually fires.
+
 # v0.0.629
 
 **2026-09-28 — Changed**

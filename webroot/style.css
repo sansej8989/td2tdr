@@ -3300,6 +3300,10 @@ body {
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--text-dim);
+  /* v0.0.630: name sits on the right edge of the card. The tile is a column
+     flex box with `align-items: stretch`, so the label block is already full
+     width — no markup change needed. */
+  text-align: right;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -3312,15 +3316,18 @@ body {
   gap: 7px;
   min-width: 0;
 }
+/* v0.0.630: chip 22x22 -> 28x28 (+27%), glyph 13px -> 16px to match. It eats
+   6px more of the row, so fitForecastValues shrinks the value a step further
+   at narrow widths — that is the intended trade for a readable icon. */
 .an-forecast-metric-icon {
   flex: 0 0 auto;
   display: grid;
   place-items: center;
-  width: 22px;
-  height: 22px;
-  border-radius: 7px;
+  width: 28px;
+  height: 28px;
+  border-radius: 9px;
   background: var(--fc-tint, rgba(129, 140, 248, 0.14));
-  font-size: 13px;
+  font-size: 16px;
   line-height: 1;
 }
 /* Both numbers share one grid cell, so the swap changes neither width nor
