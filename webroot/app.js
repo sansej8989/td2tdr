@@ -2297,18 +2297,18 @@ function formatForecastDate(daysAhead) {
       cash: t("an_cash"), gold: t("an_gold"),
       prestige: t("an_prestige"), garageSlots: t("an_garage"),
     };
-    const rows = [];
+    const PROJ_ICONS = {
+      cash: "💰", gold: "🪙", prestige: "🏆", garageSlots: "🚗",
+    };
+    const metrics = [];
     for (const key of ["cash", "gold", "prestige", "garageSlots"]) {
       const pts = hist.filter((h) => h[key] != null);
       if (pts.length < 2) continue;
       let incomeRate;
-      // v0.0.602: для престижу — розрахунок за активні дні (7-денне вікно),
-      // для інших ресурсів — старий метод (позитивні дельти за 14 днів).
       if (key === "prestige") {
         const dailyGain = computeActiveDailyGain(hist, "prestige", 7);
         incomeRate = dailyGain || 0;
       } else {
-        // Темп — як у v0.0.509: вікно 14 днів, тільки позитивні дельти.
         const winCut = Date.now() - 14 * 86400000;
         const winPts = pts.filter((p) => new Date(p.date + "T00:00:00").getTime() >= winCut);
         const ratePts = winPts.length >= 2 ? winPts : pts.slice(-2);
@@ -2325,41 +2325,36 @@ function formatForecastDate(daysAhead) {
       if (!isFinite(incomeRate)) continue;
       const current = pts[pts.length - 1][key];
       const expectedDelta = Math.round(incomeRate * N);
-      // v0.0.512: явна нижня межа 0 — баланс ресурсу не може бути від'ємним
-      // навіть при від'ємному темпі (наприклад, якщо користувач витрачає).
       const projected = Math.max(0, Math.round(current + expectedDelta));
       const perDay = Math.round(incomeRate * 10) / 10;
 
       const accent = PROJ_COLORS[key] || "var(--text)";
-      let rateBadge;
+      let rateCls = "flat";
+      let rateText = `—<span class="an-forecast-num">0</span>${t("an_per_day")}`;
       if (perDay > 0) {
-        rateBadge = `<small class="an-proj-net up">🟢 <span class="an-forecast-num">+${perDay.toLocaleString("uk-UA")}</span>${t("an_per_day")}</small>`;
+        rateCls = "up";
+        rateText = `+${perDay.toLocaleString("uk-UA")}<span class="an-forecast-num" aria-hidden="true"></span>${t("an_per_day")}`;
       } else if (perDay < 0) {
-        rateBadge = `<small class="an-proj-net down">🔴 <span class="an-forecast-num">${perDay.toLocaleString("uk-UA")}</span>${t("an_per_day")}</small>`;
-      } else {
-        rateBadge = `<small class="an-proj-net flat">—<span class="an-forecast-num">0</span>${t("an_per_day")}</small>`;
+        rateCls = "down";
+        rateText = `${perDay.toLocaleString("uk-UA")}<span class="an-forecast-num" aria-hidden="true"></span>${t("an_per_day")}`;
       }
-      rows.push(`
-        <div class="an-proj-row" data-key="${escapeAttr(key)}">
-          <div class="an-proj-left"><span>${PROJ_TITLES[key]}</span></div>
-          <div class="an-proj-right">
-            <b class="up" style="color:${accent}">${projected.toLocaleString("uk-UA")}</b>
-            ${rateBadge}
-          </div>
+      metrics.push(`
+        <div class="an-forecast-metric" data-key="${escapeAttr(key)}">
+          <span class="an-forecast-metric-icon" aria-hidden="true">${PROJ_ICONS[key]}</span>
+          <span class="an-forecast-metric-label">${PROJ_TITLES[key]}</span>
+          <b class="an-forecast-metric-value" style="color:${accent}">${projected.toLocaleString("uk-UA")}</b>
+          <small class="an-forecast-metric-rate ${rateCls}">${rateText}</small>
         </div>
       `);
     }
-    if (!rows.length) return "";
-    // v0.0.515: прибрано дублювання «Прогноз на N д.» — дата DD.MM.YYYY
-    // тепер єдиний акцентний заголовок картки. Індикатор періоду живе
-    // поруч зі слайдером (статичний HTML), а не всередині блоку.
+    if (!metrics.length) return "";
     return `
       <div class="an-forecast an-forecast-card" data-forecast-block>
         <div class="an-forecast-date-head">
           <span class="an-forecast-date-label">${t("an_forecast_date")}</span>
           <span class="an-forecast-date-value" data-forecast-date>${forecastDate}</span>
         </div>
-        <div class="an-proj-grid">${rows.join("")}</div>
+        <div class="an-forecast-grid">${metrics.join("")}</div>
       </div>
     `;
   }

@@ -1,15 +1,15 @@
 # Changelog
 
 
-# v0.0.627
+# v0.0.628
 
-## [0.0.627] – 2026-09-28
+## [0.0.628] – 2026-09-28
 
 ### Changed
 - **Analytics: redesigned forecast block (compact metric cards)** — replaced 4 stacked rows with a responsive 4-column grid (2×2 on narrow screens). Each metric (Gold, Cash, Prestige, Garage) is now a small card with icon, muted label, prominent value, and rate badge. Visual distinction via existing accent colors per resource. Preserves all calculations, formatting, and data attributes.
+- **Include webroot/app.js and webroot/style.css in release** — the v0.0.627 tag missed these files; this release packages the forecast redesign.
 
 All notable changes to this project will be documented in this file.
-
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 

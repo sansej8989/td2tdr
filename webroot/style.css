@@ -2840,7 +2840,7 @@ body {
     align-items: start;
   }
   .an-metric { break-inside: avoid; }
-  .an-forecast, .an-proj-grid { grid-template-columns: unset; }
+  .an-forecast, .an-forecast-grid { grid-template-columns: unset; }
   /* v0.0.512: forecast-card має займати ВСЮ ширину в landscape, щоб не
      «застрягнути» у 2-колонковій сітці. KPI-дашборд (`.an-kpi-grid`)
      видалено. */
@@ -3233,6 +3233,60 @@ body {
 }
 [data-theme="light"] .an-forecast-date-head {
   border-bottom-color: rgba(20, 22, 30, 0.08);
+}
+
+/* Forecast metrics grid: 4 cards in a row on wide, 2x2 on narrow */
+.an-forecast-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1px;
+  margin-top: 4px;
+  border-radius: var(--radius-xs);
+  overflow: hidden;
+  background: var(--card-border);
+}
+.an-forecast-metric {
+  background: rgba(255, 255, 255, 0.025);
+  padding: 10px 10px 9px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  text-align: center;
+}
+.an-forecast-metric-icon {
+  font-size: 18px;
+  line-height: 1;
+  opacity: 0.9;
+}
+.an-forecast-metric-label {
+  font-size: 9.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-dimmer);
+}
+.an-forecast-metric-value {
+  font-size: 15px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+  line-height: 1.15;
+  word-break: break-word;
+}
+.an-forecast-metric-rate {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  opacity: 0.95;
+  color: var(--text-dim);
+}
+.an-forecast-metric-rate.up { color: #34d399; }
+.an-forecast-metric-rate.down { color: #f87171; }
+.an-forecast-metric-rate.flat { color: var(--text-dim); }
+
+@media (max-width: 430px) {
+  .an-forecast-grid { grid-template-columns: repeat(2, 1fr); }
 }
 
 }
