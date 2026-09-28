@@ -1,5 +1,13 @@
 # Changelog
 
+
+# v0.0.627
+
+## [0.0.627] – 2026-09-28
+
+### Changed
+- **Analytics: redesigned forecast block (compact metric cards)** — replaced 4 stacked rows with a responsive 4-column grid (2×2 on narrow screens). Each metric (Gold, Cash, Prestige, Garage) is now a small card with icon, muted label, prominent value, and rate badge. Visual distinction via existing accent colors per resource. Preserves all calculations, formatting, and data attributes.
+
 All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
