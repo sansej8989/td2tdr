@@ -1,6 +1,15 @@
 # Changelog
 
 
+
+
+# v0.0.629
+
+**2026-09-28 — Changed**
+
+- **Analytics: forecast cards polish (contrast fix, icon next to value, tap to toggle forecast/change)** — metric values no longer inherit the per-resource accent colour, so the label, value and rate badge meet WCAG AA (4.5:1) in every theme; the accent survives as a thin bar and a subtle icon chip. The rate badge uses a solid fill so its contrast no longer depends on the background bubbles behind the card. Icon and value now sit on one centred row, with the value as the largest element. Tapping a card switches between the forecast value and the change against the current value; the card is keyboard/screen-reader operable (`aria-pressed`). Large numbers shrink to fit instead of wrapping. Calculations, formatting and data attributes are unchanged.
+- **Forecast grid is 2×2 at every width** — the 4-column row gave each tile ~99px, which cannot hold a large number once the icon shares the row.
+
 # v0.0.628
 
 ## [0.0.628] – 2026-09-28

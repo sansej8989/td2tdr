@@ -2840,7 +2840,9 @@ body {
     align-items: start;
   }
   .an-metric { break-inside: avoid; }
-  .an-forecast, .an-forecast-grid { grid-template-columns: unset; }
+  /* v0.0.629: the forecast stays 2x2 in landscape too — `unset` would drop
+     the grid to a single full-width column. */
+  .an-forecast-grid { grid-template-columns: repeat(2, 1fr); }
   /* v0.0.512: forecast-card має займати ВСЮ ширину в landscape, щоб не
      «застрягнути» у 2-колонковій сітці. KPI-дашборд (`.an-kpi-grid`)
      видалено. */
@@ -3190,12 +3192,13 @@ body {
   stroke-dasharray: 4 3;
 }
 
-/* Прогноз як окрема картка з акцентом на дату */
+/* Forecast card with the date as its accent.
+   v0.0.629: padding/radius aligned with .an-metric, date header strengthened. */
 .an-forecast-card {
   background: var(--card-bg-soft, rgba(255, 255, 255, 0.03));
   border: 1px solid var(--card-border);
-  border-radius: 14px;
-  padding: 12px 14px;
+  border-radius: 12px;
+  padding: 12px 13px 11px;
   margin: 0 0 12px;
 }
 /* v0.0.515: дата DD.MM.YYYY — єдиний акцентний заголовок картки.
@@ -3203,91 +3206,193 @@ body {
    заголовок «Прогноз на N дн.» — через це період дублювався тричі. */
 .an-forecast-date-head {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  padding-bottom: 10px;
-  margin-bottom: 6px;
-  border-bottom: 1px solid rgba(127, 127, 127, 0.10);
+  gap: 10px;
+  padding: 0 1px 10px;
+  border-bottom: 1px solid rgba(127, 127, 127, 0.14);
 }
 .an-forecast-date-label {
-  font-size: 10px;
+  font-size: 10.5px;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.08em;
   color: var(--text-dim);
-  font-weight: 700;
+  font-weight: 800;
 }
 .an-forecast-date-value {
-  font-size: 20px;
+  font-size: 22px;
   font-weight: 900;
-  letter-spacing: 0.02em;
-  color: var(--accent-2, #67e8f9);
+  line-height: 1.1;
+  letter-spacing: 0.01em;
+  color: var(--accent-3, #67e8f9);
   font-variant-numeric: tabular-nums;
 }
 [data-theme="light"] .an-forecast-card {
   background: rgba(20, 22, 30, 0.035);
   border-color: rgba(20, 22, 30, 0.08);
 }
+/* v0.0.629: in the light theme --accent-3 (#0090b3) only reaches ~2.9:1 on the
+   card fill, so the date uses a darker shade of the same hue. */
 [data-theme="light"] .an-forecast-date-value {
-  color: #0e7490;
+  color: #0a5a70;
 }
 [data-theme="light"] .an-forecast-date-head {
   border-bottom-color: rgba(20, 22, 30, 0.08);
 }
 
-/* Forecast metrics grid: 4 cards in a row on wide, 2x2 on narrow */
+/* Forecast metrics grid. v0.0.629: 2x2 at every width. There used to be a
+   4-column row, but with the icon in the same row a tile shrinks to ~99px
+   and a 13-digit number no longer fits even at the minimum font size
+   (.wrap is capped at 480px, so 4 columns never get wider than 99px). */
 .an-forecast-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 1px;
-  margin-top: 4px;
-  border-radius: var(--radius-xs);
-  overflow: hidden;
-  background: var(--card-border);
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+  margin-top: 10px;
 }
 .an-forecast-metric {
-  background: rgba(255, 255, 255, 0.025);
-  padding: 10px 10px 9px;
+  position: relative;
+  overflow: hidden;
+  margin: 0;
+  min-width: 0;
+  appearance: none;
+  -webkit-appearance: none;
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  min-width: 0;
-  text-align: center;
+  align-items: stretch;
+  gap: 6px;
+  padding: 12px 11px 10px;
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-xs);
+  background: rgba(255, 255, 255, 0.025);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.12s var(--ease-out), background 0.18s var(--ease-out),
+    border-color 0.18s var(--ease-out);
 }
-.an-forecast-metric-icon {
-  font-size: 18px;
-  line-height: 1;
+/* Thin per-metric accent bar. No text sits on it, so the value contrast does
+   not depend on the metric colour. */
+.an-forecast-metric-bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--fc-accent, var(--accent-1));
   opacity: 0.9;
 }
+.an-forecast-metric:active {
+  transform: scale(0.97);
+  background: rgba(255, 255, 255, 0.06);
+  border-color: var(--card-border-hi);
+}
+.an-forecast-metric:focus-visible {
+  outline: 2px solid var(--accent-1);
+  outline-offset: 2px;
+}
 .an-forecast-metric-label {
-  font-size: 9.5px;
+  display: block;
+  font-size: 10px;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--text-dimmer);
+  letter-spacing: 0.06em;
+  color: var(--text-dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
+/* Icon + value row: vertically centred, value is the largest element on the
+   card. */
+.an-forecast-metric-main {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+}
+.an-forecast-metric-icon {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 7px;
+  background: var(--fc-tint, rgba(129, 140, 248, 0.14));
+  font-size: 13px;
+  line-height: 1;
+}
+/* Both numbers share one grid cell, so the swap changes neither width nor
+   height and the 2x2 grid never jumps.
+   `flex: 1 1 0` (not `auto`) on purpose: the box width must not depend on its
+   content, otherwise fitForecastValues would measure one width and get a
+   different one after the font size changed, leaving the number clipped. */
+.an-forecast-metric-figures {
+  flex: 1 1 0;
+  min-width: 0;
+  display: grid;
+  align-items: center;
+}
+.an-forecast-metric-figures > * { grid-area: 1 / 1; }
 .an-forecast-metric-value {
-  font-size: 15px;
+  display: block;
+  width: 100%;
+  min-width: 0;
+  font-size: var(--fc-value-size, 19px);
   font-weight: 800;
   font-variant-numeric: tabular-nums;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.015em;
   line-height: 1.15;
-  word-break: break-word;
+  color: var(--text);
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: opacity 0.16s var(--ease-out), transform 0.16s var(--ease-out);
 }
+.an-forecast-metric-value.is-change {
+  opacity: 0;
+  transform: translateY(5px);
+}
+.an-forecast-metric[aria-pressed="true"] .an-forecast-metric-value.is-forecast {
+  opacity: 0;
+  transform: translateY(-5px);
+}
+.an-forecast-metric[aria-pressed="true"] .an-forecast-metric-value.is-change {
+  opacity: 1;
+  transform: none;
+}
+/* Rate badge: solid fill, not translucent — that keeps its contrast
+   independent of whatever ends up behind the card (background bubbles). */
 .an-forecast-metric-rate {
-  font-size: 9px;
+  align-self: flex-start;
+  max-width: 100%;
+  padding: 1px 7px;
+  border-radius: 999px;
+  font-size: 9.5px;
   font-weight: 700;
-  letter-spacing: 0.02em;
-  opacity: 0.95;
+  line-height: 1.5;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   color: var(--text-dim);
+  background: #22252b;
 }
-.an-forecast-metric-rate.up { color: #34d399; }
-.an-forecast-metric-rate.down { color: #f87171; }
-.an-forecast-metric-rate.flat { color: var(--text-dim); }
-
-@media (max-width: 430px) {
-  .an-forecast-grid { grid-template-columns: repeat(2, 1fr); }
+.an-forecast-metric-rate.up { color: #34d399; background: #0f2f27; }
+.an-forecast-metric-rate.down { color: #f87171; background: #33191d; }
+.an-forecast-metric-rate.flat { color: var(--text-dim); background: #22252b; }
+[data-theme="light"] .an-forecast-metric {
+  background: rgba(255, 255, 255, 0.6);
 }
+[data-theme="light"] .an-forecast-metric:active {
+  background: #ffffff;
+}
+[data-theme="light"] .an-forecast-metric-rate { background: #e4e6ec; }
+[data-theme="light"] .an-forecast-metric-rate.up { color: #065f46; background: #d6f0e4; }
+[data-theme="light"] .an-forecast-metric-rate.down { color: #9f1239; background: #fadfe3; }
+[data-theme="light"] .an-forecast-metric-rate.flat { color: var(--text-dim); background: #e4e6ec; }
 
 }
 

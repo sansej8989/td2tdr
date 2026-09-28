@@ -357,6 +357,8 @@ an_garage: "Гараж",
 
       an_tooltip_delta: "Зміна за день",
       an_tooltip_balance: "Баланс на день",
+      an_forecast_view_forecast: "Прогноз",
+      an_forecast_view_change: "Зміна",
       an_prestige_alert_title: "⚠️ Увага: наближення до ліміту Престижу",
       an_prestige_alert_overflow: "⚠️ Увага! Завтра очікується переповнення Престижу ({projected} / 1000). Ви ризикуєте втратити ~{overflow} очок. Витратьте очки вже сьогодні!",
       an_prestige_alert_near: "🔔 Наближення до ліміту: Наразі {current} / 1000 Престижу. При поточному прирості (+{gain} /день) ліміт буде досягнуто завтра або найближчими днями.",
@@ -591,6 +593,8 @@ an_accuracy: "Forecast accuracy: {pct}%",
        an_tooltip_date: "Date",
        an_tooltip_delta: "Daily Δ",
        an_tooltip_balance: "Balance",
+       an_forecast_view_forecast: "Forecast",
+       an_forecast_view_change: "Change",
        // v0.0.604: smart prestige cap alert (Callout above the chart)
        an_prestige_alert_title: "⚠️ Warning: approaching the Prestige cap",
        an_prestige_alert_overflow: "⚠️ Warning! Tomorrow a Prestige overflow is expected ({projected} / 1000). You risk losing ~{overflow} points. Spend them today!",
@@ -2290,8 +2294,14 @@ function formatForecastDate(daysAhead) {
   function renderForecastBlockHtml(hist, days) {
     const N = Math.max(1, Math.min(90, Number(days) || 1));
     const forecastDate = formatForecastDate(N);
+    // v0.0.629: the per-metric colour no longer paints text. It only drives a
+    // thin accent bar and the icon chip, so the value keeps its theme contrast
+    // (see .an-forecast-metric-value / -rate in style.css).
     const PROJ_COLORS = {
-      cash: "#3ddc84", gold: "#ffb545", prestige: "#a06bff", garageSlots: "#4d7cff",
+      cash: { accent: "#3ddc84", tint: "rgba(61, 220, 132, 0.14)" },
+      gold: { accent: "#ffb545", tint: "rgba(255, 181, 69, 0.14)" },
+      prestige: { accent: "#a06bff", tint: "rgba(160, 107, 255, 0.14)" },
+      garageSlots: { accent: "#4d7cff", tint: "rgba(77, 124, 255, 0.14)" },
     };
     const PROJ_TITLES = {
       cash: t("an_cash"), gold: t("an_gold"),
@@ -2328,7 +2338,7 @@ function formatForecastDate(daysAhead) {
       const projected = Math.max(0, Math.round(current + expectedDelta));
       const perDay = Math.round(incomeRate * 10) / 10;
 
-      const accent = PROJ_COLORS[key] || "var(--text)";
+      const accent = PROJ_COLORS[key] || { accent: "var(--accent-1)", tint: "rgba(129, 140, 248, 0.14)" };
       let rateCls = "flat";
       let rateText = `—<span class="an-forecast-num">0</span>${t("an_per_day")}`;
       if (perDay > 0) {
@@ -2338,13 +2348,30 @@ function formatForecastDate(daysAhead) {
         rateCls = "down";
         rateText = `${perDay.toLocaleString("uk-UA")}<span class="an-forecast-num" aria-hidden="true"></span>${t("an_per_day")}`;
       }
+      // v0.0.629: the card is a button toggling forecast <-> change against the
+      // current value. Both numbers stay in the DOM so the swap can transition,
+      // hence the explicit aria-label: the rest is aria-hidden so a screen
+      // reader never announces both numbers at once.
+      const forecastText = projected.toLocaleString("uk-UA");
+      const deltaText = (expectedDelta > 0 ? "+" : "") + expectedDelta.toLocaleString("uk-UA");
+      const aForecast = `${PROJ_TITLES[key]}: ${forecastText} · ${t("an_forecast_view_forecast")}`;
+      const aChange = `${PROJ_TITLES[key]}: ${deltaText} · ${t("an_forecast_view_change")}`;
       metrics.push(`
-        <div class="an-forecast-metric" data-key="${escapeAttr(key)}">
-          <span class="an-forecast-metric-icon" aria-hidden="true">${PROJ_ICONS[key]}</span>
-          <span class="an-forecast-metric-label">${PROJ_TITLES[key]}</span>
-          <b class="an-forecast-metric-value" style="color:${accent}">${projected.toLocaleString("uk-UA")}</b>
-          <small class="an-forecast-metric-rate ${rateCls}">${rateText}</small>
-        </div>
+        <button type="button" class="an-forecast-metric" data-key="${escapeAttr(key)}"
+          aria-pressed="false" aria-label="${escapeAttr(aForecast)}"
+          data-a-forecast="${escapeAttr(aForecast)}" data-a-change="${escapeAttr(aChange)}"
+          style="--fc-accent:${accent.accent};--fc-tint:${accent.tint}">
+          <span class="an-forecast-metric-bar" aria-hidden="true"></span>
+          <span class="an-forecast-metric-label" aria-hidden="true">${PROJ_TITLES[key]}</span>
+          <span class="an-forecast-metric-main" aria-hidden="true">
+            <span class="an-forecast-metric-icon">${PROJ_ICONS[key]}</span>
+            <span class="an-forecast-metric-figures">
+              <span class="an-forecast-metric-value is-forecast">${forecastText}</span>
+              <span class="an-forecast-metric-value is-change">${deltaText}</span>
+            </span>
+          </span>
+          <small class="an-forecast-metric-rate ${rateCls}" aria-hidden="true">${rateText}</small>
+        </button>
       `);
     }
     if (!metrics.length) return "";
@@ -2362,6 +2389,9 @@ function formatForecastDate(daysAhead) {
   // Ізольований апдейт ТІЛЬКИ блоку прогнозу (без renderAnalytics).
   // Викликається при русі повзунка. v0.0.512: KPI-дашборд видалено, тож
   // блок прогнозу — перший елемент списку.
+  // v0.0.629: the toggle state is deliberately NOT preserved — the new innerHTML
+  // puts every card back into the forecast view. The number changes with the
+  // period anyway, so resetting keeps the card predictable (see bindForecastToggles).
   function updateForecastBlock() {
     if (!_analyticsLastHist) return;
     const root = $("analyticsList");
@@ -2376,6 +2406,67 @@ function formatForecastDate(daysAhead) {
       root.insertAdjacentHTML("afterbegin", fresh);
     } else {
       old.outerHTML = fresh;
+    }
+    fitForecastValues(root);
+  }
+
+  // v0.0.629: tapping a card toggles forecast <-> change. Delegated on the
+  // container, so it survives every re-render.
+  function bindForecastToggles() {
+    const list = $("analyticsList");
+    if (!list || list.dataset.forecastBound) return;
+    list.dataset.forecastBound = "1";
+    list.addEventListener("click", (e) => {
+      const card = e.target.closest && e.target.closest(".an-forecast-metric");
+      if (!card) return;
+      const next = card.getAttribute("aria-pressed") !== "true";
+      card.setAttribute("aria-pressed", next ? "true" : "false");
+      card.setAttribute("aria-label", card.dataset[next ? "aChange" : "aForecast"]);
+    });
+  }
+
+  // v0.0.629: big numbers must not wrap, so the font size is shrunk to the
+  // tile width. Text width is measured via `width: max-content` because
+  // `scrollWidth` on an element with ellipsis reports the clipped width and
+  // never notices. The 0.9 margin absorbs glyph rounding; the ellipsis stays
+  // as a last-resort guard.
+  const FC_VALUE_BASE = 19;
+  const FC_VALUE_MIN = 11;
+  function fitForecastValues(root) {
+    if (!root) return;
+    root.querySelectorAll(".an-forecast-metric-value").forEach((el) => {
+      el.style.removeProperty("--fc-value-size");
+      const avail = el.clientWidth;
+      if (!avail) return;
+      const prevWidth = el.style.width;
+      el.style.width = "max-content";
+      const need = el.getBoundingClientRect().width;
+      el.style.width = prevWidth;
+      if (need > avail) {
+        el.style.setProperty(
+          "--fc-value-size",
+          Math.max(FC_VALUE_MIN, FC_VALUE_BASE * (avail / need) * 0.9).toFixed(2) + "px"
+        );
+      }
+    });
+  }
+
+  // v0.0.629: rotating the screen changes the tile width, so the font size is
+  // recomputed. Old WebViews have no ResizeObserver; they keep the base size.
+  let _fcFitObserver = null;
+  let _fcFontRefit = false;
+  function observeForecastSizing() {
+    const list = $("analyticsList");
+    if (!list) return;
+    if (typeof window.ResizeObserver === "function" && !_fcFitObserver) {
+      _fcFitObserver = new ResizeObserver(() => fitForecastValues(list));
+      _fcFitObserver.observe(list);
+    }
+    // Inter comes from Google Fonts. Until it resolves, text is measured with
+    // metrics that are not the ones used to paint, so measure again when ready.
+    if (!_fcFontRefit && document.fonts && typeof document.fonts.ready === "object") {
+      _fcFontRefit = true;
+      document.fonts.ready.then(() => fitForecastValues(list));
     }
   }
 
@@ -2796,12 +2887,18 @@ const breakdownBar = breakdownAvailable && breakdownTotal > 0
         initChartInteraction();
         bindChartModeToggles();
         bindRacesDashboard();
+        bindForecastToggles();
+        observeForecastSizing();
+        fitForecastValues(container);
       });
     } else {
       container.innerHTML = html;
       initChartInteraction();
       bindChartModeToggles();
       bindRacesDashboard();
+      bindForecastToggles();
+      observeForecastSizing();
+      fitForecastValues(container);
     }
       } finally {
         renderAnalyticsInFlight = false;
