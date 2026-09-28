@@ -1757,7 +1757,25 @@ an_accuracy: "Forecast accuracy: {pct}%",
         message: `${dropped} invalid history line(s) skipped`
       }), "W");
     }
-    return out;
+    // v0.0.619 (аудит динаміки приросту): канонізація серії перед будь-якими
+    // розрахунками — один запис на дату (останній виграє) + хронологічне
+    // сортування. sync_now.sh дописує новий рядок у кінець файлу, а імпорт
+    // чи ручне редагування можуть залишити дублікати дат; без цього
+    // computeDelta() / renderMetric() брали б «попередній» запис не за
+    // часом, а за позицією у файлі — тобто рахували б дельти між
+    // випадковими парами (зокрема 0 замість руху між двома записами
+    // одного дня). Сортування робить серію придатною для сусідніх дельт
+    // у buildChartSeries() та для «Пікового дня» / «Витрати».
+    const byDate = {};
+    for (const h of out) byDate[h.date] = h;
+    const series = Object.values(byDate).sort((a, b) => a.date.localeCompare(b.date));
+    const merged = out.length - series.length;
+    if (merged > 0) {
+      addLog(t("log_analytics_snapshot_error", {
+        message: `${merged} duplicate history date(s) merged`
+      }), "W");
+    }
+    return series;
   }
 
   async function saveHistory(history) {
@@ -1834,15 +1852,27 @@ an_accuracy: "Forecast accuracy: {pct}%",
     if (!m) return null;
     try {
       const cards = JSON.parse(m[1]);
+      if (!Array.isArray(cards)) return null;
       // v0.0.611: чотири окремі метрики замість колишнього змішування
-      // «всього карток» і «заблоковані»:
-      //   garageTotal  — місткість гаража (state:1 + 1 резервний слот)
-      //   garageLocked — збережені/заблоковані машини (locked:true)
+      // «всього карток» і «заблокованих».
+      // v0.0.619 (аудит): у PlayerDeck немає ключів slots / max_slots /
+      // garage_capacity — `state` це стан картки, а НЕ місткість гаража.
+      // Тому «всього слотів» лишається місткістю, яку показує гра
+      // (машини, що стоять у гаражі, + 1 резервний слот), і метрики
+      // рахуються від того самого набору карток:
+      //   garageTotal  — state:1 + 1 резервний слот
+      //   garageLocked — locked:true ТОДІ Й ТІЛЬКИ серед state:1.
+      //                  Раніше рахували всі locked без фільтра на state,
+      //                  включно з машинами «у триманні» (state:0), які
+      //                  гаражного слоту не займають → метрика завищена.
       //   garageFree   — вільні слоти = garageTotal - garageLocked
       //   garageHeld   — «під гаражем» / не забрані машини (state:0)
-      const inGarage = cards.filter((c) => c.state === 1).length;
-      const held = cards.filter((c) => c.state === 0).length;
-      const locked = Math.max(0, cards.filter((c) => c.locked).length);
+      // state приводимо через Number(): у грі це число, але в ручно
+      // відредагованих копіях Garage.dat поле буває рядком ("1").
+      const stateOf = (c) => (c && c.state != null ? Number(c.state) : NaN);
+      const inGarage = cards.filter((c) => stateOf(c) === 1).length;
+      const held = cards.filter((c) => stateOf(c) === 0).length;
+      const locked = cards.filter((c) => stateOf(c) === 1 && c.locked === true).length;
       const total = inGarage + 1;
       const free = Math.max(0, total - locked);
       const battleWins = cards.reduce((sum, c) => sum + (c.cardWins || 0), 0);
@@ -1888,27 +1918,15 @@ an_accuracy: "Forecast accuracy: {pct}%",
         if (res.prestige != null) entry.prestige = res.prestige;
       }
       if (gar) {
-        if (gar.garageTotal != null) {
-          // v0.0.612: місткість слотів неспадна. Продаж/злиття машин
-          // зменшує лічильник state:1, але це не «віднімання слотів» —
-          // тому не записуємо значення нижче попереднього максимуму.
-          const prevTotal = history
-            .filter((h) => h.garageTotal != null && h.date !== today)
-            .sort((a, b) => a.date.localeCompare(b.date))
-            .map((h) => h.garageTotal)
-            .pop();
-          const floorTotal = prevTotal != null ? Math.max(0, prevTotal) : 0;
-          entry.garageTotal = gar.garageTotal < floorTotal ? floorTotal : gar.garageTotal;
-        }
-        if (gar.garageLocked != null) {
-          const prevLocked = history
-            .filter((h) => h.garageLocked != null && h.date !== today)
-            .sort((a, b) => a.date.localeCompare(b.date))
-            .map((h) => h.garageLocked)
-            .pop();
-          const floorLocked = prevLocked != null ? Math.max(0, prevLocked) : 0;
-          entry.garageLocked = Math.max(0, gar.garageLocked < floorLocked ? floorLocked : gar.garageLocked);
-        }
+        // v0.0.619 (аудит): монотонні нижні межі (v0.0.612) прибрано.
+        // `garageTotal` — похідна величина від кількості машин у гаражі, а
+        // `garageLocked` не монотонний узагалі: розблокування машини
+        // зменшує його. Підміна фактичного значення попереднім максимумом
+        // робила лічильники неспадними НАЗАВЖДИ, тож один продаж/злиття
+        // «заморожував» метрики до кінця історії: реальні спади зникли, а
+        // динаміка приросту показувала хиби, а не рух. Пишемо факт.
+        if (gar.garageTotal != null) entry.garageTotal = gar.garageTotal;
+        if (gar.garageLocked != null) entry.garageLocked = gar.garageLocked;
         if (gar.garageFree != null) entry.garageFree = gar.garageFree;
         if (gar.garageHeld != null) entry.garageHeld = gar.garageHeld;
         if (gar.battleTotal != null) entry.battleTotal = gar.battleTotal;
@@ -1941,23 +1959,12 @@ an_accuracy: "Forecast accuracy: {pct}%",
     return last[key] - prev[key];
   }
 
-  // v0.0.612: місткість гаража — не витратний ресурс, а неспадний ліміт.
-  // Продаж/злиття/розблокування машин змінює кількість машин у гаражі,
-  // але не «віднімає слоти»: графіки мають показувати лише чисте
-  // розширення (+N слотів), а не спади на -53.
-  // Застосуємо «running max» до вже відсортованої серії: значення
-  // піднімаються до попереднього максимуму й далі тільки ростуть.
-  function applyMonotonicFloor(history, key) {
-    const withKey = history.filter((h) => h[key] != null);
-    if (!withKey.length) return;
-    let floor = -Infinity;
-    for (const h of withKey) {
-      const v = h[key];
-      if (typeof v !== "number" || !Number.isFinite(v)) continue;
-      if (v > floor) floor = v;
-      else h[key] = floor;
-    }
-  }
+  // v0.0.619: applyMonotonicFloor() (running max по серії, додана у
+  // v0.0.612) прибрано разом із монотонними межами в
+  // recordSnapshotIfNeeded() та sync_now.sh.
+  // «Місткість» гаража тут — це не неспадний ліміт, а похідна величина від
+  // кількості машин: продаж, злиття чи розблокування авто справді змінюють
+  // її вниз, і приховувати ці спади було б викривленням графіка приросту.
 
   // ---- analytics: forecast range state (slider, days) -----------------
   let analyticsTargetDate = null;
@@ -2632,10 +2639,13 @@ function formatForecastDate(daysAhead) {
     if (!last) return "";
     const total = last.garageTotal != null ? last.garageTotal : null;
     const locked = last.garageLocked != null ? last.garageLocked : null;
-    // garageFree може бути відсутній у старих знімках — тоді рахуємо з total.
+    // v0.0.619: garageFree відсутній у старих знімках (sync_now.sh його
+    // не писав) — відновлюємо з total - locked. Clamp прибрано: він
+    // ховав розсинхрон (locked > total) за нулем, тобто плитка «Вільно»
+    // показувала 0 там, де дані просто не сходяться.
     const free = last.garageFree != null
       ? last.garageFree
-      : (total != null && locked != null ? Math.max(0, total - locked) : null);
+      : (total != null && locked != null ? total - locked : null);
     const held = last.garageHeld != null ? last.garageHeld : null;
     if (total == null && locked == null && free == null && held == null) return "";
 
@@ -2822,13 +2832,13 @@ const breakdownBar = breakdownAvailable && breakdownTotal > 0
     // v0.0.611: garageSlots = місткість гаража (garageTotal), а не заблоковані.
     // Раніше тут підставлявся garageLocked, через що «всього слотів»
     // фактично показувало кількість збережених машин.
+    // v0.0.619: applyMonotonicFloor(hist, "garageSlots") прибрано — він
+    // піднімав усе, що нижче попереднього максимуму, до нього, тож серія
+    // могла лише зростати й втрачала реальні спади (див. динаміку приросту).
     const hist = history.map((h) => ({
       ...h,
       garageSlots: h.garageTotal != null ? h.garageTotal : h.garageLocked,
     }));
-    // v0.0.612: місткість слотів неспадна — вирівнюємо серію, щоб продаж
-    // чи розблокування машин не показувалися як «витрата» (-N слотів).
-    applyMonotonicFloor(hist, "garageSlots");
     // Кешуємо для updateForecastBlock.
     _analyticsLastHist = hist;
 
