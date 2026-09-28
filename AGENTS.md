@@ -1,27 +1,25 @@
-# AI AGENT RULES AND GUIDELINES
+# AI AGENT RULES
 
-## 1. CORE DIRECTIVE: STRICT SCOPE CONTROL
-- **Do ONLY what is explicitly requested.** 
-- Do NOT refactor, reformat, or "improve" code outside the requested scope.
-- Do NOT add unrequested features, libraries, abstractions, or boilerplate.
-- Do NOT delete existing comments, logs, or functions unless asked.
-- If you see potential issues in other parts of the code, mention them in your summary instead of modifying them autonomously.
+## Scope
+- Do only what is requested. No refactors, reformatting, new features, libraries or abstractions outside the task.
+- Don't delete existing code, comments or logs unless asked. Report unrelated issues in the summary instead of fixing them.
+- Bug fix = root cause: grep all callers and fix the shared function once, not each symptom.
+- Before writing code: check the codebase, stdlib and installed dependencies for an existing solution.
+- If a request is ambiguous or overbuilt, ask whether a simpler option covers it.
 
-## 2. ENVIRONMENT & OS
-- Operating System: **Windows**.
-- Terminal: **PowerShell**. Always format terminal commands for PowerShell (e.g., use `Set-ExecutionPolicy`, correct syntax for environment variables, path escaping).
-- File Paths: Always use relative paths relative to the project root. Never hardcode absolute Windows paths (like `C:\Users\...`).
+## Environment
+- Windows + PowerShell: give terminal commands in PowerShell syntax.
+- Use project-relative paths in repo code.
 
-## 3. CODE STYLE & QUALITY
-- **No unnecessary inline comments.** Write self-documenting code. Add comments ONLY if the logic is complex or explicitly requested.
-- Focus on performance, reliability, and robust error handling (`try/catch`).
-- Keep function scope tight and modular.
+## Code
+- Don't add new comments unless the logic is non-obvious or a comment is requested. Leave existing ones alone.
+- Error handling at trust boundaries (input, I/O, network) and wherever failure could lose data; no blanket try/catch.
 
-## 4. RESPONSE & COMMUNICATION FORMAT
-- Perform all code generation and internal reasoning in **English** (for token efficiency).
-- Provide explanations, summaries of changes, and instructions to the user in **Ukrainian**.
+## Language
+- Code, comments, commits: English.
+- Explanations and summaries to the user: Ukrainian.
 
-## 5. EXECUTION PROTOCOL
-1. **Analyze:** Read the task and target files thoroughly before making changes.
-2. **Execute:** Make minimal, accurate edits focused solely on the prompt goal.
-3. **Verify:** Check syntax, test execution (if tests/scripts exist), and ensure no syntax errors were introduced.
+## Workflow
+1. Read the task and the files it touches; trace the real flow before editing.
+2. Make the minimal edit that fixes the cause.
+3. Run existing tests/linter. For non-trivial new logic leave one minimal runnable check (assert or a single test file).
