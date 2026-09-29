@@ -2438,6 +2438,10 @@ body {
   width: 100%;
   appearance: none;
   -webkit-appearance: none;
+  /* v0.0.632: the UA default 2px margin inset the track inside the wrap, which
+     put the printed scale 2px out of line with it. The scale is positioned from
+     the stop list now, so the two have to share an edge. */
+  margin: 0;
   height: 5px;
   border-radius: 3px;
   background: linear-gradient(90deg, #34d399, #ffb545);
@@ -2464,14 +2468,25 @@ body {
   border: 3px solid var(--accent-3, #67e8f9);
   cursor: pointer;
 }
+/* v0.0.632: the track maps to fixed period stops rather than 1..90, so the
+   labels are placed at their stop positions (set from app.js) instead of being
+   spread evenly — otherwise "30д" would sit next to a much longer period. */
 .an-scale {
-  display: flex;
-  justify-content: space-between;
+  position: relative;
+  height: 13px;
   margin-top: 4px;
   font-size: 9.5px;
   font-weight: 600;
   color: var(--text-dimmer);
 }
+.an-scale span {
+  position: absolute;
+  top: 0;
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+.an-scale span:first-child { transform: none; }
+.an-scale span:last-child { transform: translateX(-100%); }
 .an-accuracy {
   display: flex;
   justify-content: flex-end;

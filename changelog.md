@@ -7,6 +7,15 @@
 
 
 
+
+
+# v0.0.632
+
+## [0.0.632] – 2026-09-29
+
+### Changed
+- **Analytics: forecast period slider now uses non-linear stops (1,2,3,4,5,6,7,9,12,15,20,25,30,40,50,60,75,90 days) so 1-3 days can be selected precisely, and updates the forecast cards live while dragging.** The slider used to be linear over 1..90, which left days 1-3 sharing ~3.6px of track — less than one thumb width. Days 1-3 now get ~19px of travel each. Forecast card re-renders are coalesced into one per animation frame, so a fast drag no longer queues a full block rebuild per input event while the label still tracks the thumb immediately. The range, default (30 days) and localStorage persistence are unchanged — the input carries a stop index while everything else keeps working in days. Arrow keys step one stop at a time, matching the pointer, and the slider gained `aria-label`, `aria-valuemin/max/now` and `aria-valuetext` so the value is announced in days. The printed scale now follows the stop positions instead of being spread evenly.
+
 # v0.0.631
 
 ## [0.0.631] – 2026-09-28

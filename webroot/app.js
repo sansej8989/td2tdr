@@ -1904,6 +1904,22 @@ an_accuracy: "Forecast accuracy: {pct}%",
   // її вниз, і приховувати ці спади було б викривленням графіка приросту.
 
   // ---- analytics: forecast range state (slider, days) -----------------
+  // v0.0.632: the slider used to be linear over 1..90, so days 1-3 shared less
+  // than one thumb width of track and were hard to land on. The input now
+  // carries the INDEX of a small fixed set of stops: the first days get about a
+  // thumb width of travel each, the long range stays coarse. `analyticsPeriod`
+  // and localStorage still hold days, so nothing else has to know about this.
+  const FORECAST_PERIOD_STOPS = [1, 2, 3, 4, 5, 6, 7, 9, 12, 15, 20, 25, 30, 40, 50, 60, 75, 90];
+  // Mirrors the order of the four labels in the .an-scale markup.
+  const FORECAST_SCALE_DAYS = [1, 30, 60, 90];
+  function forecastPeriodStopIndex(days) {
+    let best = 0;
+    for (let i = 1; i < FORECAST_PERIOD_STOPS.length; i++) {
+      if (Math.abs(FORECAST_PERIOD_STOPS[i] - days) < Math.abs(FORECAST_PERIOD_STOPS[best] - days)) best = i;
+    }
+    return best;
+  }
+
   let analyticsTargetDate = null;
   let analyticsPeriod = 30;
   // v0.0.606: dynamic countdown — selecting a period persists a target end-date
@@ -1925,6 +1941,9 @@ an_accuracy: "Forecast accuracy: {pct}%",
       if (!isNaN(n)) analyticsPeriod = Math.min(90, Math.max(1, n));
     }
   } catch (e) {}
+  // A restored or counted-down value may sit between stops (e.g. 17): snap it so
+  // the thumb and the cards always agree.
+  analyticsPeriod = FORECAST_PERIOD_STOPS[forecastPeriodStopIndex(analyticsPeriod)];
   // v0.0.511: повзунок прогнозу живе ОКРЕМО від графіків — input-handler
   // оновлює ТІЛЬКИ блок прогнозу (`updateForecastBlock`), не викликаючи
   // renderAnalytics(). Графіки за замовчуванням показують ВСЮ історію.
@@ -2818,23 +2837,57 @@ const breakdownBar = breakdownAvailable && breakdownTotal > 0
     // v0.0.511: ізольований біндинг повзунка прогнозу. Слайдер НЕ
     // викликає renderAnalytics — лише оновлює блок прогнозу.
     const range = $("analyticsRange");
+    // Keeps the accessible value in days: the native value is a stop index, so
+    // aria-valuenow/valuetext is what actually reaches a screen reader. Arrow
+    // keys stay consistent with the pointer — one press moves one stop.
+    const syncRangeA11y = () => {
+      if (!range) return;
+      range.setAttribute("aria-valuemin", String(FORECAST_PERIOD_STOPS[0]));
+      range.setAttribute("aria-valuemax", String(FORECAST_PERIOD_STOPS[FORECAST_PERIOD_STOPS.length - 1]));
+      range.setAttribute("aria-valuenow", String(analyticsPeriod));
+      range.setAttribute("aria-valuetext", t("an_stat_days", { n: analyticsPeriod }));
+    };
     if (range && !range.dataset.bound) {
       range.dataset.bound = "1";
-      range.min = "1";
-      range.max = "90";
-      range.value = String(analyticsPeriod);
-       range.addEventListener("input", () => {
-        analyticsPeriod = Math.max(1, Math.min(90, Number(range.value) || 1));
+      range.min = "0";
+      range.max = String(FORECAST_PERIOD_STOPS.length - 1);
+      range.step = "1";
+      range.setAttribute("aria-label", t("an_range_title"));
+      range.value = String(forecastPeriodStopIndex(analyticsPeriod));
+      // v0.0.632: the track is no longer linear, so the printed scale has to
+      // follow the stop positions instead of being spread evenly.
+      const scale = document.querySelector(".an-scale");
+      if (scale) {
+        const last = FORECAST_PERIOD_STOPS.length - 1;
+        FORECAST_SCALE_DAYS.forEach((days, i) => {
+          const el = scale.children[i];
+          if (el) el.style.left = (forecastPeriodStopIndex(days) / last) * 100 + "%";
+        });
+      }
+      // v0.0.632: one re-render per frame. A fast drag fires input far more
+      // often than the screen refreshes, and every call rebuilds the block.
+      // The label, persistence and a11y stay synchronous so the number always
+      // tracks the thumb; a queued frame always runs, so the value the user
+      // releases on is the one that ends up rendered.
+      let forecastFrame = 0;
+      range.addEventListener("input", () => {
+        analyticsPeriod = FORECAST_PERIOD_STOPS[Number(range.value)] || 1;
         analyticsTargetDate = Date.now() + analyticsPeriod * 86400000;
+        syncRangeA11y();
         const lbl = $("analyticsRangeVal");
         if (lbl) lbl.textContent = `${analyticsPeriod}д`;
         try { localStorage.setItem("td2tdr_an_period", String(analyticsPeriod)); } catch (e) {}
         try { localStorage.setItem("td2tdr_an_target_date", String(analyticsTargetDate)); } catch (e) {}
-        updateForecastBlock();
+        if (forecastFrame) return;
+        forecastFrame =
+          typeof window.requestAnimationFrame === "function"
+            ? window.requestAnimationFrame(() => { forecastFrame = 0; updateForecastBlock(); })
+            : (updateForecastBlock(), 0);
       });
     }
     if (range) {
-      range.value = String(analyticsPeriod);
+      range.value = String(forecastPeriodStopIndex(analyticsPeriod));
+      syncRangeA11y();
       const lbl = $("analyticsRangeVal");
       if (lbl) lbl.textContent = `${analyticsPeriod}д`;
     }
