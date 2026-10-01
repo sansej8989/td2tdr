@@ -312,16 +312,6 @@ toast_sync_busy: "Синхронізація вже виконується",
       an_cash: "Cash",
       an_gold: "Gold",
       an_prestige: "Престиж",
-an_garage: "Гараж",
-       an_garage_total: "Всього слотів",
-       an_garage_locked: "Заблоковано",
-       an_garage_free: "Вільно",
-       an_garage_held: "У триманні",
-        an_garage_total_edit: "тап — виправити",
-        prompt_garage_capacity: "Справжня місткість гаража (зараз {current}). Garage.dat її не містить — вводить вручну:",
-        alert_garage_capacity_set: "Місткість гаража: {value}",
-        alert_garage_capacity_low: "Не менше за зайняті слоти ({min}) — виправлено",
-        alert_garage_capacity_bad: "Невірне значення місткості",
        an_races: "Заїзди",
        an_delta_24h: "/ 24г",
       an_record_gain: "Піковий день: <b>+{value}</b> ({date})",
@@ -552,16 +542,6 @@ toast_sync_busy: "Sync already in progress",
       an_cash: "Cash",
       an_gold: "Gold",
       an_prestige: "Prestige",
-an_garage: "Garage",
-       an_garage_total: "Total slots",
-       an_garage_locked: "Locked",
-       an_garage_free: "Free",
-       an_garage_held: "Held",
-        an_garage_total_edit: "tap to correct",
-        prompt_garage_capacity: "True garage capacity (currently {current}). Garage.dat does not contain it — enter it manually:",
-        alert_garage_capacity_set: "Garage capacity: {value}",
-        alert_garage_capacity_low: "Cannot be below occupied slots ({min}) — clamped",
-        alert_garage_capacity_bad: "Invalid capacity value",
        an_races: "Races",
        an_delta_24h: "/ 24h",
       an_record_gain: "Best day: <b>+{value}</b> ({date})",
@@ -1576,8 +1556,8 @@ an_accuracy: "Forecast accuracy: {pct}%",
   });
 
   // v0.0.611: парсер карток (renderUpgradeBar / loadGarageStats) видалено
-  // разом із вкладкою «Гараж». Метрики гаражу тепер рахує sync_now.sh
-  // і показує renderGarageTilesHtml() у вкладці «Аналітика».
+  // разом із вкладкою «Гараж». v0.0.635: прибрано й сам блок «Гараж» у
+  // вкладці «Аналітика» — див. git до v0.0.635.
 
   // ---- wire up ----------------------------------------------------------
   // ---- theme (auto / light / dark) ---------------------------------------
@@ -1679,7 +1659,7 @@ an_accuracy: "Forecast accuracy: {pct}%",
     // можливих артефактів усіченого запису: відкидаємо рядки без валідної
     // ISO-дати або з не-скінченними числовими полями.
     const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
-    const NUMERIC_FIELDS = ["cash", "gold", "prestige", "garageTotal", "garageCapacity", "garageLocked", "garageFree", "garageHeld", "battleTotal", "battleWins", "battleDraws", "battleLosses"];
+    const NUMERIC_FIELDS = ["cash", "gold", "prestige", "battleTotal", "battleWins", "battleDraws", "battleLosses"];
     const isValidEntry = (h) => {
       if (!h || typeof h !== "object") return false;
       if (typeof h.date !== "string" || !DATE_RE.test(h.date)) return false;
@@ -1733,7 +1713,7 @@ an_accuracy: "Forecast accuracy: {pct}%",
     // імпортів — лишаємо лише один канонічний запис на кожну дату (останній
     // запис у масиві «перебиває» попередні).
     const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
-    const NUMERIC_FIELDS = ["cash", "gold", "prestige", "garageTotal", "garageCapacity", "garageLocked", "garageFree", "garageHeld", "battleTotal", "battleWins", "battleDraws", "battleLosses"];
+    const NUMERIC_FIELDS = ["cash", "gold", "prestige", "battleTotal", "battleWins", "battleDraws", "battleLosses"];
     const isValidEntry = (h) => {
       if (!h || typeof h !== "object") return false;
       if (typeof h.date !== "string" || !DATE_RE.test(h.date)) return false;
@@ -1792,40 +1772,11 @@ an_accuracy: "Forecast accuracy: {pct}%",
     return r;
   }
 
-  // ---- garage capacity: the one number Garage.dat cannot give us -----------
-  // v0.0.634: "Total" used to be `count(state===1) + 1` — a GUESS, not data.
-  // PlayerDeck carries no slots/maxSlots/capacity field anywhere (audited
-  // against two real exports), so true capacity is not derivable from the cards
-  // at all. The guess is wrong whenever more than one slot is vacant, or when
-  // the player bought slots they have not filled yet (observed: capacity 3917
-  // while only 3914 cards occupied a slot -> total showed 3915).
-  // So capacity is persisted in history.jsonl (`garageCapacity`) and only ever
-  // healed UPWARD: max(stored ?? occupied + 1, occupied). The occupied+1 seed
-  // keeps pre-0.0.634 installs behaving exactly as before until the real number
-  // is known.
-  // KNOWN LIMITATION (by design): if the player buys slots and leaves them
-  // empty, occupied does not change, so self-heal cannot see the increase and
-  // the number stays stale until the user corrects it by tapping "Всього".
-  function resolveGarageCapacity(occupied, stored) {
-    const base = Number.isFinite(stored) && stored > 0 ? stored : occupied + 1;
-    return Math.max(base, occupied);
-  }
-  // Manual entry: integer only, and never below what is actually occupied.
-  function sanitizeGarageCapacity(input, occupied) {
-    const n = Math.floor(Number(input));
-    if (!Number.isFinite(n) || n <= 0) return null;
-    return Math.max(n, occupied);
-  }
-  // Most recent known capacity from history (rows are date-sorted).
-  function readStoredGarageCapacity(history) {
-    for (let i = history.length - 1; i >= 0; i--) {
-      const v = history[i] ? history[i].garageCapacity : null;
-      if (v != null && Number.isFinite(Number(v)) && Number(v) > 0) return Number(v);
-    }
-    return null;
-  }
-
-  async function getGarageSnapshot(storedCapacity) {
+  // v0.0.635: метрики гаражу (місткість / заблоковані / вільні / у триманні)
+  // прибрано разом із блоком «Гараж». PlayerDeck все ще живить у Garage.dat,
+  // тому блок «Заїзди» читає з нього лише результати W/D/L. Історію змін
+  // див. git до v0.0.635.
+  async function getRacesSnapshot() {
     const data = await readSourceFile(SRC, SRC_ROOT, DST);
     if (!data) return null;
     const line = data.split(/\r?\n/).find((l) => l.startsWith("PlayerDeck="));
@@ -1835,32 +1786,10 @@ an_accuracy: "Forecast accuracy: {pct}%",
     try {
       const cards = JSON.parse(m[1]);
       if (!Array.isArray(cards)) return null;
-      // v0.0.611: чотири окремі метрики замість колишнього змішування
-      // «всього карток» і «заблокованих».
-      // v0.0.619 (аудит): у PlayerDeck немає ключів slots / max_slots /
-      // garage_capacity — `state` це стан картки, а НЕ місткість гаража.
-      // v0.0.634: місткість приходить зі збереженого garageCapacity, а не з
-      // припущення «+1 резервний слот» (див. resolveGarageCapacity вище).
-      // Метрики:
-      //   garageCapacity — справжня місткість (зберігається, лікується вгору)
-      //   garageTotal    — те саме значення (legacy-поле для графіка/імпорту)
-      //   garageLocked   — locked:true ТОДІ Й ТІЛЬКИ серед state:1.
-      //   garageFree     — garageCapacity - garageLocked
-      //   garageHeld     — «під гаражем» / не забрані машини (state:0)
-      // state приводимо через Number(): у грі це число, але в ручно
-      // відредагованих копіях Garage.dat поле буває рядком ("1").
-      const stateOf = (c) => (c && c.state != null ? Number(c.state) : NaN);
-      const occupied = cards.filter((c) => stateOf(c) === 1).length;
-      const held = cards.filter((c) => stateOf(c) === 0).length;
-      const locked = cards.filter((c) => stateOf(c) === 1 && c.locked === true).length;
-      const capacity = resolveGarageCapacity(occupied, storedCapacity);
-      const total = capacity;
-      const free = Math.max(0, total - locked);
       const battleWins = cards.reduce((sum, c) => sum + (c.cardWins || 0), 0);
       const battleDraws = cards.reduce((sum, c) => sum + (c.cardDraws || 0), 0);
       const battleLosses = cards.reduce((sum, c) => sum + (c.cardLosses || 0), 0);
-      const battleTotal = battleWins + battleDraws + battleLosses;
-      return { garageCapacity: capacity, garageTotal: total, garageLocked: locked, garageFree: free, garageHeld: held, battleTotal, battleWins, battleDraws, battleLosses };
+      return { battleTotal: battleWins + battleDraws + battleLosses, battleWins, battleDraws, battleLosses };
     } catch (e) {
       return null;
     }
@@ -1885,11 +1814,9 @@ an_accuracy: "Forecast accuracy: {pct}%",
       // v0.0.634: збережену місткість беремо з УСІєЇ історії (включно з
       // сьогоднішнім рядком) — інакше ручний ввід, який живе лише в
       // сьогоднішньому рядку, затирался б наступним dedup'ом у shell.
-      const historyForCapacity = await loadHistory();
-      const storedCapacity = readStoredGarageCapacity(historyForCapacity);
-      const [res, gar] = await Promise.all([getResourceSnapshot(), getGarageSnapshot(storedCapacity)]);
-      if (!res && !gar) return;
-      const history = historyForCapacity;
+      const history = await loadHistory();
+      const [res, races] = await Promise.all([getResourceSnapshot(), getRacesSnapshot()]);
+      if (!res && !races) return;
       const today = todayStr();
       let entry = history.find((h) => h.date === today);
       if (!entry) {
@@ -1903,23 +1830,11 @@ an_accuracy: "Forecast accuracy: {pct}%",
         if (res.gold != null) entry.gold = res.gold;
         if (res.prestige != null) entry.prestige = res.prestige;
       }
-      if (gar) {
-        // v0.0.619 (аудит): монотонні нижні межі (v0.0.612) прибрано.
-        // `garageTotal` — похідна величина від кількості машин у гаражі, а
-        // `garageLocked` не монотонний узагалі: розблокування машини
-        // зменшує його. Підміна фактичного значення попереднім максимумом
-        // робила лічильники неспадними НАЗАВЖДИ, тож один продаж/злиття
-        // «заморожував» метрики до кінця історії: реальні спади зникли, а
-        // динаміка приросту показувала хиби, а не рух. Пишемо факт.
-        if (gar.garageCapacity != null) entry.garageCapacity = gar.garageCapacity;
-        if (gar.garageTotal != null) entry.garageTotal = gar.garageTotal;
-        if (gar.garageLocked != null) entry.garageLocked = gar.garageLocked;
-        if (gar.garageFree != null) entry.garageFree = gar.garageFree;
-        if (gar.garageHeld != null) entry.garageHeld = gar.garageHeld;
-        if (gar.battleTotal != null) entry.battleTotal = gar.battleTotal;
-        if (gar.battleWins != null) entry.battleWins = gar.battleWins;
-        if (gar.battleDraws != null) entry.battleDraws = gar.battleDraws;
-        if (gar.battleLosses != null) entry.battleLosses = gar.battleLosses;
+      if (races) {
+        if (races.battleTotal != null) entry.battleTotal = races.battleTotal;
+        if (races.battleWins != null) entry.battleWins = races.battleWins;
+        if (races.battleDraws != null) entry.battleDraws = races.battleDraws;
+        if (races.battleLosses != null) entry.battleLosses = races.battleLosses;
       }
       history.sort((a, b) => a.date.localeCompare(b.date));
       await saveHistory(history);
@@ -1949,9 +1864,8 @@ an_accuracy: "Forecast accuracy: {pct}%",
   // v0.0.619: applyMonotonicFloor() (running max по серії, додана у
   // v0.0.612) прибрано разом із монотонними межами в
   // recordSnapshotIfNeeded() та sync_now.sh.
-  // «Місткість» гаража тут — це не неспадний ліміт, а похідна величина від
-  // кількості машин: продаж, злиття чи розблокування авто справді змінюють
-  // її вниз, і приховувати ці спади було б викривленням графіка приросту.
+  // v0.0.635: разом із блоком «Гараж» прибрано й монотонність місткості,
+  // тож recordSnapshotIfNeeded() більше не має що «заморожувати».
 
   // ---- analytics: forecast range state (slider, days) -----------------
   // v0.0.632: the slider used to be linear over 1..90, so days 1-3 shared less
@@ -2412,11 +2326,11 @@ function formatForecastDate(daysAhead) {
   // v0.0.634: scored on the predicted CHANGE vs the actual CHANGE, not on the
   // absolute levels. On a large balance (cash, gold) the level is dominated by
   // the starting sum, so even a clearly wrong forecast landed at 80-99%.
-  const ACCURACY_KEYS = ["cash", "gold", "prestige", "garageSlots"];
+  const ACCURACY_KEYS = ["cash", "gold", "prestige"];
   const ACCURACY_MIN_SAMPLES = 3;
   // Denominator guard for a flat or near-flat period. A flat absolute value
   // would divide by zero; anything above 1 would hide real misses on
-  // small-integer metrics (garageSlots moves by whole slots). The per-point
+  // small-integer metrics (prestige moves in whole points). The per-point
   // clamp at 1 already bounds every sample, so this only decides how a +-1 miss
   // on a metric that moved by 1 is scored - counted as a full miss, which is
   // the conservative reading and needs no per-metric tuning.
@@ -2464,17 +2378,16 @@ function formatForecastDate(daysAhead) {
       cash: { accent: "#3ddc84", tint: "rgba(61, 220, 132, 0.14)" },
       gold: { accent: "#ffb545", tint: "rgba(255, 181, 69, 0.14)" },
       prestige: { accent: "#a06bff", tint: "rgba(160, 107, 255, 0.14)" },
-      garageSlots: { accent: "#4d7cff", tint: "rgba(77, 124, 255, 0.14)" },
     };
     const PROJ_TITLES = {
       cash: t("an_cash"), gold: t("an_gold"),
-      prestige: t("an_prestige"), garageSlots: t("an_garage"),
+      prestige: t("an_prestige"),
     };
     const PROJ_ICONS = {
-      cash: "💰", gold: "🪙", prestige: "🏆", garageSlots: "🚗",
+      cash: "💰", gold: "🪙", prestige: "🏆",
     };
     const metrics = [];
-    for (const key of ["cash", "gold", "prestige", "garageSlots"]) {
+    for (const key of ["cash", "gold", "prestige"]) {
       const m = projectMetric(hist, key, N);
       if (!m) continue;
       const projected = m.projected;
@@ -2553,68 +2466,7 @@ function formatForecastDate(daysAhead) {
     fitForecastValues(root);
   }
 
-  // Зайняті слоти не виводяться з capacity, тому для валідації ручного вводу
-  // перераховуємо їх просто з Garage.dat (без припущень).
-  async function lastGarageOccupied() {
-    const data = await readSourceFile(SRC, SRC_ROOT, DST);
-    if (!data) return 0;
-    const line = data.split(/\r?\n/).find((l) => l.startsWith("PlayerDeck="));
-    const m = line && line.match(/^PlayerDeck=[^,]+,s(.+)$/);
-    if (!m) return 0;
-    try {
-      const cards = JSON.parse(m[1]);
-      if (!Array.isArray(cards)) return 0;
-      return cards.filter((c) => c && c.state != null && Number(c.state) === 1).length;
-    } catch (e) {
-      return 0;
-    }
-  }
-
-  // v0.0.634: ручне виправлення місткості гаража (тап по плитці «Всього»).
-  // Значення пишеться в сьогоднішній рядок history.jsonl — звідки його читає і
-  // sync_now.sh, тому обидва шляхи лишаються узгодженими. Значення нижче за
-  // реально зайняті слоти відхиляється (sanitizeGarageCapacity).
-  async function editGarageCapacity(tile) {
-    const raw = prompt(t("prompt_garage_capacity", { current: tile.dataset.garageEdit || "" }));
-    if (raw == null) return;
-    const value = sanitizeGarageCapacity(raw, await lastGarageOccupied());
-    if (value == null) {
-      toast(t("alert_garage_capacity_bad"));
-      return;
-    }
-    if (value !== Math.floor(Number(raw))) {
-      toast(t("alert_garage_capacity_low", { min: await lastGarageOccupied() }));
-    } else {
-      toast(t("alert_garage_capacity_set", { value }));
-    }
-    const history = await loadHistory();
-    const today = todayStr();
-    let entry = history.find((e) => e.date === today);
-    if (!entry) {
-      entry = { date: today, ts: Date.now() };
-      history.push(entry);
-    }
-    entry.garageCapacity = value;
-    entry.garageTotal = value;
-    if (entry.garageLocked != null) entry.garageFree = Math.max(0, value - entry.garageLocked);
-    history.sort((a, b) => a.date.localeCompare(b.date));
-    await saveHistory(history);
-    await renderAnalytics();
-  }
-
-  // v0.0.634: тап по плитці «Всього» відкриває ручне виправлення місткості.
-  function bindGarageCapacityEditor() {
-    const list = $("analyticsList");
-    if (!list || list.dataset.garageBound) return;
-    list.dataset.garageBound = "1";
-    list.addEventListener("click", (e) => {
-      const tile = e.target.closest && e.target.closest("[data-garage-edit]");
-      if (!tile) return;
-      editGarageCapacity(tile);
-    });
-  }
-
-  // v0.0.629: tapping a card toggles forecast <-> change. Delegated on the
+    // v0.0.629: tapping a card toggles forecast <-> change. Delegated on the
   // container, so it survives every re-render.
   function bindForecastToggles() {
     const list = $("analyticsList");
@@ -2852,47 +2704,6 @@ function formatForecastDate(daysAhead) {
     };
   }
 
-  // v0.0.611: чотири метрики гаражу як вбудована група плиток. Раніше
-  // «всього слотів» і «заблоковано» були однаковим числом, що приховувало
-  // вільні слоти та «під гаражем» (незабрані машини).
-  // Повертаємо лише сітку плиток — картка-обгортка й заголовок «Гараж»
-  // малює renderMetric(), тож окремого дубльованого блоку більше немає.
-  function renderGarageTilesHtml(hist) {
-    const last = hist.length ? hist[hist.length - 1] : null;
-    if (!last) return "";
-    // v0.0.634: «Всього» = збережена місткість (legacy-поле garageTotal лишається
-    // фолбеком для старих рядків історії).
-    const total = last.garageCapacity != null ? last.garageCapacity
-      : last.garageTotal != null ? last.garageTotal : null;
-    const locked = last.garageLocked != null ? last.garageLocked : null;
-    // garageFree відсутній у старих знімках (sync_now.sh його
-    // не писав) — відновлюємо з total - locked. Clamp прибрано: він
-    // ховав розсинхрон (locked > total) за нулем, тобто плитка «Вільно»
-    // показувала 0 там, де дані просто не сходяться.
-    const free = last.garageFree != null
-      ? last.garageFree
-      : (total != null && locked != null ? total - locked : null);
-    const held = last.garageHeld != null ? last.garageHeld : null;
-    if (total == null && locked == null && free == null && held == null) return "";
-
-    const tiles = [
-      { key: "total", label: t("an_garage_total"), value: total, color: "#4d7cff", edit: true },
-      { key: "locked", label: t("an_garage_locked"), value: locked, color: "#3ddc84" },
-      { key: "free", label: t("an_garage_free"), value: free, color: "#ffb545" },
-      { key: "held", label: t("an_garage_held"), value: held, color: "#a06bff" },
-    ];
-
-    // v0.0.634: місткість гаража НЕ виводиться з Garage.dat, тож «Всього» —
-    // єдина плитка, яку можна виправити вручну (тап → prompt, як у решті
-    // разових полів модуля). Значення нижче поточного occupied відхиляється.
-    return `<div class="an-garage-grid">${tiles.map((tile) => `
-        <${tile.edit ? "button" : "div"} class="an-garage-tile${tile.edit ? " an-garage-tile-edit" : ""}"${tile.edit ? ` type="button" data-garage-edit="${fmtNum(total)}"` : ""}>
-          <span class="an-garage-tile-lbl">${tile.label}</span>
-          <b class="an-garage-tile-val" style="color:${tile.color}">${fmtNum(tile.value)}</b>
-          ${tile.edit ? `<span class="an-garage-tile-hint">${t("an_garage_total_edit")}</span>` : ""}
-        </${tile.edit ? "button" : "div"}>`).join("")}</div>`;
-  }
-
   function getRaceTimeline(hist, period) {
     const slice = getRacePeriodSlice(hist, period);
     return slice.entries
@@ -3099,17 +2910,11 @@ const breakdownBar = breakdownAvailable && breakdownTotal > 0
       }
     }
 
-    // v0.0.611: garageSlots = місткість гаража (garageTotal), а не заблоковані.
-    // Раніше тут підставлявся garageLocked, через що «всього слотів»
-    // фактично показувало кількість збережених машин.
-    // v0.0.619: applyMonotonicFloor(hist, "garageSlots") прибрано — він
-    // піднімав усе, що нижче попереднього максимуму, до нього, тож серія
-    // могла лише зростати й втрачала реальні спади (див. динаміку приросту).
-    const hist = history.map((h) => ({
-      ...h,
-      garageSlots: h.garageCapacity != null ? h.garageCapacity
-        : h.garageTotal != null ? h.garageTotal : h.garageLocked,
-    }));
+    // v0.0.635: окремий масив `hist` більше не потрібен — він існував лише
+    // щоб вивести garageSlots із місткості гаража. Локальний аліас лишається,
+    // бо решта викликів renderMetric()/renderForecastBlockHtml() читають саме
+    // його. Історію змін див. git до v0.0.635.
+    const hist = history;
     // Кешуємо для updateForecastBlock.
     _analyticsLastHist = hist;
 
@@ -3126,9 +2931,8 @@ const breakdownBar = breakdownAvailable && breakdownTotal > 0
       1000,
       renderPrestigeAlertHtml(computePrestigeAlert(hist))
     );
-    // v0.0.611: єдиний блок «Гараж» — картка метрики містить і графік
-    // місткості, і групу з чотирьох плиток (всього/заблоковано/вільно/у триманні).
-    html += renderMetric(hist, "garageSlots", t("an_garage"), "#4d7cff", null, renderGarageTilesHtml(hist));
+    // v0.0.635: блок «Гараж» (плитки + картка метрики + графік) прибрано,
+    // історію див. git до v0.0.635.
     html += renderRacesDashboard(hist);
 
     // v0.0.527: обгортаємо важке оновлення DOM у requestAnimationFrame,
@@ -3140,7 +2944,6 @@ const breakdownBar = breakdownAvailable && breakdownTotal > 0
         bindChartModeToggles();
         bindRacesDashboard();
         bindForecastToggles();
-        bindGarageCapacityEditor();
         observeForecastSizing();
         fitForecastValues(container);
       });
@@ -3150,7 +2953,6 @@ const breakdownBar = breakdownAvailable && breakdownTotal > 0
       bindChartModeToggles();
       bindRacesDashboard();
       bindForecastToggles();
-      bindGarageCapacityEditor();
       observeForecastSizing();
       fitForecastValues(container);
     }
@@ -3182,7 +2984,7 @@ const breakdownBar = breakdownAvailable && breakdownTotal > 0
         const key = metricEl.dataset.key;
         if (!key) return;
         const color = ({
-          cash: "#3ddc84", gold: "#ffb545", prestige: "#a06bff", garageSlots: "#4d7cff", battleTotal: "#f87171"
+          cash: "#3ddc84", gold: "#ffb545", prestige: "#a06bff", battleTotal: "#f87171"
         })[key] || "var(--accent)";
         const wrap = metricEl.querySelector(".an-chart-wrap");
         if (!wrap) return;
@@ -3961,7 +3763,7 @@ const breakdownBar = breakdownAvailable && breakdownTotal > 0
       // v0.0.527: повна schema-валідація імпортованих записів. Відкидаємо
       // рядки з нечисловими або нескінченними полями, щоб не заповнювати
       // історію "брудними" даними.
-      const IMPORT_NUMERIC_FIELDS = ["cash", "gold", "prestige", "garageTotal", "garageCapacity", "garageLocked", "garageFree", "garageHeld"];
+      const IMPORT_NUMERIC_FIELDS = ["cash", "gold", "prestige"];
       const isValidImportEntry = (h) => {
         if (!h || typeof h !== "object") return false;
         if (typeof h.date !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(h.date)) return false;

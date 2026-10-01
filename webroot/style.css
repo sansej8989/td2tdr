@@ -2855,8 +2855,8 @@ body {
     align-items: start;
   }
   .an-metric { break-inside: avoid; }
-  /* v0.0.629: the forecast stays 2x2 in landscape too — `unset` would drop
-     the grid to a single full-width column. */
+  /* v0.0.635: прогноз лишається 2-колонковим (3 картки: 2 + 1 на всю
+     ширину) — `unset` відкотив би сітку в одну колонку на всю ширину. */
   .an-forecast-grid { grid-template-columns: repeat(2, 1fr); }
   /* v0.0.512: forecast-card має займати ВСЮ ширину в landscape, щоб не
      «застрягнути» у 2-колонковій сітці. KPI-дашборд (`.an-kpi-grid`)
@@ -3258,12 +3258,17 @@ body {
 /* Forecast metrics grid. v0.0.629: 2x2 at every width. There used to be a
    4-column row, but with the icon in the same row a tile shrinks to ~99px
    and a 13-digit number no longer fits even at the minimum font size
-   (.wrap is capped at 480px, so 4 columns never get wider than 99px). */
+   (.wrap is capped at 480px, so 4 columns never get wider than 99px).
+   v0.0.635: карток стало три (Cash/Gold/Prestige), тому остання тягнеться
+   на обидві колонки — інакше в другому рядку лишалася б порожня комірка. */
 .an-forecast-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 8px;
   margin-top: 10px;
+}
+.an-forecast-metric:last-child {
+  grid-column: 1 / -1;
 }
 .an-forecast-metric {
   position: relative;
@@ -3676,73 +3681,4 @@ body {
   font: inherit;
   color: inherit;
   letter-spacing: inherit;
-}
-
-/* v0.0.611/612: чотири метрики гаражу (всього / заблоковано / вільно / held)
-   всередині єдиної картки «Гараж». */
-.an-garage-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 1px;
-  margin-bottom: 8px;
-  border-radius: var(--radius-xs);
-  overflow: hidden;
-  background: var(--card-border);
-}
-.an-garage-tile {
-  background: rgba(255, 255, 255, 0.025);
-  padding: 10px 10px 9px;
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  min-width: 0;
-}
-/* v0.0.634: плитка «Всього» — кнопка ручного виправлення місткості
-   (у Garage.dat її немає). Стилізована як решта плиток, але з помітною
-   підказкою й натисканням. */
-.an-garage-tile-edit {
-  appearance: none;
-  -webkit-appearance: none;
-  border: 0;
-  margin: 0;
-  font: inherit;
-  color: inherit;
-  text-align: left;
-  cursor: pointer;
-  touch-action: manipulation;
-  -webkit-tap-highlight-color: transparent;
-  transition: background 0.18s var(--ease-out);
-}
-.an-garage-tile-edit:active { background: rgba(255, 255, 255, 0.06); }
-.an-garage-tile-edit:focus-visible {
-  outline: 2px solid var(--accent-1);
-  outline-offset: -2px;
-}
-.an-garage-tile-hint {
-  font-size: 8.5px;
-  font-weight: 600;
-  color: var(--text-dimmer);
-  opacity: 0.75;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.an-garage-tile-lbl {
-  font-size: 9.5px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--text-dimmer);
-}
-.an-garage-tile-val {
-  font-size: 15px;
-  font-weight: 800;
-  font-variant-numeric: tabular-nums;
-  letter-spacing: -0.01em;
-  line-height: 1.15;
-  word-break: break-word;
-}
-
-@media (max-width: 430px) {
-  .an-garage-grid { grid-template-columns: repeat(2, 1fr); }
 }

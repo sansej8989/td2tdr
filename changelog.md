@@ -13,6 +13,15 @@
 
 
 
+
+
+# v0.0.635
+
+## [0.0.635] – 2026-10-01
+
+### Changed
+- **Analytics: removed the Garage block (tiles, forecast card, trend chart) — may return later.** The Гараж tile strip (Всього / Заблоковано / Вільно / У триманні), the Garage card in the forecast grid and the Garage trend chart are all gone; the forecast grid is now three cards (Cash/Gold/Prestige) with the third spanning both columns, and the forecast-accuracy backtest scores those three keys. The garage capacity computation and its manual-edit control were removed with them, so sync_now.sh no longer writes garageTotal/garageLocked/garageFree/garageHeld/garageCapacity. Existing garage* fields in already-recorded history rows are left untouched and simply ignored. Race results (W/D/L) still come from Garage.dat, so the Заізди block is unaffected.
+
 # v0.0.634
 
 ## [0.0.634] – 2026-10-01

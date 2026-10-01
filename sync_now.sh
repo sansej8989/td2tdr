@@ -122,112 +122,8 @@ record_history_snapshot() {
     GLD=$(parse_val "Gold" "$USER_FILE")
     PRESTIGE=$(parse_val "FestivalPasses" "$USER_FILE")
 
-# Garage: PlayerDeck=<hex>,s<JSON-array>; картки мають поля `locked` та `state`.
-     # Витягуємо JSON-частину через sed і рахуємо масив ПОЕЛЕМЕНТНО.
-     #   state:1 = в гаражі (slots), state:0 = в триманні (held/under garage)
-     #   locked:true = заблоковані/зберігаються, locked:false = розблоковані
-     # Метрики:
-     #   garageCapacity — справжня місткість, якої НЕМАЄ в PlayerDeck (аудит
-     #     двох справжніх експортів: жодного slots/maxSlots/capacity). Тому вона
-     #     зберігається в history.jsonl і лікується лише ВГОРУ.
-     #   garageTotal    = garageCapacity (legacy-поле для графіка/імпорту)
-     #   garageLocked   = state:1 І locked:true (лише ті, що займають слот)
-     #   garageFree     = garageCapacity - garageLocked
-     #   garageHeld     = state:0
-     # v0.0.619 (аудит): глобальний grep по '"locked":true' рахував locked
-     # у ВСІХ станах, включно з машинами «у триманні» (state:0), які
-     # гаражного слоту не займають → «заблоковані» завищені, а «вільно»
-     # (total - locked) занижені. Щоб узяти locked і state з ТІЄІ самої
-     # картки, рахуємо елементи масиву окремо: awk обходить рядок і
-     # збирає буфер кожного об'єкта верхнього рівня (глибина 2), ігноруючи
-     # вкладені об'єкти/масиви. Те саме, що робить WebUI у
-     # getGarageSnapshot() через cards.filter(...).
-     # Якщо awk недоступний/спіткнувся — degrades до глобального підрахунку
-     # (WebUI перезапише сьогоднішній рядок точними значеннями).
-     # ВАЖЛИВО: збережену місткість читаємо з ПОВНОГО файлу історії,
-     # включно із сьогоднішнім рядком — інакше ручний ввід із WebUI, який
-     # живе лише в сьогоднішньому рядку, затерся б dedup'ом нижче.
-     local G_TOTAL G_LOCKED G_STATE1 G_STATE0 G_CAPACITY=""
-     # v0.0.634: збережена місткість — останнє garageCapacity у файлі історії.
-     # Читаємо ДО dedup'у (тобто з повного файлу, включно із сьогоднішнім
-     # рядком), щоб ручний ввід із WebUI пережив наступну синхронізацію.
-     if [ -f "$HISTORY" ]; then
-         G_CAPACITY=$(grep -o '"garageCapacity"[[:space:]]*:[[:space:]]*[0-9]*' "$HISTORY" 2>/dev/null | tail -n1 | grep -o '[0-9]*$')
-     fi
-     if [ -f "$GARAGE_FILE" ]; then
-         local DECK_JSON
-         DECK_JSON=$(grep -oE '^PlayerDeck=[^,]+,s\[.*\]' "$GARAGE_FILE" 2>/dev/null | head -n1 | sed -E 's/^PlayerDeck=[^,]+,s//')
-         if [ -n "$DECK_JSON" ]; then
-             local G_COUNTS
-             G_COUNTS=$(printf '%s' "$DECK_JSON" | awk '
-                 function flush(   s) {
-                     s = buf
-                     if (s ~ /"state"[[:space:]]*:[[:space:]]*1[[:space:]]*[,}]/) {
-                         n1++
-                         if (s ~ /"locked"[[:space:]]*:[[:space:]]*true/) l1++
-                     } else if (s ~ /"state"[[:space:]]*:[[:space:]]*0[[:space:]]*[,}]/) {
-                         n0++
-                     }
-                     buf = ""
-                 }
-                 {
-                     depth = 0; buf = ""; n1 = 0; n0 = 0; l1 = 0
-                     total = length($0)
-                     for (i = 1; i <= total; i++) {
-                         c = substr($0, i, 1)
-                         if (c == "{" || c == "[") {
-                             depth++
-                             if (depth == 2) buf = ""
-                         } else if (c == "}" || c == "]") {
-                             if (depth == 2) flush()
-                             depth--
-                             if (depth < 0) depth = 0
-                         } else if (depth == 2) {
-                             buf = buf c
-                         }
-                     }
-                     if (depth >= 2) flush()
-                     print n1, n0, l1
-                 }' 2>/dev/null)
-             if [ -n "$G_COUNTS" ]; then
-                 G_STATE1=$(printf '%s' "$G_COUNTS" | cut -d' ' -f1)
-                 G_STATE0=$(printf '%s' "$G_COUNTS" | cut -d' ' -f2)
-                 G_LOCKED=$(printf '%s' "$G_COUNTS" | cut -d' ' -f3)
-             fi
-             # Fallback (awk недоступний): глобальний підрахунок ключів.
-             if [ -z "$G_LOCKED" ]; then
-                 G_LOCKED=$(printf '%s' "$DECK_JSON" | grep -oE '"locked":[[:space:]]*true' | wc -l | tr -d ' ')
-                 [ -z "$G_STATE1" ] && G_STATE1=$(printf '%s' "$DECK_JSON" | grep -oE '"state":[[:space:]]*1[,}]' | wc -l | tr -d ' ')
-                 [ -z "$G_STATE0" ] && G_STATE0=$(printf '%s' "$DECK_JSON" | grep -oE '"state":[[:space:]]*0[,}]' | wc -l | tr -d ' ')
-fi
-              # Зайняті слоти = state:1 (без жодного «+1»).
-              if [ -n "$G_STATE1" ]; then
-                  G_OCCUPIED="$G_STATE1"
-              else
-                  G_OCCUPIED=$(printf '%s' "$DECK_JSON" | grep -oE '"locked":[[:space:]]*(true|false)' | wc -l | tr -d ' ')
-              fi
-              # v0.0.634: місткість лікується лише вгору —
-              # max(збережена ?? occupied+1, occupied). Старе встановлення
-              # (occupied+1) працює як фолбек, поки справжнє число невідоме.
-              # Відоме обмеження: якщо гравець купить слоти й не заповнить їх,
-              # occupied не зміниться, тож авто-лікування не побачить зростання —
-              # число залишиться застарілим до ручного виправлення (див. WebUI).
-              if [ -n "$G_CAPACITY" ] && [ "$G_CAPACITY" -gt 0 ] 2>/dev/null; then
-                  G_CAPACITY_BASE="$G_CAPACITY"
-              else
-                  G_CAPACITY_BASE=$((G_OCCUPIED + 1))
-              fi
-              if [ "$G_OCCUPIED" -gt "$G_CAPACITY_BASE" ]; then
-                  G_CAPACITY="$G_OCCUPIED"
-              else
-                  G_CAPACITY="$G_CAPACITY_BASE"
-              fi
-              G_TOTAL="$G_CAPACITY"
-          fi
-      fi
-
     # --- 2. Patch I в shell: захист від порожнього знімка ---
-     if [ -z "$CASH$GLD$PRESTIGE$G_TOTAL" ]; then
+     if [ -z "$CASH$GLD$PRESTIGE" ]; then
          log "WARN: history snapshot — усі ресурси порожні (user.dat пошкоджений?), знімок пропущено"
          return 0
      fi
@@ -241,24 +137,15 @@ fi
      # динаміка приросту втрачала реальні спади.
 
      # --- 3. Побудувати JSON-рядок нового запису ---
-     # Уникаємо залежностей від jq: формуємо вручну через printf.
-     # v0.0.619: garageFree тепер пишеться явно. Раніше поле не записувалося
-     # взагалі, тож WebUI відновлював його через total - locked — уже без
-     # фільтра за state, тобто «вільні слоти» були систематично занижені.
-     local ENTRY G_FREE=""
+# Уникаємо залежностей від jq: формуємо вручну через printf.
+     # v0.0.635: метрики гаражу прибрано разом із блоком «Гараж» — історію
+     # див. git до v0.0.635. Старі поля garage* в уже записаних рядках
+     # history.jsonl лишаються як є: решта коду їх ігнорує.
+     local ENTRY=""
      ENTRY=$(printf '{"date":"%s","ts":%s' "$TODAY" "$NOW_TS")
      [ -n "$CASH" ]     && ENTRY=$(printf '%s,"cash":%s'     "$ENTRY" "$CASH")
      [ -n "$GLD" ]      && ENTRY=$(printf '%s,"gold":%s'      "$ENTRY" "$GLD")
      [ -n "$PRESTIGE" ] && ENTRY=$(printf '%s,"prestige":%s' "$ENTRY" "$PRESTIGE")
-     [ -n "$G_CAPACITY" ] && ENTRY=$(printf '%s,"garageCapacity":%s' "$ENTRY" "$G_CAPACITY")
-      [ -n "$G_TOTAL" ]  && ENTRY=$(printf '%s,"garageTotal":%s'  "$ENTRY" "$G_TOTAL")
-     [ -n "$G_LOCKED" ] && ENTRY=$(printf '%s,"garageLocked":%s' "$ENTRY" "$G_LOCKED")
-     if [ -n "$G_TOTAL" ] && [ -n "$G_LOCKED" ]; then
-         G_FREE=$((G_TOTAL - G_LOCKED))
-         [ "$G_FREE" -lt 0 ] && G_FREE=0
-         ENTRY=$(printf '%s,"garageFree":%s' "$ENTRY" "$G_FREE")
-     fi
-     [ -n "$G_STATE0" ] && ENTRY=$(printf '%s,"garageHeld":%s' "$ENTRY" "$G_STATE0")
      ENTRY="$ENTRY}"
 
     # --- 4. Дедуплікація: прочитати існуючий history.jsonl, видалити рядки з
@@ -307,7 +194,7 @@ fi
         fi
     fi
 
-    log "history snapshot: $TODAY записано (cash=$CASH gold=$GLD prestige=$PRESTIGE gTotal=$G_TOTAL gLocked=$G_LOCKED)"
+    log "history snapshot: $TODAY записано (cash=$CASH gold=$GLD prestige=$PRESTIGE )"
     return 0
 }
 
