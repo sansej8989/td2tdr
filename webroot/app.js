@@ -345,6 +345,7 @@ an_garage: "Гараж",
       upd_error_copy: "Скопіювати лог помилки",
       upd_error_copied: "Лог скопійовано",
       an_accuracy: "Точність прогнозу: {pct}%",
+      an_accuracy_na: "Точність прогнозу: недостатньо даних",
       an_per_day: " / день",
       an_range_title: "Прогнозований період",
 
@@ -579,7 +580,8 @@ an_garage: "Garage",
       upd_error_copy: "Copy error log",
       upd_error_copied: "Log copied",
 an_accuracy: "Forecast accuracy: {pct}%",
-       an_per_day: " / day",
+        an_accuracy_na: "Forecast accuracy: not enough data yet",
+        an_per_day: " / day",
        an_range_title: "Forecast period",
        an_forecast_conf_label_low: "confidence: low",
        an_forecast_conf_label_med: "confidence: medium",
@@ -1909,7 +1911,16 @@ an_accuracy: "Forecast accuracy: {pct}%",
   // carries the INDEX of a small fixed set of stops: the first days get about a
   // thumb width of travel each, the long range stays coarse. `analyticsPeriod`
   // and localStorage still hold days, so nothing else has to know about this.
-  const FORECAST_PERIOD_STOPS = [1, 2, 3, 4, 5, 6, 7, 9, 12, 15, 20, 25, 30, 40, 50, 60, 75, 90];
+  // v0.0.633: the stops are now piecewise — step 1 up to 14, step 2 to 30, step
+  // 5 to 90. Each run continues from the previous one (14+2=16, 30+5=35) so no
+  // value is repeated. That leaves 15 deliberately unreachable: it falls between
+  // the 14 and 16 stops. `forecastPeriodStopIndex` snaps exact ties downwards,
+  // so a restored 15 resolves to 14.
+  const FORECAST_PERIOD_STOPS = [
+    1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14,
+    16, 18, 20, 22, 24, 26, 28, 30,
+    35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90,
+  ];
   // Mirrors the order of the four labels in the .an-scale markup.
   const FORECAST_SCALE_DAYS = [1, 30, 60, 90];
   function forecastPeriodStopIndex(days) {
@@ -1993,10 +2004,10 @@ an_accuracy: "Forecast accuracy: {pct}%",
 // прогнозу показує лише базовий баланс на вибрану дату.
 
 // v0.0.602: розрахунок приросту за активні дні (ігнорує дні з нульовою/від'ємною дельтою)
-function computeActiveDailyGain(history, key, lookbackDays = 7) {
+function computeActiveDailyGain(history, key, lookbackDays = 7, asOfTs = Date.now()) {
   const pts = history.filter((h) => h[key] != null);
   if (pts.length < 2) return null;
-  const cutoff = Date.now() - lookbackDays * 86400000;
+  const cutoff = asOfTs - lookbackDays * 86400000;
   const recent = pts.filter((p) => new Date(p.date + "T00:00:00").getTime() >= cutoff);
   if (recent.length < 2) return null;
 
@@ -2305,6 +2316,91 @@ function formatForecastDate(daysAhead) {
     return Math.max(1, Math.floor((now.getTime() - first) / 86400000) + 1);
   }
 
+  // v0.0.633: the per-metric projection, extracted verbatim from
+  // renderForecastBlockHtml so the forecast cards and the accuracy backtest
+  // below share ONE implementation of the math (no fork).
+  // `asOfTs` anchors the lookback window instead of "now": the cards leave it at
+  // the default, while a backtest passes the cut point so the window cannot
+  // reach into data recorded after it.
+  function projectMetric(hist, key, days, asOfTs = Date.now()) {
+    const N = Math.max(1, Math.min(90, Number(days) || 1));
+    const pts = hist.filter((h) => h[key] != null);
+    if (pts.length < 2) return null;
+    let incomeRate;
+    if (key === "prestige") {
+      const dailyGain = computeActiveDailyGain(hist, "prestige", 7, asOfTs);
+      incomeRate = dailyGain || 0;
+    } else {
+      const winCut = asOfTs - 14 * 86400000;
+      const winPts = pts.filter((p) => new Date(p.date + "T00:00:00").getTime() >= winCut);
+      const ratePts = winPts.length >= 2 ? winPts : pts.slice(-2);
+      let posSum = 0;
+      for (let i = 1; i < ratePts.length; i++) {
+        const d = ratePts[i][key] - ratePts[i - 1][key];
+        if (d > 0) posSum += d;
+      }
+      const rFirst = ratePts[0];
+      const lastPt = pts[pts.length - 1];
+      const spanDays = Math.max(1, (new Date(lastPt.date) - new Date(rFirst.date)) / 86400000);
+      incomeRate = posSum / spanDays;
+    }
+    if (!isFinite(incomeRate)) return null;
+    const current = pts[pts.length - 1][key];
+    const expectedDelta = Math.round(incomeRate * N);
+    return {
+      projected: Math.max(0, Math.round(current + expectedDelta)),
+      expectedDelta,
+      perDay: Math.round(incomeRate * 10) / 10,
+      current,
+      incomeRate,
+    };
+  }
+
+// v0.0.633: real forecast accuracy. For every past day we re-run the very same
+  // projection on the data recorded up to that day, then compare with what was
+  // actually recorded `days` later. The previous indicator was
+  // 20 + 70 * min(historyDays, 14) / 14, which only counted how much history
+  // existed and sat at 90% forever from day 14 on.
+  // v0.0.634: scored on the predicted CHANGE vs the actual CHANGE, not on the
+  // absolute levels. On a large balance (cash, gold) the level is dominated by
+  // the starting sum, so even a clearly wrong forecast landed at 80-99%.
+  const ACCURACY_KEYS = ["cash", "gold", "prestige", "garageSlots"];
+  const ACCURACY_MIN_SAMPLES = 3;
+  // Denominator guard for a flat or near-flat period. A flat absolute value
+  // would divide by zero; anything above 1 would hide real misses on
+  // small-integer metrics (garageSlots moves by whole slots). The per-point
+  // clamp at 1 already bounds every sample, so this only decides how a +-1 miss
+  // on a metric that moved by 1 is scored - counted as a full miss, which is
+  // the conservative reading and needs no per-metric tuning.
+  const ACCURACY_DELTA_FLOOR = 1;
+  function forecastAccuracyPct(hist, days) {
+    const N = Math.max(1, Math.min(90, Number(days) || 1));
+    if (!hist || hist.length < 2) return null;
+    const errs = [];
+    for (let i = 1; i + N < hist.length; i++) {
+      const cut = hist[i];
+      if (!cut || !cut.date) continue;
+      const asOfTs = new Date(cut.date + "T00:00:00").getTime();
+      if (!isFinite(asOfTs)) continue;
+      for (const key of ACCURACY_KEYS) {
+        const base = cut[key];
+        const later = hist[i + N];
+        if (base == null || !later || later[key] == null) continue;
+        const actualDelta = later[key] - base;
+        const m = projectMetric(hist.slice(0, i + 1), key, N, asOfTs);
+        if (!m) continue;
+        // expectedDelta IS the projected change over N days - the projection
+        // builds `projected = current + expectedDelta` - so it is used as-is
+        // and never recomputed here.
+        const rel = Math.abs(m.expectedDelta - actualDelta) / Math.max(Math.abs(actualDelta), ACCURACY_DELTA_FLOOR);
+        errs.push(Math.min(1, rel));
+      }
+    }
+    if (errs.length < ACCURACY_MIN_SAMPLES) return null;
+    const mape = errs.reduce((a, b) => a + b, 0) / errs.length;
+    return Math.max(0, Math.min(99, Math.round((1 - mape) * 100)));
+  }
+
   // v0.0.511: ізольований блок прогнозу. Викликається як при першому
   // рендері, так і при русі повзунка (без renderAnalytics).
   // Повертає HTML для всього блоку .an-forecast.
@@ -2331,31 +2427,11 @@ function formatForecastDate(daysAhead) {
     };
     const metrics = [];
     for (const key of ["cash", "gold", "prestige", "garageSlots"]) {
-      const pts = hist.filter((h) => h[key] != null);
-      if (pts.length < 2) continue;
-      let incomeRate;
-      if (key === "prestige") {
-        const dailyGain = computeActiveDailyGain(hist, "prestige", 7);
-        incomeRate = dailyGain || 0;
-      } else {
-        const winCut = Date.now() - 14 * 86400000;
-        const winPts = pts.filter((p) => new Date(p.date + "T00:00:00").getTime() >= winCut);
-        const ratePts = winPts.length >= 2 ? winPts : pts.slice(-2);
-        let posSum = 0;
-        for (let i = 1; i < ratePts.length; i++) {
-          const d = ratePts[i][key] - ratePts[i - 1][key];
-          if (d > 0) posSum += d;
-        }
-        const rFirst = ratePts[0];
-        const lastPt = pts[pts.length - 1];
-        const spanDays = Math.max(1, (new Date(lastPt.date) - new Date(rFirst.date)) / 86400000);
-        incomeRate = posSum / spanDays;
-      }
-      if (!isFinite(incomeRate)) continue;
-      const current = pts[pts.length - 1][key];
-      const expectedDelta = Math.round(incomeRate * N);
-      const projected = Math.max(0, Math.round(current + expectedDelta));
-      const perDay = Math.round(incomeRate * 10) / 10;
+      const m = projectMetric(hist, key, N);
+      if (!m) continue;
+      const projected = m.projected;
+      const expectedDelta = m.expectedDelta;
+      const perDay = m.perDay;
 
       const accent = PROJ_COLORS[key] || { accent: "var(--accent-1)", tint: "rgba(129, 140, 248, 0.14)" };
       let rateCls = "flat";
@@ -2892,13 +2968,19 @@ const breakdownBar = breakdownAvailable && breakdownTotal > 0
       if (lbl) lbl.textContent = `${analyticsPeriod}д`;
     }
 
-    // Індикатор точності: що більше накопичених днів історії, то вищий %.
+    // Індикатор точності: реальний бектест прогнозу (forecastAccuracyPct), а не
+    // обсяг історії. При надто малій кількості зразків показуємо «недостатньо
+    // даних», а не вигадану цифру.
     const accEl = $("analyticsAccuracy");
     if (accEl) {
-      const histDays = history.length;
-      const pct = Math.min(99, Math.round(20 + 70 * Math.min(histDays, 14) / 14));
-      const cls = histDays >= 7 ? "pill-ok" : histDays >= 3 ? "pill-warn" : "pill";
-      accEl.innerHTML = `<span class="pill ${cls}">${t("an_accuracy", { pct })}</span>`;
+      const accPct = forecastAccuracyPct(history, analyticsPeriod);
+      if (accPct == null) {
+        accEl.innerHTML = `<span class="pill">${t("an_accuracy_na")}</span>`;
+      } else {
+        // Пороги тепер на самій оцінці якості, а не на кількості днів.
+        const cls = accPct >= 80 ? "pill-ok" : accPct >= 50 ? "pill-warn" : "pill";
+        accEl.innerHTML = `<span class="pill ${cls}">${t("an_accuracy", { pct: accPct })}</span>`;
+      }
     }
 
     // v0.0.611: garageSlots = місткість гаража (garageTotal), а не заблоковані.

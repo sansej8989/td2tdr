@@ -9,6 +9,16 @@
 
 
 
+
+
+# v0.0.633
+
+## [0.0.633] – 2026-10-01
+
+### Changed
+- **Analytics: forecast accuracy is now a real backtest (predicted change vs actual change over the period) instead of a day-count estimate that capped at 90% after 14 days.** For every past day the forecast is re-run on the data recorded up to that day and its predicted change is compared with the change that actually happened `N` days later, where `N` is the selected forecast period. The old indicator was `20 + 70 × min(historyDays, 14) / 14`, which only measured how much history existed and read a flat 90% forever from day 14 on. Scoring the change rather than the absolute level matters for cash and gold, where the starting balance otherwise absorbed the error: on 42 days of history a steady forecast now reads 99% while a forecast that never notices growth stopping reads 30%. With too few samples to backtest the pill shows "not enough data" instead of a misleading number. The forecast math itself is unchanged — it was extracted into `projectMetric()` so the cards and the backtest share one implementation.
+- **Analytics: forecast period slider stops are now piecewise (step 1 up to 14 days, step 2 to 30, step 5 to 90)** — days 1-14 are each individually selectable at ~9.8px of travel, and the long range stays coarse. Note that 15 is not reachable: it falls between the 14 and 16 stops.
+
 # v0.0.632
 
 ## [0.0.632] – 2026-09-29
