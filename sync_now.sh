@@ -127,10 +127,13 @@ record_history_snapshot() {
      #   state:1 = в гаражі (slots), state:0 = в триманні (held/under garage)
      #   locked:true = заблоковані/зберігаються, locked:false = розблоковані
      # Метрики:
-     #   garageTotal  = state:1 + 1 (запасний слот) = загальна кімната
-     #   garageLocked = state:1 І locked:true (лише ті, що займають слот)
-     #   garageFree   = garageTotal - garageLocked
-     #   garageHeld   = state:0
+     #   garageCapacity — справжня місткість, якої НЕМАЄ в PlayerDeck (аудит
+     #     двох справжніх експортів: жодного slots/maxSlots/capacity). Тому вона
+     #     зберігається в history.jsonl і лікується лише ВГОРУ.
+     #   garageTotal    = garageCapacity (legacy-поле для графіка/імпорту)
+     #   garageLocked   = state:1 І locked:true (лише ті, що займають слот)
+     #   garageFree     = garageCapacity - garageLocked
+     #   garageHeld     = state:0
      # v0.0.619 (аудит): глобальний grep по '"locked":true' рахував locked
      # у ВСІХ станах, включно з машинами «у триманні» (state:0), які
      # гаражного слоту не займають → «заблоковані» завищені, а «вільно»
@@ -141,7 +144,16 @@ record_history_snapshot() {
      # getGarageSnapshot() через cards.filter(...).
      # Якщо awk недоступний/спіткнувся — degrades до глобального підрахунку
      # (WebUI перезапише сьогоднішній рядок точними значеннями).
-     local G_TOTAL G_LOCKED G_STATE1 G_STATE0=""
+     # ВАЖЛИВО: збережену місткість читаємо з ПОВНОГО файлу історії,
+     # включно із сьогоднішнім рядком — інакше ручний ввід із WebUI, який
+     # живе лише в сьогоднішньому рядку, затерся б dedup'ом нижче.
+     local G_TOTAL G_LOCKED G_STATE1 G_STATE0 G_CAPACITY=""
+     # v0.0.634: збережена місткість — останнє garageCapacity у файлі історії.
+     # Читаємо ДО dedup'у (тобто з повного файлу, включно із сьогоднішнім
+     # рядком), щоб ручний ввід із WebUI пережив наступну синхронізацію.
+     if [ -f "$HISTORY" ]; then
+         G_CAPACITY=$(grep -o '"garageCapacity"[[:space:]]*:[[:space:]]*[0-9]*' "$HISTORY" 2>/dev/null | tail -n1 | grep -o '[0-9]*$')
+     fi
      if [ -f "$GARAGE_FILE" ]; then
          local DECK_JSON
          DECK_JSON=$(grep -oE '^PlayerDeck=[^,]+,s\[.*\]' "$GARAGE_FILE" 2>/dev/null | head -n1 | sed -E 's/^PlayerDeck=[^,]+,s//')
@@ -187,17 +199,32 @@ record_history_snapshot() {
                  G_LOCKED=$(printf '%s' "$DECK_JSON" | grep -oE '"locked":[[:space:]]*true' | wc -l | tr -d ' ')
                  [ -z "$G_STATE1" ] && G_STATE1=$(printf '%s' "$DECK_JSON" | grep -oE '"state":[[:space:]]*1[,}]' | wc -l | tr -d ' ')
                  [ -z "$G_STATE0" ] && G_STATE0=$(printf '%s' "$DECK_JSON" | grep -oE '"state":[[:space:]]*0[,}]' | wc -l | tr -d ' ')
-             fi
-             # Загальна кімната = state:1 + 1 (запасний слот, який завжди є).
-             # Перевірка лише на непорожність: state:1 = 0 теж дає коректні
-             # G_TOTAL = 1 (лише резервний слот), як і в попередній версії.
-             if [ -n "$G_STATE1" ]; then
-                 G_TOTAL=$((G_STATE1 + 1))
-             else
-                 G_TOTAL=$(printf '%s' "$DECK_JSON" | grep -oE '"locked":[[:space:]]*(true|false)' | wc -l | tr -d ' ')
-             fi
-         fi
-     fi
+fi
+              # Зайняті слоти = state:1 (без жодного «+1»).
+              if [ -n "$G_STATE1" ]; then
+                  G_OCCUPIED="$G_STATE1"
+              else
+                  G_OCCUPIED=$(printf '%s' "$DECK_JSON" | grep -oE '"locked":[[:space:]]*(true|false)' | wc -l | tr -d ' ')
+              fi
+              # v0.0.634: місткість лікується лише вгору —
+              # max(збережена ?? occupied+1, occupied). Старе встановлення
+              # (occupied+1) працює як фолбек, поки справжнє число невідоме.
+              # Відоме обмеження: якщо гравець купить слоти й не заповнить їх,
+              # occupied не зміниться, тож авто-лікування не побачить зростання —
+              # число залишиться застарілим до ручного виправлення (див. WebUI).
+              if [ -n "$G_CAPACITY" ] && [ "$G_CAPACITY" -gt 0 ] 2>/dev/null; then
+                  G_CAPACITY_BASE="$G_CAPACITY"
+              else
+                  G_CAPACITY_BASE=$((G_OCCUPIED + 1))
+              fi
+              if [ "$G_OCCUPIED" -gt "$G_CAPACITY_BASE" ]; then
+                  G_CAPACITY="$G_OCCUPIED"
+              else
+                  G_CAPACITY="$G_CAPACITY_BASE"
+              fi
+              G_TOTAL="$G_CAPACITY"
+          fi
+      fi
 
     # --- 2. Patch I в shell: захист від порожнього знімка ---
      if [ -z "$CASH$GLD$PRESTIGE$G_TOTAL" ]; then
@@ -223,7 +250,8 @@ record_history_snapshot() {
      [ -n "$CASH" ]     && ENTRY=$(printf '%s,"cash":%s'     "$ENTRY" "$CASH")
      [ -n "$GLD" ]      && ENTRY=$(printf '%s,"gold":%s'      "$ENTRY" "$GLD")
      [ -n "$PRESTIGE" ] && ENTRY=$(printf '%s,"prestige":%s' "$ENTRY" "$PRESTIGE")
-     [ -n "$G_TOTAL" ]  && ENTRY=$(printf '%s,"garageTotal":%s'  "$ENTRY" "$G_TOTAL")
+     [ -n "$G_CAPACITY" ] && ENTRY=$(printf '%s,"garageCapacity":%s' "$ENTRY" "$G_CAPACITY")
+      [ -n "$G_TOTAL" ]  && ENTRY=$(printf '%s,"garageTotal":%s'  "$ENTRY" "$G_TOTAL")
      [ -n "$G_LOCKED" ] && ENTRY=$(printf '%s,"garageLocked":%s' "$ENTRY" "$G_LOCKED")
      if [ -n "$G_TOTAL" ] && [ -n "$G_LOCKED" ]; then
          G_FREE=$((G_TOTAL - G_LOCKED))

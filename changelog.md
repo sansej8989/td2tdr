@@ -11,6 +11,16 @@
 
 
 
+
+
+# v0.0.634
+
+## [0.0.634] – 2026-10-01
+
+### Changed
+- **Analytics: garage "Всього"/"Вільно" now track a real, self-healing capacity value instead of an occupied+1 guess; tap "Всього" to correct it manually (e.g. after buying new slots).** `PlayerDeck` in `Garage.dat` contains no slot/capacity field at all — audited against two real exports — so the old `count(state==1) + 1` was a guess that was wrong whenever more than one slot was vacant or newly bought slots were still empty (observed: true capacity 3917, "Всього" showed 3915 and "Вільно" 7 instead of 9). Capacity is now persisted as `garageCapacity` in `history.jsonl`, healed only upward to `max(stored ?? occupied+1, occupied)` on every sync, and "Вільно" remains `capacity − blocked`. "Заблоковано" and "У триманні" are computed exactly as before. Manual entry below the currently occupied slot count is rejected.
+- Existing installs keep the old `occupied+1` estimate until the first manual correction, so the first sync after this update will still show the previous (slightly low) total. Known limitation: buying slots and leaving them empty cannot be detected automatically, because the occupied count does not change — the value stays stale until corrected by hand. Both `sync_now.sh` and the WebUI read and write the same field, so they cannot disagree after a sync from either path.
+
 # v0.0.633
 
 ## [0.0.633] – 2026-10-01

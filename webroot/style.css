@@ -3697,6 +3697,36 @@ body {
   gap: 3px;
   min-width: 0;
 }
+/* v0.0.634: плитка «Всього» — кнопка ручного виправлення місткості
+   (у Garage.dat її немає). Стилізована як решта плиток, але з помітною
+   підказкою й натисканням. */
+.an-garage-tile-edit {
+  appearance: none;
+  -webkit-appearance: none;
+  border: 0;
+  margin: 0;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.18s var(--ease-out);
+}
+.an-garage-tile-edit:active { background: rgba(255, 255, 255, 0.06); }
+.an-garage-tile-edit:focus-visible {
+  outline: 2px solid var(--accent-1);
+  outline-offset: -2px;
+}
+.an-garage-tile-hint {
+  font-size: 8.5px;
+  font-weight: 600;
+  color: var(--text-dimmer);
+  opacity: 0.75;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 .an-garage-tile-lbl {
   font-size: 9.5px;
   font-weight: 700;
