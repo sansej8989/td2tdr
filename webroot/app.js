@@ -2387,7 +2387,11 @@ function formatForecastDate(daysAhead) {
       cash: "💰", gold: "🪙", prestige: "🏆",
     };
     const metrics = [];
-    for (const key of ["cash", "gold", "prestige"]) {
+    // v0.0.636: порядок карток у сітці прогнозу — Gold, Prestige у першому
+    // рядку, Cash другим (на всю ширину, через :last-child у style.css).
+    // Це локальний масив renderForecastBlockHtml(): ACCURACY_KEYS і порядок
+    // графіків далі йдуть cash, gold, prestige — вони не читають його.
+    for (const key of ["gold", "prestige", "cash"]) {
       const m = projectMetric(hist, key, N);
       if (!m) continue;
       const projected = m.projected;

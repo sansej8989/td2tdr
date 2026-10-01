@@ -15,6 +15,15 @@
 
 
 
+
+
+# v0.0.636
+
+## [0.0.636] – 2026-10-01
+
+### Changed
+- **Analytics: forecast grid reordered — Gold and Prestige in the first row, Cash full-width in the second.** Visual order of the three forecast cards only; the accuracy backtest keys and the trend charts keep their own cash/gold/prestige order. Data-attributes, icons, colours, the tap-to-toggle behaviour and the layout (no empty cell, no shift when toggling) are unchanged.
+
 # v0.0.635
 
 ## [0.0.635] – 2026-10-01
